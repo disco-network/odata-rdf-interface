@@ -2,4 +2,4 @@
 This project is supposed to become kind of a customizable odata server.
 
 # dependencies
-per default, the project depends on a copy of abnfjs at "../abnfjs", my GitHub project parsing and interpreting ABNF specs.
+This project depends on a copy of [abnfjs](https://github.com/datokrat/abnfjs) located at "../abnfjs", my GitHub project parsing and interpreting ABNF specifications.
