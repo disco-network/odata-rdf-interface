@@ -106,10 +106,10 @@ odataRelativeUri = '$batch'                           ; Note: case-sensitive!
 ; 1. Resource Path
 ;------------------------------------------------------------------------------
 
-resourcePath = <| entitySetName |>=entitySetName   <| collectionNavigation |>=navigation ;collectionNavigation components are already optional
+resourcePath = <| entitySetName |>=entitySetName   [ <| collectionNavigation |>=navigation ]
              / singletonEntity                [ singleNavigation ]
              / actionImportCall 
-             / entityColFunctionImportCall    collectionNavigation
+             / entityColFunctionImportCall    [collectionNavigation]
              / entityFunctionImportCall       [ singleNavigation ] 
              / complexColFunctionImportCall   [ complexColPath ] 
              / complexFunctionImportCall      [ complexPath ] 
@@ -118,7 +118,7 @@ resourcePath = <| entitySetName |>=entitySetName   <| collectionNavigation |>=na
              / crossjoin
              / '$all'                         [ "/" qualifiedEntityTypeName ]
 
-collectionNavigation = [ "/" <|qualifiedEntityTypeName|>=qualifiedEntityTypeName ] [ <|collectionNavPath|>=collectionNavPath ]
+collectionNavigation =  "/" <|qualifiedEntityTypeName|>=qualifiedEntityTypeName [ <|collectionNavPath|>=collectionNavPath ] / <|collectionNavPath|>=collectionNavPath
 collectionNavPath    = <|keyPredicate|>=keyPredicate [ singleNavigation ]
                      / boundOperation
                      / count
@@ -386,7 +386,7 @@ commonExpr = ( <|primitiveLiteral|>=primitiveLiteral
              / parameterAlias
              / arrayOrObject
              / rootExpr
-             / firstMemberExpr
+             / <|firstMemberExpr|>=memberExpr
              / functionExpr
              / negateExpr 
              / methodCallExpr 
@@ -417,34 +417,32 @@ boolCommonExpr = ( isofExpr
 
 rootExpr = '$root/' ( entitySetName keyPredicate / singletonEntity ) [ singleNavigationExpr ]
 
-firstMemberExpr = memberExpr
-                / inscopeVariableExpr [ "/" memberExpr ]
+firstMemberExpr = <|memberExpr|>=memberExpr
+                / <|inscopeVariableExpr|>=inscopeVariable [ "/" <|memberExpr|>=memberExpr ] ; TODO: Parser can't distinguish!
 
-memberExpr = [ qualifiedEntityTypeName "/" ]
-             ( propertyPathExpr
-             / boundFunctionExpr 
+memberExpr = [ <|qualifiedEntityTypeName|>=entityTypeName "/" ]
+             ( <|propertyPathExpr|>=propertyPath
+             / <|boundFunctionExpr|>=boundFunction 
              )
              
-propertyPathExpr = ( entityColNavigationProperty [ collectionNavigationExpr ] 
-                   / entityNavigationProperty    [ singleNavigationExpr ] 
-                   / complexColProperty          [ complexColPathExpr ]
-                   / complexProperty             [ complexPathExpr ] 
-                   / primitiveColProperty        [ collectionPathExpr ]
-                   / primitiveProperty           [ primitivePathExpr ]
-                   / streamProperty              [ primitivePathExpr ]
+propertyPathExpr = ( <|entityColNavigationProperty|>=property [ <|collectionNavigationExpr|>=collectionNavigation ] 
+                   / <|entityNavigationProperty|>=property    [ <|singleNavigationExpr|>=singleNavigation ] 
+                   / <|complexColProperty|>=property          [ <|complexColPathExpr|>=complexColPath ]
+                   / <|complexProperty|>=property             [ <|complexPathExpr|>=complexPath ] 
+                   / <|primitiveColProperty|>=property        [ <|collectionPathExpr|>=collectionPath ]
+                   / <|primitiveProperty|>=property           [ <|primitivePathExpr|>=primitivePath ]
+                   / <|streamProperty|>=property              [ <|primitivePathExpr|>=primitivePath ]
                    )
                    
 inscopeVariableExpr  = implicitVariableExpr 
-                     / lambdaVariableExpr ; only allowed inside a lambdaPredicateExpr
+                     ;/ lambdaVariableExpr ; only allowed inside a lambdaPredicateExpr TODO: see above ^
 implicitVariableExpr = '$it'              ; references the unnamed outer variable of the query
 lambdaVariableExpr   = odataIdentifier
 
-collectionNavigationExpr = [ "/" qualifiedEntityTypeName ]
-                           [ keyPredicate [ singleNavigationExpr ] 
-                           / collectionPathExpr 
-                           ]
+collectionNavigationExpr =  "/" qualifiedEntityTypeName [ keyPredicate [ singleNavigationExpr ] / collectionPathExpr ] 
+                           / keyPredicate [ singleNavigationExpr ] / collectionPathExpr
 
-singleNavigationExpr = "/" memberExpr
+singleNavigationExpr = "/" <|memberExpr|>=memberExpr
 
 complexColPathExpr = [ "/" qualifiedComplexTypeName ]
                      [ collectionPathExpr ]

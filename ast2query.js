@@ -12,13 +12,13 @@ function getQueryFromCondensedSyntaxTree(ast) {
     switch(ast.type) {
       case 'resourceQuery':
         if(ast.resourcePath.type !== 'entitySet') throw new Error('unsupported');
-        if(ast.resourcePath.navigation.qualifiedEntityTypeName != null) throw new Error('unsupported');
-        if(ast.resourcePath.navigation.collectionNavPath != null) {
+        if(ast.resourcePath.navigation && ast.resourcePath.navigation.qualifiedEntityTypeName) throw new Error('unsupported');
+        if(ast.resourcePath.navigation && ast.resourcePath.navigation.collectionNavPath) {
           if(ast.resourcePath.navigation.collectionNavPath.type !== 'keyPredicate' || ast.resourcePath.navigation.collectionNavPath.keyPredicate.type !== 'simpleKey') throw new Error('unsupported');
           return new queries.GetSingleEntityQuery({ entitySet: ast.resourcePath.entitySetName, key: ast.resourcePath.navigation.collectionNavPath.keyPredicate.simpleKey });
         }
         else {
-          return new queries.GetManyEntitiesQuery({ entitySet: ast.resourcePath.entitySetName });
+          return new queries.GetManyEntitiesQuery({ entitySet: ast.resourcePath.entitySetName, filter: ast.queryOptions.filter });
         }
       default:
         throw new Error('unsupported');
@@ -31,6 +31,7 @@ function getQueryFromCondensedSyntaxTree(ast) {
 
 function condenseSyntaxTree(ast) {
   ast = navi(ast);
+  console.log(ast);
   var descriptors = ast.descriptors();
   if(descriptors.resourcePath) {
     return { type: 'resourceQuery', 
@@ -87,7 +88,7 @@ function condenseCollectionNavigation(collectionNavigation) {
 }
 
 function condenseQueryOptions(expr) {
-  if(!expr) return;
+  if(!expr) return {};
   var queryOptions = [expr.descriptors().firstQueryOption.singleItem()];
   var furtherQueryOptions = expr.descriptors().furtherQueryOptions || [];
   for(var i = 0; i < furtherQueryOptions.length; ++i) {
@@ -103,7 +104,6 @@ function condenseQueryOptions(expr) {
     }
     else throw new Error('unsupported systemQueryOption');
   }
-  console.log(opts.filter); //TODO
   return opts;
 }
 
@@ -142,10 +142,42 @@ function condenseCommonExpr(commonExpr) {
     return condensePrimitiveLiteral(selectedAlternative.singleItem());
   else if(selectedAlternative = commonExpr.descriptors().parenExpr)
     return condenseParenthesesExpr(selectedAlternative.singleItem());
+  else if(selectedAlternative = commonExpr.descriptors().memberExpr)
+    return condenseFirstMemberExpr(selectedAlternative.singleItem());
   else
     throw new Error('unsupported expression');
   
   //TODO second group
+}
+
+function condenseFirstMemberExpr(expr) {
+  var inscopeVariable = expr.descriptors().inscopeVariable;
+  var memberExpr = condenseRelativeMemberExpr(expr.descriptors().memberExpr.singleItem());
+  return { type: 'member-expression', variable: inscopeVariable && inscopeVariable.str(), path: memberExpr }
+}
+
+function condenseRelativeMemberExpr(expr) {
+  if(expr.descriptors().entityTypeName || expr.descriptors().boundFunction) throw new Error('unsupported member expression');
+  if(expr.descriptors().propertyPath) {
+    var ret = {};
+    var propertyPath = expr.descriptors().propertyPath.singleItem();
+    if(propertyPath.descriptors().property) {
+      ret.property = propertyPath.descriptors().property.str();
+      if(propertyPath.descriptors().singleNavigation)
+        ret.singleNavigation = condenseRelativeMemberExpr(propertyPath.descriptors().singleNavigation.descriptors().memberExpr.singleItem());
+      if(propertyPath.descriptors().collectionNavigation) {
+        ret.collectionNavigation = condenseCollectionNavigationExpr(propertyPath.descriptors().collectionNavigation.singleItem());
+      }
+      if(propertyPath.descriptors().primitivePath || propertyPath.descriptors().complexPath || propertyPath.descriptors().complexColPath || propertyPath.descriptors().collectionPath)
+        throw new Error('unsupported member expression' + JSON.stringify(Object.keys(propertyPath.descriptors())));
+      return ret;
+    } 
+  }
+  throw new Error('unsupported member expression');
+}
+
+function condenseCollectionNavigationExpr(expr) {
+  throw new Error('collectionNavigationExpr is unsupported');
 }
 
 function condenseOperatorExpr(operatorExpr, name) {

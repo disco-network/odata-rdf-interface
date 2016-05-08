@@ -92,7 +92,7 @@ var GetManyEntitiesQuery = exports.GetManyEntitiesQuery = (function(_super) {
 	GetManyEntitiesQuery.prototype.run = function(db) { //IDEA: method checkSemantically
 		var meta = metadata.Metadata.entitySets[this.expression.entitySet];
 		if(meta) {
-			var dbResult = db.getEntities(this.expression.entitySet);
+			var dbResult = db.getEntities(this.expression.entitySet, this.expression.filter);
 			if(!dbResult.error) this.result = { result: dbResult.result };
 			else this.result = { error: ErrorTypes.DB, errorDetails: dbResult.error };
 		}
