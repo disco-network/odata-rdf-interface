@@ -6,8 +6,8 @@ var Database = exports.Database = (function() {
 		this.data = {
 			"Posts": {
 				values: [
-					{ Id: 1, ContentId: 1 },
-					{ Id: 2, ContentId: 1 },
+					{ Id: 1, ContentId: 1, ParentId: null },
+					{ Id: 2, ContentId: 1, ParentId: 1 },
 				]
 			},
 			"PostReferences": {
@@ -27,7 +27,10 @@ var Database = exports.Database = (function() {
 		    Post: {
 		      properties: {
 		        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64" },
-		        ContentId: { type: "Edm.Int64" }
+		        ContentId: { type: "Edm.Int64" },
+		        ParentId: { type: "Edm.Int64", correspondingNavigationProperty: "Parent" },
+		        Parent: { type: "Post", quantity: "one-to-many", indexProperty: "ParentId", foreignSet: "Posts" },
+		        ChildrenIds: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
 		      }
 		    }
 		  },
@@ -154,12 +157,49 @@ Database.prototype.evalRelativeMemberExpr = function(schema, entity, expr) {
   var property = expr.property;
   if(expr.collectionNavigation || expr.complexPath || expr.primitivePath || expr.complexColPath)
     throw new Error('unsupported member expression');
+    
+  var val = this.getProperty(schema, entity, property);
   
   //TODO: security and error handling below
   if(expr.singleNavigation)
-    return self.evalRelativeMemberExpr(this.schema.entityTypes[schema.properties[property].type], entity[property], expr.singleNavigation)
+    return self.evalRelativeMemberExpr(this.schema.entityTypes[schema.properties[property].type], val, expr.singleNavigation)
   else
-    return { type: schema.properties[property].type, value: entity[property] };
+    return { type: schema.properties[property].type, value: val };
+}
+
+Database.prototype.getProperty = function(schema, entity, property) {
+  if(!entity) return null;
+  if(this.isNavigationProperty(schema, property)) {
+    switch(schema.properties[property].quantity) {
+      case 'one-to-one':
+      case 'one-to-many':
+        var index = entity[schema.properties[property].indexProperty];
+        if(index != null) {
+          var result = this.getSingleEntity(schema.properties[property].foreignSet, index);
+          if(!result.error) return result.result.entity;
+          else throw new Error('no error handling implemented');
+        }
+        else return null;
+      case 'many-to-one':
+        var foreignSet = schema.properties[property].foreignSet;
+        var foreignProperty = schema.properties[property].foreignProperty;
+        var type = schema.properties[property].type;
+        var foreignIndexProperty = this.schema.entityTypes[type].properties[foreignProperty].indexProperty;
+        var result = this.getReferringEntities(foreignSet, foreignIndexProperty, entity.Id);
+        console.log(result.result);
+        if(!result.error) return result.result.entities;
+        else throw new Error('no error handling implemented');
+      default:
+        throw new Error('not implemented');
+    }
+  }
+  else {
+    return entity[property];
+  }
+}
+
+Database.prototype.isNavigationProperty = function(schema, name) {
+  return schema.properties[name].type.substr(0,4) !== "Edm.";
 }
 
 var Result = exports.Result = (function() {
