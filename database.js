@@ -30,7 +30,7 @@ var Database = exports.Database = (function() {
 		        ContentId: { type: "Edm.Int64" },
 		        ParentId: { type: "Edm.Int64", correspondingNavigationProperty: "Parent" },
 		        Parent: { type: "Post", quantity: "one-to-many", indexProperty: "ParentId", foreignSet: "Posts" },
-		        ChildrenIds: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
+		        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
 		      }
 		    }
 		  },
@@ -41,6 +41,8 @@ var Database = exports.Database = (function() {
 		  }
 		};
 	}
+	
+	Database.prototype.getSchema = function() { return this.schema };
 	
 	Database.prototype.getSingleEntity = function(entitySetName, id) {
 		var entitySet = this.data[entitySetName];

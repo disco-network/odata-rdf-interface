@@ -119,7 +119,7 @@ resourcePath = <| entitySetName |>=entitySetName   [ <| collectionNavigation |>=
              / '$all'                         [ "/" qualifiedEntityTypeName ]
 
 collectionNavigation =  "/" <|qualifiedEntityTypeName|>=qualifiedEntityTypeName [ <|collectionNavPath|>=collectionNavPath ] / <|collectionNavPath|>=collectionNavPath
-collectionNavPath    = <|keyPredicate|>=keyPredicate [ singleNavigation ]
+collectionNavPath    = <|keyPredicate|>=keyPredicate [ <| singleNavigation |>=singleNavigation ]
                      / boundOperation
                      / count
                      / ref
@@ -133,20 +133,19 @@ keyPropertyAlias = odataIdentifier
 ;keyPathSegments  = 1*( "/" keyPathLiteral )
 ;keyPathLiteral   = *pchar
 
-singleNavigation = [ "/" qualifiedEntityTypeName ] 
-                   [ "/" propertyPath
+singleNavigation = ;[ "/" qualifiedEntityTypeName ] 
+                   "/" <| propertyPath |>=propertyPath
                    / boundOperation
                    / ref 
-                   / value  ; request the media resource of a media entity 
-                   ]
+                   / value  ; request the media resource of a media entity
 
-propertyPath = entityColNavigationProperty [ collectionNavigation ]
-             / entityNavigationProperty    [ singleNavigation ]
-             / complexColProperty          [ complexColPath ]
-             / complexProperty             [ complexPath ]
-             / primitiveColProperty        [ primitiveColPath ]
-             / primitiveProperty           [ primitivePath ]
-             / streamProperty              [ boundOperation ]
+propertyPath = ;entityColNavigationProperty [ collectionNavigation ] /
+             <| entityNavigationProperty |>=propertyName    [ <| collectionNavigation |>=collectionNavigation / <| singleNavigation |>=singleNavigation ]
+             ;/ complexColProperty          [ complexColPath ]
+             ;/ complexProperty             [ complexPath ]
+             ;/ primitiveColProperty        [ primitiveColPath ]
+             ;/ primitiveProperty           [ primitivePath ]
+             ;/ streamProperty              [ boundOperation ]
 
 primitiveColPath = count / boundOperation
 

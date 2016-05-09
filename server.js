@@ -31,7 +31,7 @@ app.use(config.path, function(req, res, next) {
   
   var ast = interpreter.getCompleteMatch(interpreter.getPattern('odataRelativeUri'), url);
   
-  query = ast2query.getQueryFromSyntaxTree(ast);
+  query = ast2query.getQueryFromSyntaxTree(ast, db.getSchema());
 	
 	query.run(db);
 	query.sendResults(res);

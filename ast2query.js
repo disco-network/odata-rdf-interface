@@ -2,31 +2,43 @@ module.exports = { getQueryFromSyntaxTree: getQueryFromSyntaxTree };
 
 var queries = require('./queries');
 var navi = require('../abnfjs/ast-navigator');
+var queryFactory = require('./dbqueryfactory');
 
-function getQueryFromSyntaxTree(ast) {
-  return getQueryFromCondensedSyntaxTree(condenseSyntaxTree(ast));
+function getQueryFromSyntaxTree(ast, schema) {
+  return getQueryFromCondensedSyntaxTree(condenseSyntaxTree(ast), schema);
 }
 
-function getQueryFromCondensedSyntaxTree(ast) {
-  try {
-    switch(ast.type) {
-      case 'resourceQuery':
-        if(ast.resourcePath.type !== 'entitySet') throw new Error('unsupported');
-        if(ast.resourcePath.navigation && ast.resourcePath.navigation.qualifiedEntityTypeName) throw new Error('unsupported');
-        if(ast.resourcePath.navigation && ast.resourcePath.navigation.collectionNavPath) {
-          if(ast.resourcePath.navigation.collectionNavPath.type !== 'keyPredicate' || ast.resourcePath.navigation.collectionNavPath.keyPredicate.type !== 'simpleKey') throw new Error('unsupported');
-          return new queries.GetSingleEntityQuery({ entitySet: ast.resourcePath.entitySetName, key: ast.resourcePath.navigation.collectionNavPath.keyPredicate.simpleKey });
-        }
-        else {
-          return new queries.GetManyEntitiesQuery({ entitySet: ast.resourcePath.entitySetName, filter: ast.queryOptions.filter });
-        }
+function getQueryFromCondensedSyntaxTree(ast, schema) {
+  //try {
+    var fty = getQueryStackWithFactory(ast, schema);
+    return new queries.EntitySetQuery({ entitySetName: fty.entitySetName, navigationStack: fty.path, filterOption: fty.filterOption });
+  //}
+  //catch(e) {
+    //return new queries.UnsupportedQuery(e);
+  //}
+}
+
+function getQueryStackWithFactory(ast, schema) {
+  if(ast.type == 'resourceQuery') {
+    if(ast.resourcePath.type !== 'entitySet') throw new Error('unsupported resource path type: ' + ast.resourcePath.type);
+    if(ast.resourcePath.navigation && ast.resourcePath.navigation.qualifiedEntityTypeName) throw new Error('qualified entity type name not supported');
+    var fty = new queryFactory.DbQueryFactory(ast.resourcePath.entitySetName, schema);
+    fty.filter(ast.queryOptions.filter);
+    switch(ast.resourcePath.navigation.type) {
+      case 'none':
+        return fty;
+      case 'collection-navigation':
+        var navPath = ast.resourcePath.navigation.path;
+        var key = navPath.keyPredicate.simpleKey;
+        fty.selectById(key);
+        if(navPath.singleNavigation)
+          fty.selectProperty(navPath.singleNavigation.propertyPath.propertyName);
+        return fty;
       default:
-        throw new Error('unsupported');
+        throw new Error('resourcePath navigation type is not implemented');
     }
   }
-  catch(e) {
-    return new queries.UnsupportedQuery(e.message);
-  }
+  else throw new Error('unsupported query type: ' + ast.type);
 }
 
 function condenseSyntaxTree(ast) {
@@ -44,22 +56,19 @@ function condenseSyntaxTree(ast) {
 function condenseResourcePath(resourcePath) {
   var descriptors = resourcePath.descriptors();
   var entitySetName = descriptors.entitySetName.singleItem();
-  var navigation = condenseNavigation(descriptors.navigation && descriptors.navigation.singleItem());
+  var navigation = condenseCollectionNavigation(descriptors.navigation && descriptors.navigation.singleItem());
   return { type: 'entitySet', entitySetName: entitySetName.str(), navigation: navigation };
 }
 
-function condenseNavigation(navigationExpr) {
-  if(navigationExpr) return condenseCollectionNavigation(navigationExpr);
-  else return null;
-}
-
 function condenseCollectionNavigation(collectionNavigation) {
+  var ret = { type: 'none' };
+  if(!collectionNavigation) return ret;
   var descriptors = collectionNavigation.descriptors();
   var qualifiedEntityTypeName = descriptors.qualifiedEntityTypeName;
   var collectionNavPath = descriptors.collectionNavPath;
   
-  var ret = {};
   if(qualifiedEntityTypeName) {
+    throw new Error('qualified entity type names are not yet supported');
     var qualifiedEntityTypeNameExpression = qualifiedEntityTypeName.singleItem();
     ret.qualifiedEntityTypeName = {};
     ret.qualifiedEntityTypeName.namespace = qualifiedEntityTypeNameExpression.nthItem(0).str();
@@ -68,23 +77,40 @@ function condenseCollectionNavigation(collectionNavigation) {
   if(collectionNavPath) {
     var collectionNavPathExpression = collectionNavPath.singleItem();
     var descriptors = collectionNavPathExpression.descriptors();
-    ret.collectionNavPath = {};
+    ret.type = 'collection-navigation';
+    ret.path = {};
     if(descriptors.keyPredicate) {
-      ret.collectionNavPath.type = 'keyPredicate';
-      ret.collectionNavPath.keyPredicate = {};
+      ret.path.type = 'keyPredicate';
+      ret.path.keyPredicate = {};
       var keyPredicateExpr = descriptors.keyPredicate.singleItem();
       var keyPredicateDescriptors = keyPredicateExpr.descriptors();
       if(keyPredicateDescriptors.simpleKey) {
         var simpleKey = keyPredicateDescriptors.simpleKey.singleItem().descriptors().value.str();
-        ret.collectionNavPath.keyPredicate.type = 'simpleKey';
-        ret.collectionNavPath.keyPredicate.simpleKey = parseInt(simpleKey); 
-        //TODO: key type!!!
+        ret.path.keyPredicate.type = 'simpleKey';
+        ret.path.keyPredicate.simpleKey = parseInt(simpleKey);
+        //TODO: key type
+        if(descriptors.singleNavigation) {
+          ret.path.singleNavigation = condenseSingleNavigation(descriptors.singleNavigation.singleItem());
+        }
       }
       else throw new Error('unsupported');
     }
-    else throw new Error('unsupported: collectionNavPath');
+    else throw new Error('unsupported: collectionNavPath without keyPredicate');
   }
   return ret;
+}
+
+function condenseSingleNavigation(expr) {
+  console.log('condense single navigation');
+  console.log(expr.descriptors());
+  return { propertyPath: condensePropertyPath(expr.descriptors().propertyPath.singleItem()) };
+}
+
+function condensePropertyPath(expr) {
+  var desc = expr.descriptors();
+  var propertyName = desc.propertyName.str();
+  if(desc.collectionNavigation || desc.singleNavigation) throw new Error('unsupported');
+  return { propertyName: propertyName };
 }
 
 function condenseQueryOptions(expr) {
@@ -158,6 +184,7 @@ function condenseFirstMemberExpr(expr) {
 
 function condenseRelativeMemberExpr(expr) {
   if(expr.descriptors().entityTypeName || expr.descriptors().boundFunction) throw new Error('unsupported member expression');
+  console.log('relativeMemeberExpr: ', expr.descriptors());
   if(expr.descriptors().propertyPath) {
     var ret = {};
     var propertyPath = expr.descriptors().propertyPath.singleItem();

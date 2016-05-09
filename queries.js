@@ -20,8 +20,9 @@ var UnsupportedQuery = exports.UnsupportedQuery = (function(_super) {
 	function UnsupportedQuery(text) { this.text = text }
 	Query.prototype.run = function(db) {};
 	Query.prototype.sendResults = function(res, body) {
+	  console.trace();
 		res.statusCode = 400;
-		res.end('unsupported query' + (this.text ? (': ' + this.text) : ''));
+		res.end('unsupported query: \n' + this.text && this.text.toString());
 	};
 	return UnsupportedQuery;
 })(Query);
@@ -30,9 +31,11 @@ var GetSingleEntityQuery = exports.GetSingleEntityQuery = (function(_super) {
 	__extends(GetSingleEntityQuery, _super);
 	function GetSingleEntityQuery(expression) {
 		this.expression = expression;
+		this.key = expression.navPath.keyPredicate.simpleKey;
+		//this.propertyName = expression.navPath.singleNavigation.propertyPath.propertyName;
 	}
 	GetSingleEntityQuery.prototype.run = function(db) {
-		var dbResult = db.getSingleEntity(this.expression.entitySet, this.expression.key);
+		var dbResult = db.getSingleEntity(this.expression.entitySet, this.key);
 		if(!dbResult.error) {
 			this.result = { entity: dbResult.result.entity };
 		}
@@ -47,7 +50,7 @@ var GetSingleEntityQuery = exports.GetSingleEntityQuery = (function(_super) {
 	return GetSingleEntityQuery;
 })(Query);
 
-var GetSingleEntityPropertyQuery = exports.GetSingleEntityPropertyQuery = (function(_super) {
+/*var GetSingleEntityPropertyQuery = exports.GetSingleEntityPropertyQuery = (function(_super) {
 	__extends(GetSingleEntityPropertyQuery, _super);
 	function GetSingleEntityPropertyQuery(expression) {
 		this.expression = expression;
@@ -82,7 +85,65 @@ var GetSingleEntityPropertyQuery = exports.GetSingleEntityPropertyQuery = (funct
 	};
 	
 	return GetSingleEntityPropertyQuery;
+})(Query);*/
+
+var EntitySetQuery = exports.EntitySetQuery = (function(_super) {
+  __extends(EntitySetQuery, _super);
+  function EntitySetQuery(args) {
+    this.args = args;
+  }
+  
+  EntitySetQuery.prototype.run = function(db) {
+    var schema = db.getSchema();
+    console.log('ok1');
+    var currentSchema = schema.entitySets[this.args.entitySetName];
+    if(!currentSchema) return { error: ErrorTypes.ENTITYSET_NOTFOUND };
+    var firstPrimitiveQuery = new PrimitiveQuery_EntitySet(this.args.entitySetName, this.args.navigationStack, 0, this.args.filterOption);
+    this.result = firstPrimitiveQuery.getResult(db);
+  }
+  
+  EntitySetQuery.prototype.sendResults = function(res) {
+		if(!this.result.error) res.end(JSON.stringify(this.result.result, null, 2));
+		else handleErrors(this.result, res);
+  }
+  return EntitySetQuery;
 })(Query);
+
+//A helper query to retrieve a collection or an element of a collection
+var PrimitiveQuery_Base = (function() {
+  function PrimitiveQuery_Base() {};
+  PrimitiveQuery_Base.prototype.getLength = function() { throw new Error('not implemented') };
+  PrimitiveQuery_Base.prototype.getResult = function() { throw new Error('not implemented') };
+  return PrimitiveQuery_Base;
+})();
+
+var PrimitiveQuery_EntitySet = (function(_super) {
+  __extends(PrimitiveQuery_EntitySet, _super);
+  function PrimitiveQuery_EntitySet(entitySetName, navigationStack, stackPos, filterOption) {
+    this._len = 0;
+    this.entitySetName = entitySetName;
+    this.filterOption = filterOption;
+    if(navigationStack[stackPos] && navigationStack[stackPos].type == 'by-id') {
+      this.byId = true;
+      this.id = navigationStack[stackPos].id;
+      this._len++;
+    }
+  };
+  PrimitiveQuery_EntitySet.prototype.getLength = function() { return this._len };
+  PrimitiveQuery_EntitySet.prototype.getResult = function(db) {
+    if(!this.byId) {
+      var dbResult = db.getEntities(this.entitySetName, this.filterOption);
+      if(!dbResult.error) return { result: dbResult.result };
+      else return { error: ErrorTypes.DB, errorDetails: dbResult.error };
+    }
+    else {
+      var dbResult = db.getSingleEntity(this.entitySetName, this.id);
+      if(!dbResult.error) return { result: dbResult.result };
+      else return { error: ErrorTypes.DB, errorDetails: dbResult.error };
+    }
+  };
+  return PrimitiveQuery_EntitySet;
+})(PrimitiveQuery_Base);
 
 var GetManyEntitiesQuery = exports.GetManyEntitiesQuery = (function(_super) {
 	__extends(GetManyEntitiesQuery, _super);
@@ -90,6 +151,7 @@ var GetManyEntitiesQuery = exports.GetManyEntitiesQuery = (function(_super) {
 		this.expression = expression;
 	}
 	GetManyEntitiesQuery.prototype.run = function(db) { //IDEA: method checkSemantically
+	   console.log('ok2');
 		var meta = metadata.Metadata.entitySets[this.expression.entitySet];
 		if(meta) {
 			var dbResult = db.getEntities(this.expression.entitySet, this.expression.filter);
