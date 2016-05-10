@@ -187,7 +187,6 @@ function condenseRelativeMemberExpr(expr) {
       if(propertyPath.descriptors().singleNavigation)
         ret.singleNavigation = condenseRelativeMemberExpr(propertyPath.descriptors().singleNavigation.descriptors().memberExpr.singleItem());
       else if(propertyPath.descriptors().collectionNavigation) {
-        console.log(propertyPath.descriptors().collectionNavigation.singleItem().ast.value);
         ret.collectionNavigation = condenseCollectionNavigationExpr(propertyPath.descriptors().collectionNavigation.singleItem());
       }
       else if(propertyPath.descriptors().collectionPath) 

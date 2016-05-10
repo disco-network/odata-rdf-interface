@@ -40,11 +40,9 @@ var EntitySetQuery = exports.EntitySetQuery = (function(_super) {
     var firstPrimitiveQuery = new PrimitiveQuery_EntitySet(this.args.entitySetName, this.args.navigationStack, 0, this.args.filterOption); //only apply filter if many items wanted
     var secondPrimitiveQuery;
     this.result = firstPrimitiveQuery.getResult(db);
-    console.log('result 1', this.result);
     if(this.args.navigationStack.length > firstPrimitiveQuery.getLength()) {
       secondPrimitiveQuery = new PrimitiveQuery_Entity(this.args.entitySetName, this.result.result, this.args.navigationStack, firstPrimitiveQuery.getLength());
       this.result = secondPrimitiveQuery.getResult(db);
-      console.log('result 2', this.result);
       if(this.args.navigationStack.length > (firstPrimitiveQuery.getLength()+secondPrimitiveQuery.getLength()))
         throw new Error('unsupported resource path');
     }
@@ -81,7 +79,6 @@ var PrimitiveQuery_EntitySet = (function(_super) {
   PrimitiveQuery_EntitySet.prototype.getResult = function(db) {
     if(!this.byId) {
       var dbResult = db.getEntities(this.entitySetName, this.filterOption);
-      console.log('entities', dbResult);
       if(!dbResult.error) return { result: dbResult.result };
       else return { error: ErrorTypes.DB, errorDetails: dbResult.error };
     }

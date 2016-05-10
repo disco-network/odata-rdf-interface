@@ -424,14 +424,24 @@ memberExpr = [ <|qualifiedEntityTypeName|>=entityTypeName "/" ]
              / <|boundFunctionExpr|>=boundFunction 
              )
              
-propertyPathExpr = ( <|entityColNavigationProperty|>=property [ <|collectionNavigationExpr|>=collectionNavigation ] 
-                   / <|entityNavigationProperty|>=property    [ <|singleNavigationExpr|>=singleNavigation ] 
-                   / <|complexColProperty|>=property          [ <|complexColPathExpr|>=complexColPath ]
-                   / <|complexProperty|>=property             [ <|complexPathExpr|>=complexPath ] 
-                   / <|primitiveColProperty|>=property        [ <|collectionPathExpr|>=collectionPath ]
-                   / <|primitiveProperty|>=property           [ <|primitivePathExpr|>=primitivePath ]
-                   / <|streamProperty|>=property              [ <|primitivePathExpr|>=primitivePath ]
-                   )
+;propertyPathExpr = ( <|entityColNavigationProperty|>=property [ <|collectionNavigationExpr|>=collectionNavigation ] 
+;                   / <|entityNavigationProperty|>=property    [ <|singleNavigationExpr|>=singleNavigation ] 
+;                   / <|complexColProperty|>=property          [ <|complexColPathExpr|>=complexColPath ]
+;                   / <|complexProperty|>=property             [ <|complexPathExpr|>=complexPath ] 
+;                   / <|primitiveColProperty|>=property        [ <|collectionPathExpr|>=collectionPath ]
+;                   / <|primitiveProperty|>=property           [ <|primitivePathExpr|>=primitivePath ]
+;                   / <|streamProperty|>=property              [ <|primitivePathExpr|>=primitivePath ]
+;                   )
+;             )
+             
+propertyPathExpr =  <|odataIdentifier|>=property [
+                      <|collectionNavigationExpr|>=collectionNavigation
+                      / <|singleNavigationExpr|>=singleNavigation
+                      / <|complexColPathExpr|>=complexColPath
+                      / <|complexPathExpr|>=complexPath
+                      / <|collectionPathExpr|>=collectionPath
+                      / <|primitivePathExpr|>=primitivePath
+                    ]
                    
 inscopeVariableExpr  = implicitVariableExpr 
                      ;/ lambdaVariableExpr ; only allowed inside a lambdaPredicateExpr TODO: see above ^
@@ -451,9 +461,10 @@ collectionPathExpr = <| count |>=count
                    ;/ "/" allExpr
  
 complexPathExpr = [ "/" qualifiedComplexTypeName ]
-                  [ "/" propertyPathExpr 
-                  / "/" boundFunctionExpr 
-                  ]
+                  ("/" propertyPathExpr 
+                  / "/" boundFunctionExpr)
+                  / "/" qualifiedComplexTypeName
+ 
 
 primitivePathExpr = "/" boundFunctionExpr
 

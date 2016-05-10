@@ -170,7 +170,6 @@ Database.prototype.getProperty = function(schema, entity, property, filter) { //
         var type = schema.properties[property].type;
         var foreignIndexProperty = this.schema.entityTypes[type].properties[foreignProperty].indexProperty;
         var result = this.getReferringEntities(foreignSet, foreignIndexProperty, entity.Id);
-        console.log('many-to-one', result.result, foreignSet, foreignIndexProperty, entity.Id);
         if(!result.error) return result.result.entities;
         else throw new Error('no error handling implemented');
       default:
