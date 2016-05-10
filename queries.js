@@ -49,7 +49,10 @@ var EntitySetQuery = exports.EntitySetQuery = (function(_super) {
   }
   
   EntitySetQuery.prototype.sendResults = function(res) {
-		if(!this.result.error) res.end(JSON.stringify(this.result.result, null, 2));
+		if(!this.result.error) {
+		  res.writeHeader(200, {'Content-type': 'application/json' });
+		  res.end(JSON.stringify(this.result.result, null, 2));
+	}
 		else handleErrors(this.result, res);
   }
   return EntitySetQuery;
