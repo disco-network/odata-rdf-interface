@@ -32,7 +32,7 @@ var Database = exports.Database = (function() {
 		        Parent: { type: "Post", quantity: "one-to-many", indexProperty: "ParentId", foreignSet: "Posts" },
 		        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
 		      }
-		    }
+		    },
 		  },
 		  entitySets: {
 		    Posts: {
@@ -66,28 +66,7 @@ var Database = exports.Database = (function() {
 		else return new Result(null, Errors.TABLE_NOTFOUND);
 	}
 	
-	Database.prototype.getOneToOneNavigationProperty = function(entitySetName, id, propertyName, metadata) {
-		var entityResult = this.getSingleEntity(entitySetName, id);
-		if(!entityResult.error) {
-			var propertyResult = this.getSingleEntity(metadata.EntitySet, entityResult.result.entity[metadata.IdProperty]);
-			if(!propertyResult.error) return propertyResult;
-			else return new Result(null, Errors.INTERNAL);
-		}
-		else return new Result(null, entityResult.error);
-	}
-	
-	Database.prototype.getOneToManyNavigationProperty = function(entitySetName, id, propertyName, metadata) {
-		//TODO: TABLE_NOTFOUND
-		var entityResult = this.getSingleEntity(entitySetName, id);
-		if(!entityResult.error) {
-			var propertyResult = this.getReferringEntities(metadata.EntitySet, metadata.ReverseProperty, entityResult.result.entity.Id);
-			if(!propertyResult.error) return propertyResult;
-			else return new Result(null, Errors.INTERNAL);
-		}
-		else return new Result(null, entityResult.error);
-	}
-	
-	Database.prototype.getEntities = function(entitySetName, filter) {
+	Database.prototype.getEntities = function(entitySetName, filter) { //TODO: result format
 		var entitySet = this.data[entitySetName];
 		var entitySetSchema = this.schema.entitySets[entitySetName];
 		if(entitySet) {
@@ -165,11 +144,14 @@ Database.prototype.evalRelativeMemberExpr = function(schema, entity, expr) {
   //TODO: security and error handling below
   if(expr.singleNavigation)
     return self.evalRelativeMemberExpr(this.schema.entityTypes[schema.properties[property].type], val, expr.singleNavigation)
+  else if(expr.collectionPath) {
+    return { type: "Edm.Int64", value: val.length };
+  }
   else
     return { type: schema.properties[property].type, value: val };
 }
 
-Database.prototype.getProperty = function(schema, entity, property) {
+Database.prototype.getProperty = function(schema, entity, property, filter) { //TODO: use filter
   if(!entity) return null;
   if(this.isNavigationProperty(schema, property)) {
     switch(schema.properties[property].quantity) {
@@ -188,7 +170,7 @@ Database.prototype.getProperty = function(schema, entity, property) {
         var type = schema.properties[property].type;
         var foreignIndexProperty = this.schema.entityTypes[type].properties[foreignProperty].indexProperty;
         var result = this.getReferringEntities(foreignSet, foreignIndexProperty, entity.Id);
-        console.log(result.result);
+        console.log('many-to-one', result.result, foreignSet, foreignIndexProperty, entity.Id);
         if(!result.error) return result.result.entities;
         else throw new Error('no error handling implemented');
       default:

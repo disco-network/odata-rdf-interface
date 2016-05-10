@@ -439,17 +439,16 @@ implicitVariableExpr = '$it'              ; references the unnamed outer variabl
 lambdaVariableExpr   = odataIdentifier
 
 collectionNavigationExpr =  "/" qualifiedEntityTypeName [ keyPredicate [ singleNavigationExpr ] / collectionPathExpr ] 
-                           / keyPredicate [ singleNavigationExpr ] / collectionPathExpr
+                           / keyPredicate [ singleNavigationExpr ] ;/ collectionPathExpr ;already processed directly
 
 singleNavigationExpr = "/" <|memberExpr|>=memberExpr
 
-complexColPathExpr = [ "/" qualifiedComplexTypeName ]
-                     [ collectionPathExpr ]
+complexColPathExpr = "/" qualifiedComplexTypeName
  
-collectionPathExpr = count 
-                   / "/" boundFunctionExpr
-                   / "/" anyExpr
-                   / "/" allExpr
+collectionPathExpr = <| count |>=count 
+                   ;/ "/" boundFunctionExpr
+                   ;/ "/" anyExpr
+                   ;/ "/" allExpr
  
 complexPathExpr = [ "/" qualifiedComplexTypeName ]
                   [ "/" propertyPathExpr 

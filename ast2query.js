@@ -9,13 +9,8 @@ function getQueryFromSyntaxTree(ast, schema) {
 }
 
 function getQueryFromCondensedSyntaxTree(ast, schema) {
-  //try {
     var fty = getQueryStackWithFactory(ast, schema);
     return new queries.EntitySetQuery({ entitySetName: fty.entitySetName, navigationStack: fty.path, filterOption: fty.filterOption });
-  //}
-  //catch(e) {
-    //return new queries.UnsupportedQuery(e);
-  //}
 }
 
 function getQueryStackWithFactory(ast, schema) {
@@ -184,7 +179,6 @@ function condenseFirstMemberExpr(expr) {
 
 function condenseRelativeMemberExpr(expr) {
   if(expr.descriptors().entityTypeName || expr.descriptors().boundFunction) throw new Error('unsupported member expression');
-  console.log('relativeMemeberExpr: ', expr.descriptors());
   if(expr.descriptors().propertyPath) {
     var ret = {};
     var propertyPath = expr.descriptors().propertyPath.singleItem();
@@ -192,15 +186,25 @@ function condenseRelativeMemberExpr(expr) {
       ret.property = propertyPath.descriptors().property.str();
       if(propertyPath.descriptors().singleNavigation)
         ret.singleNavigation = condenseRelativeMemberExpr(propertyPath.descriptors().singleNavigation.descriptors().memberExpr.singleItem());
-      if(propertyPath.descriptors().collectionNavigation) {
+      else if(propertyPath.descriptors().collectionNavigation) {
+        console.log(propertyPath.descriptors().collectionNavigation.singleItem().ast.value);
         ret.collectionNavigation = condenseCollectionNavigationExpr(propertyPath.descriptors().collectionNavigation.singleItem());
       }
-      if(propertyPath.descriptors().primitivePath || propertyPath.descriptors().complexPath || propertyPath.descriptors().complexColPath || propertyPath.descriptors().collectionPath)
+      else if(propertyPath.descriptors().collectionPath) 
+        ret.collectionPath = condenseCollectionPath(propertyPath.descriptors().collectionPath.singleItem());
+      else if(propertyPath.descriptors().primitivePath || propertyPath.descriptors().complexPath || propertyPath.descriptors().complexColPath)
         throw new Error('unsupported member expression' + JSON.stringify(Object.keys(propertyPath.descriptors())));
       return ret;
     } 
   }
   throw new Error('unsupported member expression');
+}
+
+function condenseCollectionPath(expr) {
+  var desc = expr.descriptors();
+  if(desc.count) {
+    return { type: 'count' };
+  }
 }
 
 function condenseCollectionNavigationExpr(expr) {
