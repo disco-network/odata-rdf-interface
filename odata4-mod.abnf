@@ -1,10 +1,16 @@
+; modified by datokrat, since 2016
+
 ;------------------------------------------------------------------------------
 ; odata-abnf-construction-rules
 ;------------------------------------------------------------------------------
+;     OData Version 4.0
+;     OASIS Standard
+;     24 February 2014
+;     Copyright (c) OASIS Open 2014. All Rights Reserved.
+;     Source: http://docs.oasis-open.org/odata/odata/v4.0/os/abnf/
 ;
 ; Technical Committee:
 ;   OASIS Open Data Protocol (OData) TC
-;   https://www.oasis-open.org/committees/odata
 ;
 ; Chairs:
 ;   - Barbara Hartel (barbara.hartel@sap.com), SAP AG
@@ -13,7 +19,6 @@
 ; Editors:
 ;   - Ralf Handl (ralf.handl@sap.com), SAP AG
 ;   - Michael Pizzo (mikep@microsoft.com), Microsoft
-;   - Martin Zurmuehl (martin.zurmuehl@sap.com), SAP AG
 ;
 ; Additional artifacts: 
 ;   This grammar is one component of a Work Product which consists of:
@@ -23,7 +28,6 @@
 ;   - OData ABNF Construction Rules Version 4.0 (this document)
 ;   - OData ABNF Test Cases
 ;   - OData Core Vocabulary
-;   - OData Capabilities Vocabulary
 ;   - OData Measures Vocabulary
 ;   - OData Metadata Service Entity Model
 ;   - OData EDMX XML Schema
@@ -32,14 +36,13 @@
 ; Related work:
 ;   This work product is related to the following two Work Products, each of 
 ;   which define alternate formats for OData payloads
-;   - OData Atom Format Version 4.0
 ;   - OData JSON Format Version 4.0
+;   - OData Atom Format Version 4.0
 ;   This specification replaces or supersedes:
 ;   - None
 ;
 ; Declared XML namespaces:
-;   - http://docs.oasis-open.org/odata/ns/edmx
-;   - http://docs.oasis-open.org/odata/ns/edm
+;   - None
 ;
 ; Abstract:
 ;   The Open Data Protocol (OData) enables the creation of REST-based data
@@ -99,67 +102,83 @@ odataRelativeUri = '$batch'                           ; Note: case-sensitive!
                  / '$entity' "?" entityOptions  
                  / '$entity' "/" qualifiedEntityTypeName "?" entityCastOptions  
                  / '$metadata' [ "?" format ] [ context ]
-                 / <| resourcePath |>=resourcePath [ "?" <| queryOptions |>=queryOptions ]
+                 / resourcePath:resourcePath [ "?" queryOptions:queryOptions ]
+  = {
+      var d = this.getSubordinateDescriptors();
+      if(d.resourcePath) {
+        var resourcePath = d.resourcePath;
+        var queryOptions = d.queryOptions;
+        return { type: 'resourceQuery', resourcePath: resourcePath.evaluate(), queryOptions: queryOptions ? queryOptions.evaluate() : {} };
+      }
+      else return { type: 'unsupported' };
+    }
 
 
 ;------------------------------------------------------------------------------
 ; 1. Resource Path
 ;------------------------------------------------------------------------------
 
-resourcePath = <| entitySetName |>=entitySetName   [ <| collectionNavigation |>=navigation ]
-             / singletonEntity                [ singleNavigation ]
-             / actionImportCall 
-             / entityColFunctionImportCall    [collectionNavigation]
-             / entityFunctionImportCall       [ singleNavigation ] 
-             / complexColFunctionImportCall   [ complexColPath ] 
-             / complexFunctionImportCall      [ complexPath ] 
-             / primitiveColFunctionImportCall [ primitiveColPath ] 
-             / primitiveFunctionImportCall    [ primitivePath ] 
-             / crossjoin
-             / '$all'                         [ "/" qualifiedEntityTypeName ]
+resourcePath = entitySetName:setName [ collectionNavigation:collectionNavigation ] ; TODO: Add other features (see original spec)
+ =  { 
+      var d = this.getSubordinateDescriptors();
+      if(d.setName) return { 
+        type: 'entitySet', 
+        entitySetName: d.setName.evaluate(), 
+        navigation: d.collectionNavigation ? d.collectionNavigation.evaluate() : { type: 'none' }
+      }
+      else throw new Error('huh?' + JSON.stringify(d));
+    }
 
-collectionNavigation =  "/" <|qualifiedEntityTypeName|>=qualifiedEntityTypeName [ <|collectionNavPath|>=collectionNavPath ] / <|collectionNavPath|>=collectionNavPath
-collectionNavPath    = <|keyPredicate|>=keyPredicate [ <| singleNavigation |>=singleNavigation ]
-                     / boundOperation
-                     / count
-                     / ref
+collectionNavigation = collectionNavPath ; TODO: Entity type paths
+  = { return { type: 'collection-navigation', path: this.getNthItem(0).evaluate() } }
+collectionNavPath    = keyPredicate:keyPredicate [ singleNavigation:singleNavigation ] ; TODO: implement collectionPaths and $refs
+                     ;/ collectionPath
+                     ;/ ref
+  = {
+    var d = this.getSubordinateDescriptors();
+    if(d.keyPredicate) {
+      var ret = { type: "collection-navigation" };
+      ret.keyPredicate = d.keyPredicate.evaluate();
+      ret.singleNavigation = d.singleNavigation && d.singleNavigation.evaluate();
+      return ret;
+    }
+    else throw new Error('huh?' + JSON.stringify(d));
+  }
 
-keyPredicate     = <|simpleKey|>=simpleKey / compoundKey ;/ keyPathSegments
-simpleKey        = OPEN <| parameterAlias / keyPropertyValue |>=value CLOSE
+keyPredicate     = simpleKey:simpleKey = { return { simpleKey: this.getNthItem(0).evaluate() } } ; TODO: compoundKey
+simpleKey        = OPEN keyPropertyValue:value CLOSE = { return this.getSubordinateDescriptors().value.evaluate() }
 compoundKey      = OPEN keyValuePair *( COMMA keyValuePair ) CLOSE
-keyValuePair     = ( primitiveKeyProperty / keyPropertyAlias  ) EQ ( parameterAlias / keyPropertyValue )
-keyPropertyValue = primitiveLiteral
+keyValuePair     = ( primitiveKeyProperty / keyPropertyAlias ) EQ keyPropertyValue
+keyPropertyValue = primitiveLiteral = { return this.getNthItem(0).evaluate() }
 keyPropertyAlias = odataIdentifier
-;keyPathSegments  = 1*( "/" keyPathLiteral )
-;keyPathLiteral   = *pchar
 
-singleNavigation = ;[ "/" qualifiedEntityTypeName ] 
-                   "/" <| propertyPath |>=propertyPath
-                   / boundOperation
-                   / ref 
-                   / value  ; request the media resource of a media entity
+singleNavigation = "/" propertyPath:propertyPath ; TODO: see original specs
+  = {
+    return { propertyPath: this.getSubordinateDescriptors().propertyPath.evaluate() };
+  }
 
-propertyPath = ;entityColNavigationProperty [ collectionNavigation ] /
-             <| entityNavigationProperty |>=propertyName    [ <| collectionNavigation |>=collectionNavigation / <| singleNavigation |>=singleNavigation ]
-             ;/ complexColProperty          [ complexColPath ]
-             ;/ complexProperty             [ complexPath ]
-             ;/ primitiveColProperty        [ primitiveColPath ]
-             ;/ primitiveProperty           [ primitivePath ]
-             ;/ streamProperty              [ boundOperation ]
+propertyPath = odataIdentifier:identifier 
+              ;[ TODO: collectionNavigation:collectionNavigation
+                ; TODO: singleNavigation:singleNavigation
+                ; TODO: collectionPath:collectionPath
+                ; TODO: complexPath:complexPath
+                ; TODO: singlePath:singlePath
+                ; TODO: boundOperation:boundOperation
+              ;]
+  = {
+    return { propertyName: this.getSubordinateDescriptors().identifier.evaluate() }
+  }
 
-primitiveColPath = count / boundOperation
+collectionPath = count / boundOperation
 
-primitivePath  = value / boundOperation
-
-complexColPath = [ "/" qualifiedComplexTypeName ] 
-                 [ count / boundOperation ]
+singlePath     = value / boundOperation
 
 complexPath    = [ "/" qualifiedComplexTypeName ] 
-                 [ "/" propertyPath 
+                 ( "/" propertyPath 
                  / boundOperation
-                 ]
+                 )
 
-count = '/$count'
+count = '/$count' = { return { type: 'count' } }
 ref   = '/$ref'
 value = '/$value'
 
@@ -167,12 +186,12 @@ value = '/$value'
 ; matches the type of the first parameter of the action or function being called.
 ; Note that the rule name reflects the return type of the function.
 boundOperation = "/" ( boundActionCall
-                     / boundEntityColFunctionCall    [ collectionNavigation ] 
-                     / boundEntityFunctionCall       [ singleNavigation ] 
-                     / boundComplexColFunctionCall   [ complexColPath ] 
-                     / boundComplexFunctionCall      [ complexPath ]
-                     / boundPrimitiveColFunctionCall [ primitiveColPath ] 
-                     / boundPrimitiveFunctionCall    [ primitivePath ] 
+                     / boundEntityColFuncCall    [ collectionNavigation ] 
+                     / boundEntityFuncCall       [ singleNavigation ] 
+                     / boundComplexColFuncCall   [ collectionPath ] 
+                     / boundComplexFuncCall      [ complexPath ]
+                     / boundPrimitiveColFuncCall [ collectionPath ] 
+                     / boundPrimitiveFuncCall    [ singlePath ] 
                      )
 
 actionImportCall = actionImport
@@ -180,17 +199,17 @@ boundActionCall  = namespace "." action
                    ; with the added restriction that the binding parameter MUST be either an entity or collection of entities
                    ; and is specified by reference using the URI immediately preceding (to the left) of the boundActionCall
 
-; The following boundXxxFunctionCall rules have the added restrictions that
+; The following boundXxxFuncCall rules have the added restrictions that
 ;  - the function MUST support binding, and 
 ;  - the binding parameter type MUST match the type of resource identified by the 
-;    URI immediately preceding (to the left) of the boundXxxFunctionCall, and
+;    URI immediately preceding (to the left) of the boundXxxFuncCall, and
 ;  - the functionParameters MUST NOT include the bindingParameter.
-boundEntityFunctionCall       = namespace "." entityFunction       functionParameters
-boundEntityColFunctionCall    = namespace "." entityColFunction    functionParameters
-boundComplexFunctionCall      = namespace "." complexFunction      functionParameters
-boundComplexColFunctionCall   = namespace "." complexColFunction   functionParameters
-boundPrimitiveFunctionCall    = namespace "." primitiveFunction    functionParameters
-boundPrimitiveColFunctionCall = namespace "." primitiveColFunction functionParameters
+boundEntityFuncCall       = namespace "." entityFunction       functionParameters
+boundEntityColFuncCall    = namespace "." entityColFunction    functionParameters
+boundComplexFuncCall      = namespace "." complexFunction      functionParameters
+boundComplexColFuncCall   = namespace "." complexColFunction   functionParameters
+boundPrimitiveFuncCall    = namespace "." primitiveFunction    functionParameters
+boundPrimitiveColFuncCall = namespace "." primitiveColFunction functionParameters
 
 entityFunctionImportCall       = entityFunctionImport       functionParameters
 entityColFunctionImportCall    = entityColFunctionImport    functionParameters
@@ -213,11 +232,24 @@ crossjoin = '$crossjoin' OPEN
 ; 2. Query Options
 ;------------------------------------------------------------------------------
 
-queryOptions = <|queryOption|>=firstQueryOption *( "&" <|queryOption|>=furtherQueryOptions )        
-queryOption  = <|systemQueryOption|>=systemQueryOption  
-             / aliasAndValue 
-             / customQueryOption  
-             
+queryOptions = queryOption:option *( "&" queryOption:options )
+  = {
+    var d = this.getSubordinateDescriptors();
+    var options = [ d.option ].concat(d.options || []).map(function(o) { return o.evaluate() });
+    var ret = {};
+    options.forEach(function(o) {
+      if(o.type == 'filter') {
+        if(ret.filter) throw new Error('too many $filter options specified');
+        else ret.filter = o.value;
+      }
+    });
+    return ret;
+  }
+
+queryOption  = systemQueryOption:systemOption = { return this.getNthItem(0).evaluate() }
+             ; TODO: aliasAndValue
+             ; TODO: customQueryOption
+
 entityOptions  = *( entityIdOption "&" ) id *( "&" entityIdOption )
 entityIdOption = format
                / customQueryOption
@@ -228,18 +260,21 @@ entityCastOption  = entityIdOption
 
 id = '$id' EQ IRI-in-query       
 
-systemQueryOption = deltatoken
-                  / expand 
-                  / <|filter|>=filter 
-                  / format 
-                  / id
-                  / inlinecount 
-                  / orderby 
-                  / search
-                  / select 
-                  / skip 
-                  / skiptoken
-                  / top 
+systemQueryOption = ;expand /
+                  filter:option
+                  ;/ format 
+                  ;/ id
+                  ;/ inlinecount 
+                  ;/ orderby 
+                  ;/ search
+                  ;/ select 
+                  ;/ skip 
+                  ;/ skiptoken
+                  ;/ top 
+  = {
+    var o = this.getSubordinateDescriptors().option;
+    return o.evaluate();
+  }
 
 expand            = '$expand' EQ expandItem *( COMMA expandItem )
 expandItem        = STAR [ ref / OPEN levels CLOSE ]
@@ -248,9 +283,10 @@ expandItem        = STAR [ ref / OPEN levels CLOSE ]
                     / count [ OPEN expandCountOption *( SEMI expandCountOption ) CLOSE ]
                     /         OPEN expandOption      *( SEMI expandOption      ) CLOSE 
                     ]
-expandPath        = [ ( qualifiedEntityTypeName / qualifiedComplexTypeName ) "/" ] 
+expandPath        = [ qualifiedEntityTypeName "/" ] 
                     *( ( complexProperty / complexColProperty ) "/" [ qualifiedComplexTypeName "/" ] )
-                    ( STAR / navigationProperty [ "/" qualifiedEntityTypeName ] )
+                    navigationProperty 
+                    [ "/" qualifiedEntityTypeName ]
 expandCountOption = filter
                   / search
 expandRefOption   = expandCountOption
@@ -263,9 +299,13 @@ expandOption      = expandRefOption
                   / expand
                   / levels
                 
-levels = '$levels' EQ ( oneToNine *DIGIT / 'max' )
+levels = '$levels' EQ ( 1*DIGIT / 'max' )
 
-filter = '$filter' EQ <|boolCommonExpr|>=expression
+filter = '$filter' EQ boolCommonExpr:expr
+  = {
+    var d = this.getSubordinateDescriptors();
+    return { type: 'filter', value: d.expr.evaluate() };
+  }
 
 orderby     = '$orderby' EQ orderbyItem *( COMMA orderbyItem )
 orderbyItem = commonExpr [ RWS ( 'asc' / 'desc' ) ]
@@ -301,7 +341,7 @@ searchWord   = 1*ALPHA ; Actually: any character from the Unicode categories L o
 select         = '$select' EQ selectItem *( COMMA selectItem )
 selectItem     = STAR
                / allOperationsInSchema 
-               / [ ( qualifiedEntityTypeName / qualifiedComplexTypeName ) "/" ] 
+               / [ qualifiedEntityTypeName "/" ] 
                  ( selectProperty
                  / qualifiedActionName  
                  / qualifiedFunctionName  
@@ -322,8 +362,6 @@ qualifiedFunctionName = namespace "." function [ OPEN parameterNames CLOSE ]
 
 ; The names of all non-binding parameters, separated by commas 
 parameterNames = parameterName *( COMMA parameterName )
-
-deltatoken = '$deltatoken' EQ 1*( qchar-no-AMP )
 
 skiptoken = '$skiptoken' EQ 1*( qchar-no-AMP )
 
@@ -346,16 +384,16 @@ contextFragment = 'Collection($ref)'
                 / '$ref'
                 / 'Collection(Edm.EntityType)'
                 / 'Collection(Edm.ComplexType)'
-                / singletonEntity [ navigation *( containmentNavigation ) [ "/" qualifiedEntityTypeName ] ] [ selectList ]
-                / qualifiedTypeName [ selectList ]
+                / singletonEntity
+                / qualifiedTypeName
                 / entitySet ( '/$deletedEntity' / '/$link' / '/$deletedLink' )
-                / entitySet keyPredicate "/" contextPropertyPath [ selectList ]
+                / entitySet keyPredicate "/" contextPropertyPath
                 / entitySet [ selectList ] [ '/$entity' / '/$delta' ]
                 
 entitySet = entitySetName *( containmentNavigation ) [ "/" qualifiedEntityTypeName ]
             
-containmentNavigation = keyPredicate [ "/" qualifiedEntityTypeName ] navigation
-navigation            = *( "/" complexProperty [ "/" qualifiedComplexTypeName ] ) "/" navigationProperty   
+containmentNavigation = keyPredicate [ "/" qualifiedEntityTypeName ]
+                        *( "/" complexProperty [ "/" qualifiedComplexTypeName ] ) "/" navigationProperty   
 
 selectList         = OPEN selectListItem *( COMMA selectListItem ) CLOSE
 selectListItem     = STAR ; all structural properties
@@ -381,92 +419,112 @@ contextPropertyPath = primitiveProperty
 ;------------------------------------------------------------------------------
 
 ; Note: a boolCommonExpr is also a commonExpr, e.g. sort by Boolean 
-commonExpr = ( <|primitiveLiteral|>=primitiveLiteral
-             / parameterAlias
-             / arrayOrObject
-             / rootExpr
-             / <|firstMemberExpr|>=memberExpr
-             / functionExpr
-             / negateExpr 
-             / methodCallExpr 
-             / <|parenExpr|>=parenExpr 
-             / castExpr 
+commonExpr = ( primitiveLiteral:expr
+             ;/ parameterAlias
+             ;/ arrayOrObject
+             ;/ rootExpr
+             / firstMemberExpr:expr
+             ;/ functionExpr
+             ;/ negateExpr 
+             ;/ methodCallExpr 
+             / parenExpr:expr
+             ;/ castExpr 
              ) 
-             [ addExpr 
-             / subExpr 
-             / mulExpr 
-             / divExpr 
-             / modExpr
-             ]  
+             ;[ addExpr 
+             ;/ subExpr 
+             ;/ mulExpr 
+             ;/ divExpr 
+             ;/ modExpr
+             ;]  
+  = { return this.getSubordinateDescriptors().expr.evaluate() }
 
-boolCommonExpr = ( isofExpr 
-                 / boolMethodCallExpr 
-                 / notExpr  
-                 / <|commonExpr|>=commonExpr
-                   [ <| eqExpr 
-                   / neExpr 
-                   / ltExpr  
-                   / leExpr  
-                   / gtExpr 
-                   / geExpr 
-                   / hasExpr |>=commonExprOperators
+boolCommonExpr = ( ;isofExpr
+                 ;/ boolMethodCallExpr 
+                 ;/ notExpr /
+                 commonExpr:commonExpr
+                   [ eqExpr:innerOp
+                   / neExpr:innerOp
+                   / ltExpr:innerOp
+                   / leExpr:innerOp
+                   / gtExpr:innerOp
+                   / geExpr:innerOp
+                   ;/ hasExpr 
                    ]
-                 / <|boolParenExpr|>=boolParenExpr
-                 ) [ <| andExpr / orExpr |>=andOrExpr ]
+                 ;/ boolParenExpr:boolParenExpr
+                 ) [ andExpr:outerOp / orExpr:outerOp ] 
+  = {
+    var d = this.getSubordinateDescriptors();
+    var innerLeftHandSide, innerRightHandSide;
+    if(d.commonExpr) {
+      innerLeftHandSide = d.commonExpr.evaluate();
+      innerRightHandSide = d.innerOp && d.innerOp.evaluate();
+    }
+    var outerLeftHandSide = innerRightHandSide
+      ? { type: 'operator', lhs: innerLeftHandSide, rhs: innerRightHandSide.rhs, op: innerRightHandSide.op }
+      : innerLeftHandSide;
+    var outerRightHandSide = d.outerOp && d.outerOp.evaluate();
+    
+    return outerRightHandSide
+      ? { type: 'operator', lhs: outerLeftHandSide, rhs: outerRightHandSide.rhs, op: outerRightHandSide.op }
+      : outerLeftHandSide;
+  }
 
 rootExpr = '$root/' ( entitySetName keyPredicate / singletonEntity ) [ singleNavigationExpr ]
 
-firstMemberExpr = <|memberExpr|>=memberExpr
-                / <|inscopeVariableExpr|>=inscopeVariable [ "/" <|memberExpr|>=memberExpr ] ; TODO: Parser can't distinguish!
+firstMemberExpr = memberExpr:member
+                / inscopeVariableExpr:inscopeVar [ "/" memberExpr:member ]
+  = {
+    var d = this.getSubordinateDescriptors();
+    return { type: 'member-expression', variable: d.inscopeVar && d.inscopeVar.getString(), path: d.member && d.member.evaluate() }
+  }
 
-memberExpr = [ <|qualifiedEntityTypeName|>=entityTypeName "/" ]
-             ( <|propertyPathExpr|>=propertyPath
-             / <|boundFunctionExpr|>=boundFunction 
+memberExpr = ; TODO: qualified entity set name
+             ( propertyPathExpr:propertyPathExpr
+             ;/ boundFunctionExpr
              )
+  = { return this.getSubordinateDescriptors().propertyPathExpr.evaluate() }
              
-;propertyPathExpr = ( <|entityColNavigationProperty|>=property [ <|collectionNavigationExpr|>=collectionNavigation ] 
-;                   / <|entityNavigationProperty|>=property    [ <|singleNavigationExpr|>=singleNavigation ] 
-;                   / <|complexColProperty|>=property          [ <|complexColPathExpr|>=complexColPath ]
-;                   / <|complexProperty|>=property             [ <|complexPathExpr|>=complexPath ] 
-;                   / <|primitiveColProperty|>=property        [ <|collectionPathExpr|>=collectionPath ]
-;                   / <|primitiveProperty|>=property           [ <|primitivePathExpr|>=primitivePath ]
-;                   / <|streamProperty|>=property              [ <|primitivePathExpr|>=primitivePath ]
-;                   )
-;             )
-             
-propertyPathExpr =  <|odataIdentifier|>=property [
-                      <|collectionNavigationExpr|>=collectionNavigation
-                      / <|singleNavigationExpr|>=singleNavigation
-                      / <|complexColPathExpr|>=complexColPath
-                      / <|complexPathExpr|>=complexPath
-                      / <|collectionPathExpr|>=collectionPath
-                      / <|primitivePathExpr|>=primitivePath
-                    ]
+propertyPathExpr = odataIdentifier:propertyIdentifier
+  [
+    ;collectionNavigationExpr:collectionNavigation /
+    singleNavigationExpr:singleNavigation
+    / collectionPathExpr:collectionPath
+    ;/ complexPathExpr:
+    ;/ singlePathExpr 
+  ] 
+  = {
+    var d = this.getSubordinateDescriptors();
+    var ret = { propertyName: d.propertyIdentifier.evaluate() };
+    if(d.singleNavigation) ret.singleNavigation = d.singleNavigation.evaluate();
+    //else if(d.collectionNavigation) ret.collectionNavigation = d.collectionNavigation.evaluate();
+    else if(d.collectionPath) ret.collectionPath = d.collectionPath.evaluate();
+    return ret;
+  }
                    
-inscopeVariableExpr  = implicitVariableExpr 
-                     ;/ lambdaVariableExpr ; only allowed inside a lambdaPredicateExpr TODO: see above ^
-implicitVariableExpr = '$it'              ; references the unnamed outer variable of the query
-lambdaVariableExpr   = odataIdentifier
+inscopeVariableExpr       = implicitVariableExpr 
+                          / lambdaVariableExpr ; only allowed inside a lambdaPredicateExpr
+implicitVariableExpr      = '$it'              ; references the unnamed outer variable of the query
+lambdaVariableExpr        = odataIdentifier
 
-collectionNavigationExpr =  "/" qualifiedEntityTypeName [ keyPredicate [ singleNavigationExpr ] / collectionPathExpr ] 
-                           / keyPredicate [ singleNavigationExpr ] ;/ collectionPathExpr ;already processed directly
+collectionNavigationExpr = [ "/" qualifiedEntityTypeName ]
+                           ( keyPredicate [ singleNavigationExpr ] 
+                           / collectionPathExpr 
+                           )
 
-singleNavigationExpr = "/" <|memberExpr|>=memberExpr
+singleNavigationExpr = "/" memberExpr:member = { return this.getSubordinateDescriptors().member.evaluate() }
 
-complexColPathExpr = "/" qualifiedComplexTypeName
- 
-collectionPathExpr = <| count |>=count 
+collectionPathExpr = count:path
                    ;/ "/" boundFunctionExpr
                    ;/ "/" anyExpr
                    ;/ "/" allExpr
+  = { return this.getSubordinateDescriptors().path.evaluate() }
  
-complexPathExpr = [ "/" qualifiedComplexTypeName ]
-                  ("/" propertyPathExpr 
-                  / "/" boundFunctionExpr)
-                  / "/" qualifiedComplexTypeName
- 
+complexPathExpr = "/" [ qualifiedComplexTypeName "/" ]
+                  ( propertyPathExpr 
+                  / boundFunctionExpr 
+                  )
 
-primitivePathExpr = "/" boundFunctionExpr
+singlePathExpr = "/" boundFunctionExpr
 
 boundFunctionExpr = functionExpr ; boundFunction segments can only be composed if the type of the    
                                  ; previous segment matches the type of the first function parameter
@@ -474,10 +532,10 @@ boundFunctionExpr = functionExpr ; boundFunction segments can only be composed i
 functionExpr = namespace "."
                ( entityColFunction    functionExprParameters [ collectionNavigationExpr ] 
                / entityFunction       functionExprParameters [ singleNavigationExpr ] 
-               / complexColFunction   functionExprParameters [ complexColPathExpr ]
+               / complexColFunction   functionExprParameters [ collectionPathExpr ]
                / complexFunction      functionExprParameters [ complexPathExpr ] 
                / primitiveColFunction functionExprParameters [ collectionPathExpr ] 
-               / primitiveFunction    functionExprParameters [ primitivePathExpr ] 
+               / primitiveFunction    functionExprParameters [ singlePathExpr ] 
                )
 
 functionExprParameters = OPEN [ functionExprParameter *( COMMA functionExprParameter ) ] CLOSE
@@ -542,9 +600,9 @@ dateMethodCallExpr               = 'date'               OPEN BWS commonExpr BWS 
 timeMethodCallExpr               = 'time'               OPEN BWS commonExpr BWS CLOSE
 totalOffsetMinutesMethodCallExpr = 'totaloffsetminutes' OPEN BWS commonExpr BWS CLOSE 
 
-minDateTimeMethodCallExpr = 'mindatetime' OPEN BWS CLOSE
-maxDateTimeMethodCallExpr = 'maxdatetime' OPEN BWS CLOSE
-nowMethodCallExpr         = 'now' OPEN BWS CLOSE
+minDateTimeMethodCallExpr = 'mindatetime(' BWS ')'
+maxDateTimeMethodCallExpr = 'maxdatetime(' BWS ')'
+nowMethodCallExpr         = 'now(' BWS ')'
 
 roundMethodCallExpr   = 'round'   OPEN BWS commonExpr BWS CLOSE
 floorMethodCallExpr   = 'floor'   OPEN BWS commonExpr BWS CLOSE
@@ -554,20 +612,20 @@ distanceMethodCallExpr   = 'geo.distance'   OPEN BWS commonExpr BWS COMMA BWS co
 geoLengthMethodCallExpr  = 'geo.length'     OPEN BWS commonExpr BWS CLOSE
 intersectsMethodCallExpr = 'geo.intersects' OPEN BWS commonExpr BWS COMMA BWS commonExpr BWS CLOSE
 
-boolParenExpr = OPEN BWS <|boolCommonExpr|>=innerExpr BWS CLOSE
-parenExpr     = OPEN BWS <|commonExpr|>=innerExpr     BWS CLOSE
+boolParenExpr = OPEN BWS boolCommonExpr BWS CLOSE
+parenExpr     = OPEN BWS commonExpr:expr     BWS CLOSE = { return d.getSubordinateDescriptors().expr.evaluate()  }
 
-andExpr = RWS 'and' RWS <|boolCommonExpr|>=rhsExpr
-orExpr  = RWS 'or'  RWS <|boolCommonExpr|>=rhsExpr
+andExpr = RWS 'and':op RWS boolCommonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } } 
+orExpr  = RWS 'or':op  RWS boolCommonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
 
-eqExpr = RWS 'eq' RWS <|commonExpr|>=rhsExpr
-neExpr = RWS 'ne' RWS <|commonExpr|>=rhsExpr
-ltExpr = RWS 'lt' RWS <|commonExpr|>=rhsExpr
-leExpr = RWS 'le' RWS <|commonExpr|>=rhsExpr
-gtExpr = RWS 'gt' RWS <|commonExpr|>=rhsExpr
-geExpr = RWS 'ge' RWS <|commonExpr|>=rhsExpr
+eqExpr = RWS 'eq':op RWS commonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
+neExpr = RWS 'ne':op RWS commonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
+ltExpr = RWS 'lt':op RWS commonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
+leExpr = RWS 'le':op RWS commonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
+gtExpr = RWS 'gt':op RWS commonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
+geExpr = RWS 'ge':op RWS commonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
 
-hasExpr = RWS 'has' RWS enum
+hasExpr = RWS 'has' RWS commonExpr
 
 addExpr = RWS 'add' RWS commonExpr
 subExpr = RWS 'sub' RWS commonExpr
@@ -634,7 +692,7 @@ complexPropertyInUri = quotation-mark complexProperty quotation-mark
                        name-separator 
                        complexInUri
                             
-annotationInUri = quotation-mark AT namespace "." termName quotation-mark
+annotationInUri = quotation-mark namespace "." termName quotation-mark
                   name-separator
                   ( complexInUri / complexColInUri / primitiveLiteralInJSON / primitiveColInUri )
 
@@ -645,11 +703,11 @@ primitivePropertyInUri = quotation-mark primitiveProperty quotation-mark
 navigationPropertyInUri = singleNavPropInJSON
                         / collectionNavPropInJSON
 singleNavPropInJSON     = quotation-mark entityNavigationProperty quotation-mark
-                                                                                                        name-separator
-                                                                                                        rootExpr
+													name-separator
+													rootExpr
 collectionNavPropInJSON = quotation-mark entityColNavigationProperty quotation-mark
-                                                                                                        name-separator
-                                                                                                        rootExprCol
+													name-separator
+													rootExprCol
 
 rootExprCol = begin-array 
               [ rootExpr *( value-separator rootExpr ) ]
@@ -677,7 +735,7 @@ charInJSON   = qchar-unescaped
              / qchar-JSON-special    
              / escape ( quotation-mark 
                       / escape
-                      / ( "/" / "%2F" ) ; solidus         U+002F - literal form is allowed in the query part of a URL
+                      / ( "/" / "%2F" ) ; solidus         U+002F
                       / 'b'             ; backspace       U+0008                
                       / 'f'             ; form feed       U+000C
                       / 'n'             ; line feed       U+000A
@@ -718,7 +776,7 @@ qualifiedEnumTypeName       = namespace "." enumerationTypeName
 namespace     = namespacePart *( "." namespacePart )
 namespacePart = odataIdentifier
 
-entitySetName       = odataIdentifier
+entitySetName       = odataIdentifier = { return this.getNthItem(0).evaluate() }
 singletonEntity     = odataIdentifier          
 entityTypeName      = odataIdentifier
 complexTypeName     = odataIdentifier
@@ -728,7 +786,7 @@ enumerationMember   = odataIdentifier
 termName            = odataIdentifier
 
 ; Note: this pattern is overly restrictive, the normative definition is type TSimpleIdentifier in OData EDM XML Schema
-odataIdentifier             = identifierLeadingCharacter *127identifierCharacter
+odataIdentifier             = identifierLeadingCharacter *127identifierCharacter = { return this.getString() }
 identifierLeadingCharacter  = ALPHA / "_"         ; plus Unicode characters from the categories L or Nl
 identifierCharacter         = ALPHA / "_" / DIGIT ; plus Unicode characters from the categories L, Nl, Nd, Mn, Mc, Pc, or Cf
 
@@ -804,20 +862,20 @@ primitiveColFunctionImport = odataIdentifier
 
 ; in URLs
 primitiveLiteral = nullValue                  ; plain values up to int64Value
-                 / booleanValue 
+                 / booleanValue:val 
                  / guidValue 
                  / dateValue
                  / dateTimeOffsetValue 
                  / timeOfDayValue
-                 / decimalValue 
+                 / decimalValue:val
                  / doubleValue 
                  / singleValue 
                  / sbyteValue 
                  / byteValue
-                 / int16Value 
-                 / int32Value 
-                 / int64Value 
-                 / string                     ; single-quoted
+                 ;/ int16Value:val  -> parsed by decimalValue
+                 ;/ int32Value:val 
+                 ;/ int64Value:val 
+                 / string:val                     ; single-quoted
                  / duration                   ; all others are quoted and prefixed
                  / binary 
                  / enum
@@ -835,6 +893,11 @@ primitiveLiteral = nullValue                  ; plain values up to int64Value
                  / geometryMultiPolygon 
                  / geometryPoint 
                  / geometryPolygon
+  = {
+    var d = this.getSubordinateDescriptors();
+    if(d.val) return d.val.evaluate();
+    else throw new Error('unsupported literal');
+  }
          
 ; in Atom and JSON message bodies and CSDL DefaultValue attributes                 
 primitiveValue = booleanValue
@@ -866,16 +929,16 @@ primitiveValue = booleanValue
 
 nullValue = 'null' 
 
-; base64url encoding according to http://tools.ietf.org/html/rfc4648#section-5                                             
+; TODO: base64url                                                
 binary      = "binary" SQUOTE binaryValue SQUOTE
 binaryValue = *(4base64char) [ base64b16  / base64b8 ]
 base64b16   = 2base64char ( 'A' / 'E' / 'I' / 'M' / 'Q' / 'U' / 'Y' / 'c' / 'g' / 'k' / 'o' / 's' / 'w' / '0' / '4' / '8' )   [ "=" ]
 base64b8    = base64char ( 'A' / 'Q' / 'g' / 'w' ) [ "==" ]
 base64char  = ALPHA / DIGIT / "-" / "_"
 
-booleanValue = "true" / "false"
+booleanValue = "true" / "false" = { return { type: "booleanValue", value: this.getString() == 'true' } }
 
-decimalValue = [SIGN] 1*DIGIT ["." 1*DIGIT]
+decimalValue = [SIGN] 1*DIGIT ["." 1*DIGIT] = { return { type: 'decimalValue', value: this.getString() } }
 
 doubleValue = decimalValue [ "e" [SIGN] 1*DIGIT ] / nanInfinity ; IEEE 754 binary64 floating-point number (15-17 decimal digits)
 singleValue = doubleValue                                       ; IEEE 754 binary32 floating-point number (6-9 decimal digits)
@@ -885,11 +948,11 @@ guidValue = 8HEXDIG "-" 4HEXDIG "-" 4HEXDIG "-" 4HEXDIG "-" 12HEXDIG
 
 byteValue  = 1*3DIGIT           ; numbers in the range from 0 to 255
 sbyteValue = [ sign ] 1*3DIGIT  ; numbers in the range from -128 to 127
-int16Value = [ sign ] 1*5DIGIT  ; numbers in the range from -32768 to 32767        
-int32Value = [ sign ] 1*10DIGIT ; numbers in the range from -2147483648 to 2147483647
-int64Value = [ sign ] 1*19DIGIT ; numbers in the range from -9223372036854775808 to 9223372036854775807
+int16Value = [ sign ] 1*5DIGIT = { return { type: 'integer', value: parseInt(this.getString()) } }  ; numbers in the range from -32768 to 32767
+int32Value = [ sign ] 1*10DIGIT = { return { type: 'integer', value: parseInt(this.getString()) } } ; numbers in the range from -2147483648 to 2147483647
+int64Value = [ sign ] 1*19DIGIT = { return { type: 'integer', value: parseInt(this.getString()) } } ; numbers in the range from -9223372036854775808 to 9223372036854775807
 
-string           = SQUOTE *( SQUOTE-in-string / pchar-no-SQUOTE ) SQUOTE
+string           = SQUOTE (*( SQUOTE-in-string / pchar-no-SQUOTE )):value SQUOTE = { return { type: "string", value: this.getSubordinateDescriptors().value.getString() } }
 SQUOTE-in-string = SQUOTE SQUOTE ; two consecutive single quotes represent one within a string literal
 
 dateValue = year "-" month "-" day
@@ -912,7 +975,7 @@ day   = "0" oneToNine
       / ( "1" / "2" ) DIGIT
       / "3" ( "0" / "1" )
 hour   = ( "0" / "1" ) DIGIT
-       / "2" ( "0" / "1" / "2" / "3" ) 
+       / "2" ( "1" / "2" / "3" ) 
 minute = zeroToFiftyNine
 second = zeroToFiftyNine       
 fractionalSeconds = 1*12DIGIT
@@ -989,14 +1052,14 @@ header = content-id
        / odata-version
        / prefer
 
-content-id = "Content-ID" ":" OWS 1*unreserved
+content-id = "Content-ID" COLON OWS 1*unreserved
        
-odata-entityid   = "OData-EntityID"   ":" OWS IRI-in-header
-odata-isolation  = "OData-Isolation"  ":" OWS "snapshot"
-odata-maxversion = "OData-MaxVersion" ":" OWS 1*DIGIT "." 1*DIGIT     
-odata-version    = "OData-Version"    ":" OWS "4.0"
+odata-entityid   = "OData-EntityID"   COLON OWS IRI-in-header
+odata-isolation  = "OData-Isolation"  COLON OWS "snapshot"
+odata-maxversion = "OData-MaxVersion" COLON OWS "4.0"     
+odata-version    = "OData-Version"    COLON OWS "4.0"     
       
-prefer     = "Prefer" ":" OWS preference *( COMMA preference )       
+prefer     = "Prefer" COLON OWS preference *( COMMA preference )       
 preference = allowEntityReferencesPreference
            / callbackPreference
            / continueOnErrorPreference
@@ -1007,34 +1070,33 @@ preference = allowEntityReferencesPreference
            / trackChangesPreference
            / waitPreference
            ; and everything allowed by http://tools.ietf.org/html/draft-snell-http-prefer-18
-           ; / token [ EQ-h word ] *( OWS ";" [ OWS parameter ] )
+           ; / token [ BWS "=" BWS word ] *( OWS ";" [ OWS parameter ] )
            
 allowEntityReferencesPreference = "odata.allow-entityreferences"
 
-callbackPreference = "odata.callback" OWS ";" OWS "url" EQ-h DQUOTE URI DQUOTE
+callbackPreference = "odata.callback" OWS ";" OWS "url" BWS EQ BWS DQUOTE URI DQUOTE
 
 continueOnErrorPreference = "odata.continue-on-error"           
            
-includeAnnotationsPreference = "odata.include-annotations" EQ-h DQUOTE annotationsList DQUOTE
+includeAnnotationsPreference = "odata.include-annotations" BWS EQ BWS DQUOTE annotationsList DQUOTE
 annotationsList      = annotationIdentifier *(COMMA annotationIdentifier)
 annotationIdentifier = [ excludeOperator ]
                        ( STAR 
                        / namespace "." ( termName / STAR ) 
                        ) 
-                       [ "#" odataIdentifier ]
 excludeOperator      = "-"
            
-maxpagesizePreference = "odata.maxpagesize" EQ-h oneToNine *DIGIT         
+maxpagesizePreference = "odata.maxpagesize" BWS EQ BWS oneToNine *DIGIT         
 
 respondAsyncPreference = "respond-async"
 
-returnPreference = "return" EQ-h ( 'representation' / 'minimal' )
+returnPreference = "return" BWS EQ BWS ( 'representation' / 'minimal' )
 
 trackChangesPreference = "odata.track-changes"
 
-waitPreference = "wait" EQ-h 1*DIGIT
+waitPreference = "wait" BWS EQ BWS 1*DIGIT
 
-;parameter      = token [ EQ-h word ]
+;parameter      = token [ BWS "=" BWS word ]
 ;word           = token / quoted-string
 ;token          = 1*tchar
 ;tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
@@ -1045,17 +1107,14 @@ waitPreference = "wait" EQ-h 1*DIGIT
 obs-text       = %x80-FF
 ;quoted-pair    = "\" ( HTAB / SP / VCHAR / obs-text )
 
-OWS   = *( SP / HTAB )  ; "optional" whitespace 
-BWS-h = *( SP / HTAB )  ; "bad" whitespace in header values 
-EQ-h  = BWS-h EQ BWS-h 
-
 
 ;------------------------------------------------------------------------------
 ; 9. Punctuation
 ;------------------------------------------------------------------------------
 
+OWS =  *( SP / HTAB / "%20" / "%09" )  ; "optional" whitespace 
 RWS = 1*( SP / HTAB / "%20" / "%09" )  ; "required" whitespace 
-BWS =  *( SP / HTAB / "%20" / "%09" )  ; "bad" whitespace 
+BWS = OWS                              ; "bad" whitespace 
 
 AT     = "@" / "%40"
 COLON  = ":" / "%3A"
@@ -1144,7 +1203,7 @@ qchar-no-AMP-EQ           = unreserved / pct-encoded / other-delims / ":" / "@" 
 qchar-no-AMP-EQ-AT-DOLLAR = unreserved / pct-encoded / other-delims / ":" /       "/" / "?" /       "'"
 
 qchar-unescaped       = unreserved / pct-encoded-unescaped / other-delims / ":" / "@" / "/" / "?" / "$" / "'" / "="
-pct-encoded-unescaped = "%" ( "0" / "1" /   "3" / "4" /   "6" / "7" / "8" / "9" / A-to-F ) HEXDIG 
+pct-encoded-unescaped = "%" ( "0" / "1" /   "3" / "4" /   "6" / "8" / "9" / A-to-F ) HEXDIG 
                       / "%" "2" ( "0" / "1" /   "3" / "4" / "5" / "6" / "7" / "8" / "9" / A-to-F ) 
                       / "%" "5" ( DIGIT / "A" / "B" /   "D" / "E" / "F" )
 

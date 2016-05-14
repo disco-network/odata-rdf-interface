@@ -18,7 +18,7 @@ function handleEntitySetRequest(lastPartOfUrl, req, res, next) {
 	res.end('The EntitySet is called ' + firstPartOfUrl + '. After it, you wrote: ' + lastPartOfUrl);
 }
 	
-var abnf = fs.readFileSync('./odata.abnf', 'utf8');
+var abnf = fs.readFileSync('./odata4-mod.abnf', 'utf8');
 var tokens = abnfTokenizer.tokenize(abnf);
 var grammar = abnfParser.parse(tokens);
 var interpreter = new abnfInterpreter.Interpreter(grammar);

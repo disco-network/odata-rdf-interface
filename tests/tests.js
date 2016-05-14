@@ -1,26 +1,28 @@
 var pkgGeneral = require('./general');
 var testPackages = [pkgGeneral];
 
+//run from root directory, not from $root/tests
 
 var tools = getTools();
 
 testPackages.forEach(function(pkg) {
-  console.log('Package: ', pkg.name);
+  console.log('package ' + pkg.name);
   pkg.tests.forEach(function(t,i) {
-    console.log('test #' + i);
+    console.log('* test ' + t.name);
     try {
-      t(tools);
+      t.run(tools);
     }
     catch(e) {
-      console.error(e);
+      console.log(e.stack);
     }
   });
 })
 
 function getTools() {
   return {
-    assertTrue: function(predicate) {
-      if(!predicate()) throw new Error(predicate.toString());
+    assertTrue: function(predicate, message) {
+      var result = (typeof predicate == 'function') ? predicate() : predicate;
+      if(!result) throw new Error(message || predicate.toString());
     }
   };
 }

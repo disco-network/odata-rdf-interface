@@ -94,21 +94,21 @@ Database.prototype.evalFilter = function(schema, entity, filter) {
       var rhs = self.evalFilter(schema, entity, filter.rhs);
       switch(filter.op) {
         //TODO: type checking + excluding of complex objects
-        case 'andExpr':
+        case 'and':
           return { type: "Edm.Boolean", value: lhs.value && rhs.value };
-        case 'orExpr':
+        case 'or':
           return { type: "Edm.Boolean", value: lhs.value || rhs.value };
-        case 'eqExpr':
-          return { type: "Edm.Boolean", value: lhs.value === rhs.value };
-        case 'neExpr':
-          return { type: "Edm.Boolean", value: lhs.value !== rhs.value };
-        case 'ltExpr':
+        case 'eq':
+          return { type: "Edm.Boolean", value: lhs.value == rhs.value };
+        case 'ne':
+          return { type: "Edm.Boolean", value: lhs.value != rhs.value };
+        case 'lt':
           return { type: "Edm.Boolean", value: lhs.value < rhs.value };
-        case 'leExpr':
+        case 'le':
           return { type: "Edm.Boolean", value: lhs.value <= rhs.value };
-        case 'gtExpr':
+        case 'gt':
           return { type: "Edm.Boolean", value: lhs.value > rhs.value };
-        case 'geExpr':
+        case 'ge':
           return { type: "Edm.Boolean", value: lhs.value >= rhs.value };
         default: throw new Error('not implemented');
       }
@@ -117,10 +117,10 @@ Database.prototype.evalFilter = function(schema, entity, filter) {
     case 'booleanValue':
       return { type: "Edm.Boolean", value: filter.value };
     case 'decimalValue':
-      return { type: "Edm.Int64", value: filter.value };
+      return { type: "Edm.Decimal", value: filter.value };
     case 'string':
     default:
-      throw new Error('not implemented: ' + filter);
+      throw new Error('not implemented: ' + JSON.stringify(filter));
   }
 }
 
@@ -135,7 +135,7 @@ Database.prototype.evalFirstMemberExpr = function(schema, entity, expr) {
 
 Database.prototype.evalRelativeMemberExpr = function(schema, entity, expr) {
   var self = this;
-  var property = expr.property;
+  var property = expr.propertyName;
   if(expr.collectionNavigation || expr.complexPath || expr.primitivePath || expr.complexColPath)
     throw new Error('unsupported member expression');
     
