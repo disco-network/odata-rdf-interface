@@ -5,7 +5,7 @@ var navi = require('../abnfjs/ast-navigator');
 var queryFactory = require('./dbqueryfactory');
 
 function getQueryFromSyntaxTree(ast, schema) {
-  return getQueryFromCondensedSyntaxTree(condenseSyntaxTree(ast), schema);
+  return getQueryFromCondensedSyntaxTree(ast.evaluate(), schema);
 }
 
 function getQueryFromCondensedSyntaxTree(ast, schema) {
@@ -17,6 +17,7 @@ function getQueryStackWithFactory(ast, schema) {
   if(ast.type == 'resourceQuery') {
     if(ast.resourcePath.type !== 'entitySet') throw new Error('unsupported resource path type: ' + ast.resourcePath.type);
     if(ast.resourcePath.navigation && ast.resourcePath.navigation.qualifiedEntityTypeName) throw new Error('qualified entity type name not supported');
+    
     var fty = new queryFactory.DbQueryFactory(ast.resourcePath.entitySetName, schema);
     fty.filter(ast.queryOptions.filter);
     switch(ast.resourcePath.navigation.type) {
@@ -31,12 +32,8 @@ function getQueryStackWithFactory(ast, schema) {
         }
         return fty;
       default:
-        throw new Error('resourcePath navigation type is not implemented');
+        throw new Error('this resourcePath navigation type is not supported');
     }
   }
   else throw new Error('unsupported query type: ' + ast.type);
-}
-
-function condenseSyntaxTree(ast) {
-  return ast.evaluate();
 }

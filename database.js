@@ -1,4 +1,3 @@
-var metadata = require('./metadata');
 var exports = module.exports = {};
 
 var Database = exports.Database = (function() {

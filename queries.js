@@ -1,4 +1,4 @@
-var metadata = require('./metadata');
+var defClass = require('../abnfjs/classgenerator');
 var exports = module.exports = {};
 
 var __extends = (this && this.__extends) || function (d, b) {
@@ -8,6 +8,15 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = new __();
 };
 
+var notImplemented = function() { throw new Error('not implemented') }
+
+var Query = defClass(null,
+function Query() {},
+{
+  run: notImplemented,
+  sendResults: notImplemented
+})
+
 var Query = exports.Query = (function() {
 	function Query() {}
 	Query.prototype.run = function(db) { throw new Error('not implemented') };
@@ -15,25 +24,20 @@ var Query = exports.Query = (function() {
 	return Query;
 })();
 
-var UnsupportedQuery = exports.UnsupportedQuery = (function(_super) {
-	__extends(UnsupportedQuery, _super)
-	function UnsupportedQuery(text) { this.text = text }
-	Query.prototype.run = function(db) {};
-	Query.prototype.sendResults = function(res, body) {
-	  console.trace();
+var UnsupportedQuery = exports.UnsupportedQUery = defClass(Query,
+function UnsupportedQuery(text) { this.text = text },
+{
+  run: function(db) {},
+  sendResults: function(res, body) {
 		res.statusCode = 400;
 		res.end('unsupported query: \n' + this.text && this.text.toString());
-	};
-	return UnsupportedQuery;
-})(Query);
-
-var EntitySetQuery = exports.EntitySetQuery = (function(_super) {
-  __extends(EntitySetQuery, _super);
-  function EntitySetQuery(args) {
-    this.args = args;
   }
-  
-  EntitySetQuery.prototype.run = function(db) {
+})
+
+var EntitySetQuery = exports.EntitySetQuery = defClass(Query,
+function EntitySetQuery(args) { this.args = args },
+{
+  run: function(db) {
     var schema = db.getSchema();
     var currentSchema = schema.entitySets[this.args.entitySetName];
     if(!currentSchema) return { error: ErrorTypes.ENTITYSET_NOTFOUND };
@@ -46,40 +50,38 @@ var EntitySetQuery = exports.EntitySetQuery = (function(_super) {
       if(this.args.navigationStack.length > (firstPrimitiveQuery.getLength()+secondPrimitiveQuery.getLength()))
         throw new Error('unsupported resource path');
     }
-  }
-  
-  EntitySetQuery.prototype.sendResults = function(res) {
-		if(!this.result.error) {
-		  res.writeHeader(200, {'Content-type': 'application/json' });
+  },
+  sendResults: function(res) {
+    if(!this.result.error) {
+      res.writeHeader(200, {'Content-type': 'application/json' });
 		  res.end(JSON.stringify(this.result.result, null, 2));
-	}
-		else handleErrors(this.result, res);
+    }
+    else handleErrors(this.result, res);
   }
-  return EntitySetQuery;
-})(Query);
+})
 
 //A helper query to retrieve a collection or an element of a collection
-var PrimitiveQuery_Base = (function() {
-  function PrimitiveQuery_Base() {};
-  PrimitiveQuery_Base.prototype.getLength = function() { throw new Error('not implemented') };
-  PrimitiveQuery_Base.prototype.getResult = function() { throw new Error('not implemented') };
-  return PrimitiveQuery_Base;
-})();
+var PrimitiveQuery_Base = defClass(null,
+function PrimitiveQuery_Base() {},
+{
+  getLength: notImplemented,
+  getResult: notImplemented
+})
 
-var PrimitiveQuery_EntitySet = (function(_super) {
-  __extends(PrimitiveQuery_EntitySet, _super);
-  function PrimitiveQuery_EntitySet(entitySetName, navigationStack, stackPos, filterOption) {
-    this._len = 0;
-    this.entitySetName = entitySetName;
-    this.filterOption = filterOption;
-    if(navigationStack[stackPos] && navigationStack[stackPos].type == 'by-id') {
-      this.byId = true;
-      this.id = navigationStack[stackPos].id;
-      this._len++;
-    }
-  };
-  PrimitiveQuery_EntitySet.prototype.getLength = function() { return this._len };
-  PrimitiveQuery_EntitySet.prototype.getResult = function(db) {
+var PrimitiveQuery_EntitySet = defClass(PrimitiveQuery_Base,
+function PrimitiveQuery_EntitySet(entitySetName, navigationStack, stackPos, filterOption) {
+  this._len = 0;
+  this.entitySetName = entitySetName;
+  this.filterOption = filterOption;
+  if(navigationStack[stackPos] && navigationStack[stackPos].type == 'by-id') {
+    this.byId = true;
+    this.id = navigationStack[stackPos].id;
+    this._len++;
+  }
+},
+{
+  getLength: function() { return this._len },
+  getResult: function(db) {
     if(!this.byId) {
       var dbResult = db.getEntities(this.entitySetName, this.filterOption);
       if(!dbResult.error) return { result: dbResult.result };
@@ -90,31 +92,29 @@ var PrimitiveQuery_EntitySet = (function(_super) {
       if(!dbResult.error) return { result: dbResult.result.entity };
       else return { error: ErrorTypes.DB, errorDetails: dbResult.error };
     }
-  };
-  return PrimitiveQuery_EntitySet;
-})(PrimitiveQuery_Base);
+  }
+})
 
-var PrimitiveQuery_Entity = (function(_super) {
-  __extends(PrimitiveQuery_Entity, _super);
-  function PrimitiveQuery_Entity(entitySetName, entity, navigationStack, stackPos) {
-    this.entitySetName = entitySetName;
-    this.entity = entity;
-    this.primitiveStack = [ ];
-    var upperNavigation = navigationStack[stackPos];
-    if(upperNavigation && upperNavigation.type == 'property') this.primitiveStack.push(upperNavigation);
-    else throw new Error('unexpected type of resource path segment or unexpected end of resource path');
-  };
-  PrimitiveQuery_Entity.prototype.getLength = function() { return this.primitiveStack.length };
-  PrimitiveQuery_Entity.prototype.getResult = function(db) {
+var PrimitiveQuery_Entity = defClass(PrimitiveQuery_Base,
+function PrimitiveQuery_Entity(entitySetName, entity, navigationStack, stackPos) {
+  this.entitySetName = entitySetName;
+  this.entity = entity;
+  this.primitiveStack = [ ];
+  var upperNavigation = navigationStack[stackPos];
+  if(upperNavigation && upperNavigation.type == 'property') this.primitiveStack.push(upperNavigation);
+  else throw new Error('unexpected type of resource path segment or unexpected end of resource path');
+},
+{
+  getLength: function() { return this.primitiveStack.length },
+  getResult: function(db) {
     var property = this.primitiveStack[0];
     var schema = db.getSchema();
     var entitySetSchema = schema.entitySets[this.entitySetName];
     var entitySchema = schema.entityTypes[entitySetSchema.type];
     var dbResult = db.getProperty(entitySchema, this.entity, property.name);
     return { result: dbResult };
-  };
-  return PrimitiveQuery_Entity;
-})(PrimitiveQuery_Base);
+  }
+})
 
 function handleErrors(result, res) {
 	switch(result.error) {
