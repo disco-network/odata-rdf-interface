@@ -20,6 +20,7 @@ function getQueryStackWithFactory(ast, schema) {
     
     var fty = new queryFactory.DbQueryFactory(ast.resourcePath.entitySetName, schema);
     fty.filter(ast.queryOptions.filter);
+    fty.expand(ast.queryOptions.expand);
     switch(ast.resourcePath.navigation.type) {
       case 'none':
         return fty;

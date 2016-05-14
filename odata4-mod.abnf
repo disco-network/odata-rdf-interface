@@ -242,6 +242,10 @@ queryOptions = queryOption:option *( "&" queryOption:options )
         if(ret.filter) throw new Error('too many $filter options specified');
         else ret.filter = o.value;
       }
+      else if(o.type == 'expand') {
+        if(ret.expand) throw new Error('too many $expand options specified');
+        else ret.expand = o.value;
+      }
     });
     return ret;
   }
@@ -260,7 +264,7 @@ entityCastOption  = entityIdOption
 
 id = '$id' EQ IRI-in-query       
 
-systemQueryOption = ;expand /
+systemQueryOption = expand:option /
                   filter:option
                   ;/ format 
                   ;/ id
@@ -276,17 +280,30 @@ systemQueryOption = ;expand /
     return o.evaluate();
   }
 
-expand            = '$expand' EQ expandItem *( COMMA expandItem )
-expandItem        = STAR [ ref / OPEN levels CLOSE ]
-                  / expandPath
-                    [ ref   [ OPEN expandRefOption   *( SEMI expandRefOption   ) CLOSE ]
-                    / count [ OPEN expandCountOption *( SEMI expandCountOption ) CLOSE ]
-                    /         OPEN expandOption      *( SEMI expandOption      ) CLOSE 
-                    ]
-expandPath        = [ qualifiedEntityTypeName "/" ] 
-                    *( ( complexProperty / complexColProperty ) "/" [ qualifiedComplexTypeName "/" ] )
-                    navigationProperty 
-                    [ "/" qualifiedEntityTypeName ]
+expand            = '$expand' EQ expandItem:item *( COMMA expandItem:items )
+  = {
+    var d = this.getSubordinateDescriptors();
+    var expandItems = [d.item].concat(d.items || []).map(function(i) { return i.evaluate() });
+    return { type: 'expand', value: expandItems }
+  }
+
+expandItem        = ;STAR [ ref / OPEN levels CLOSE ] /
+                    expandPath:path
+                    ;[ ref   [ OPEN expandRefOption   *( SEMI expandRefOption   ) CLOSE ]
+                    ;/ count [ OPEN expandCountOption *( SEMI expandCountOption ) CLOSE ]
+                    ;/         OPEN expandOption      *( SEMI expandOption      ) CLOSE 
+                    ;]
+  = { return this.getSubordinateDescriptors().path.evaluate() }
+expandPath        = ;[ qualifiedEntityTypeName "/" ] 
+                    ;modified, see below *( ( complexProperty / complexColProperty ) "/" [ qualifiedComplexTypeName "/" ] )
+                    *( ( complexProperty:properties / complexColProperty:properties ) "/" )
+                    navigationProperty:property
+                    ;[ "/" qualifiedEntityTypeName ]
+  = {
+    var d = this.getSubordinateDescriptors();
+    var properties = (d.properties || []).concat([d.property]).map(function(p) { return p.evaluate() });
+    return { path: properties };
+  }
 expandCountOption = filter
                   / search
 expandRefOption   = expandCountOption
@@ -823,13 +840,13 @@ primitiveProperty       = primitiveKeyProperty / primitiveNonKeyProperty
 primitiveKeyProperty    = odataIdentifier
 primitiveNonKeyProperty = odataIdentifier
 primitiveColProperty    = odataIdentifier
-complexProperty         = odataIdentifier
-complexColProperty      = odataIdentifier
+complexProperty         = odataIdentifier = { return this.getNthItem(0).evaluate() }
+complexColProperty      = odataIdentifier = { return this.getNthItem(0).evaluate() }
 streamProperty          = odataIdentifier
 
-navigationProperty          = entityNavigationProperty / entityColNavigationProperty  
-entityNavigationProperty    = odataIdentifier
-entityColNavigationProperty = odataIdentifier
+navigationProperty          = odataIdentifier = { return this.getNthItem(0).evaluate() } ;entityNavigationProperty / entityColNavigationProperty  
+;entityNavigationProperty    = odataIdentifier = { return this.getNthItem(0).evaluate() }
+;entityColNavigationProperty = odataIdentifier= { return this.getNthItem(0).evaluate() }
 
 action       = odataIdentifier
 actionImport = odataIdentifier

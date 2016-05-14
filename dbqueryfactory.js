@@ -10,6 +10,16 @@ DbQueryFactory.prototype.filter = function(filterOption) {
   this.filterOption = filterOption;
 }
 
+DbQueryFactory.prototype.expand = function(expandOption) {
+  var expandTree = this.expandTree = {};
+  expandOption.forEach(function(e) {
+    var currentBranch = expandTree;
+    e.path.forEach(function(prop) {
+      currentBranch = currentBranch[prop] = currentBranch[prop] || {};
+    });
+  })
+}
+
 DbQueryFactory.prototype.selectById = function(id) {
   if(!this.currentIsCollection) throw new Error('current query part should be a collection');
   this.path.push({ type: 'by-id', id: id, resultQuantity: 'one' });
