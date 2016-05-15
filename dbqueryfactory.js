@@ -31,7 +31,7 @@ DbQueryFactory.prototype.selectProperty = function(property) {
   if(this.currentIsCollection) throw new Error('current query part should be no collection');
   if(this.currentSchema.properties[property] == null) throw new Error('property does not exist: ' + property);
   var propertySchema = this.currentSchema.properties[property];
-  this.currentIsCollection = propertySchema.quantity == 'many-to-one' || propertySchema.quantity == 'many-to-many';
+  this.currentIsCollection = propertySchema.quantity == 'one-to-many' || propertySchema.quantity == 'many-to-many';
   this.path.push({ type: 'property', name: property, resultQuantity: 'many' });
   if(this.currentIsCollection)
     this.currentSchema = this.collectionSchema(propertySchema.type);

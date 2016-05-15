@@ -28,8 +28,8 @@ var Database = exports.Database = (function() {
 		        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64" },
 		        ContentId: { type: "Edm.Int64" },
 		        ParentId: { type: "Edm.Int64", correspondingNavigationProperty: "Parent" },
-		        Parent: { type: "Post", quantity: "one-to-many", indexProperty: "ParentId", foreignSet: "Posts" },
-		        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
+		        Parent: { type: "Post", quantity: "many-to-one", indexProperty: "ParentId", foreignSet: "Posts" },
+		        Children: { type: "Post", quantity: "one-to-many", foreignSet: "Posts", foreignProperty: "Parent" },
 		      }
 		    },
 		  },
@@ -223,7 +223,7 @@ Database.prototype.getProperty = function(schema, entity, property, filter) { //
   if(this.isNavigationProperty(schema, property)) {
     switch(schema.properties[property].quantity) {
       case 'one-to-one':
-      case 'one-to-many':
+      case 'many-to-one':
         var index = entity[schema.properties[property].indexProperty];
         if(index != null) {
           var result = this.getSingleEntity(schema.properties[property].foreignSet, index);
@@ -231,7 +231,7 @@ Database.prototype.getProperty = function(schema, entity, property, filter) { //
           else throw new Error('no error handling implemented');
         }
         else return null;
-      case 'many-to-one':
+      case 'one-to-many':
         var foreignSet = schema.properties[property].foreignSet;
         var foreignProperty = schema.properties[property].foreignProperty;
         var type = schema.properties[property].type;
@@ -253,7 +253,7 @@ Database.prototype.isNavigationProperty = function(schema, name) {
 }
 
 Database.prototype.isCollectionProperty = function(schema, name) {
-  return schema.properties[name].quantity.substr(0,5) === 'many-';
+  return schema.properties[name].quantity.substr(0,4) === 'one-';
 }
 
 var Result = exports.Result = (function() {
