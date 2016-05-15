@@ -45,7 +45,7 @@ function EntitySetQuery(args /* := entitySetName, navigationStack, filterOption,
     var secondPrimitiveQuery;
     if(this.args.navigationStack.length > firstPrimitiveQuery.getLength()) {
       var firstResult = firstPrimitiveQuery.getResult(db);
-      secondPrimitiveQuery = new PrimitiveQuery_Entity(this.args.entitySetName, this.result.result, this.args.navigationStack, firstPrimitiveQuery.getLength());
+      secondPrimitiveQuery = new PrimitiveQuery_Entity(this.args.entitySetName, firstResult.result, this.args.navigationStack, firstPrimitiveQuery.getLength());
       this.result = secondPrimitiveQuery.getResult(db);
       if(this.args.navigationStack.length > (firstPrimitiveQuery.getLength()+secondPrimitiveQuery.getLength()))
         throw new Error('unsupported resource path');
