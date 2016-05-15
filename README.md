@@ -12,10 +12,10 @@ At the moment, the database content is hardcoded in ./database.js, so you can te
 Possible queries are:
 
  * /Posts
-* /Posts(1)
-* /Children  (this is a navigation property which contains all entities whose Parent is the base entity)
-* /Parent
-* /Posts?$filter=Id eq 1 and 1 eq 2
-* /Posts?$filter=Children/$count eq 1
-* /Posts?$expand=Parent,Children,Parent/Children
-* /Posts?$filter=Id eq 1&$expand=Children
+ * /Posts(1)
+ * /Children  (this is a navigation property which contains all entities whose Parent is the base entity)
+ * /Parent
+ * /Posts?$filter=Id eq 1 and 1 eq 2
+ * /Posts?$filter=Children/$count eq 1
+ * /Posts?$expand=Parent,Children,Parent/Children
+ * /Posts?$filter=Id eq 1&$expand=Children
