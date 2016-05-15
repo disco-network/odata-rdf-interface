@@ -100,9 +100,9 @@ Database.prototype.expandAndCloneEntity = function(entityTypeSchema, entity, exp
     propertySchema = entityTypeSchema.properties[property];
     if(this.isNavigationProperty(entityTypeSchema, property)) {
       var result = this.getProperty(entityTypeSchema, clonedEntity, property);
+      var innerEntityTypeSchema = self.schema.entityTypes[entityTypeSchema.properties[property].type];
+      var innerExpandTree = expandTree[property];
       if(this.isCollectionProperty(entityTypeSchema, property)) {
-        var innerEntityTypeSchema = self.schema.entityTypes[entityTypeSchema.properties[property].type];
-        var innerExpandTree = expandTree[property];
         result = result.map(function(resultEntity) { 
           return self.expandAndCloneEntity(innerEntityTypeSchema, resultEntity, innerExpandTree);
         });
