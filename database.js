@@ -93,8 +93,8 @@ Database.prototype.expandAndCloneEntities = function(entityTypeSchema, entities,
 
 Database.prototype.expandAndCloneEntity = function(entityTypeSchema, entity, expandTree) {
   var self = this;
+  if(entity == null) return null;
   var clonedEntity = cloneJsonEntity(entity);
-  //var expandProperties = Object.keys(expandTree);
   var propertySchema;
   for(var property in expandTree) {
     propertySchema = entityTypeSchema.properties[property];
@@ -123,6 +123,7 @@ module.exports.cloneJsonEntities = cloneJsonEntities;
 
 function cloneJsonEntity(entity) {
   //TODO: avoid endless recursion
+  if(entity == null) return null;
   var ret = {};
   for(var key in entity) {
     switch(typeof entity[key]) {

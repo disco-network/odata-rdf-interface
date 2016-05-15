@@ -16,5 +16,11 @@ module.exports = { name: "expand", tests: [
     var entity = { Id: 1, NullEntity: null };
     var cloned = dbModule.cloneJsonEntity(entity);
     tools.assertTrue(JSON.stringify(cloned) === '{"Id":1,"NullEntity":null}', JSON.stringify(cloned));
+    tools.assertTrue(cloned !== entity, JSON.stringify(cloned));
+  } },
+  { name: 'clone-null', run: function (tools) {
+    var entity = null;
+    var cloned = dbModule.cloneJsonEntity(entity);
+    tools.assertTrue(cloned == null, JSON.stringify(cloned));
   } },
 ] }
