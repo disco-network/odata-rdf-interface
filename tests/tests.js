@@ -1,5 +1,4 @@
-var pkgGeneral = require('./general');
-var testPackages = [pkgGeneral];
+var testPackages = [require('./general'), require('./expand')];
 
 //run from root directory, not from $root/tests
 

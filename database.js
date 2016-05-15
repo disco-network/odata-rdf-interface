@@ -65,11 +65,12 @@ var Database = exports.Database = (function() {
 		else return new Result(null, Errors.TABLE_NOTFOUND);
 	}
 	
-	Database.prototype.getEntities = function(entitySetName, filter) { //TODO: result format
+	Database.prototype.getEntities = function(entitySetName, args /* := filterOption, expandTree */) { //TODO: result format
 		var entitySet = this.data[entitySetName];
 		var entitySetSchema = this.schema.entitySets[entitySetName];
 		if(entitySet) {
-			return new Result(this.filterEntities(this.schema.entityTypes[entitySetSchema.type], entitySet.values, filter));
+			var filteredEntities = this.filterEntities(this.schema.entityTypes[entitySetSchema.type], entitySet.values, args.filterOption);
+			return new Result(this.expandAndCloneEntities(this.schema.entityTypes[entitySetSchema.type], filteredEntities, args.expandTree));
 		}
 		else return new Result(null, Errors.TABLE_NOTFOUND);
 	}
@@ -77,9 +78,76 @@ var Database = exports.Database = (function() {
 	return Database;
 })();
 
-Database.prototype.filterEntities = function(schema, entities, filter) {
+Database.prototype.filterEntities = function(entityTypeSchema, entities, filter) {
   var self = this;
-  return entities.filter(function(e) { return self.evalFilter(schema, e, filter).value });
+  return entities.filter(function(e) { return self.evalFilter(entityTypeSchema, e, filter).value });
+}
+
+// we need cloning to avoid changing our database
+Database.prototype.expandAndCloneEntities = function(entityTypeSchema, entities, expandTree) {
+  var self = this;
+  return entities.map(function(entity) {
+    return self.expandAndCloneEntity(entityTypeSchema, entity, expandTree);
+  })
+}
+
+Database.prototype.expandAndCloneEntity = function(entityTypeSchema, entity, expandTree) {
+  var self = this;
+  var clonedEntity = cloneJsonEntity(entity);
+  //var expandProperties = Object.keys(expandTree);
+  var propertySchema;
+  for(var property in expandTree) {
+    propertySchema = entityTypeSchema.properties[property];
+    if(this.isNavigationProperty(entityTypeSchema, property)) {
+      var result = this.getProperty(entityTypeSchema, clonedEntity, property);
+      if(this.isCollectionProperty(entityTypeSchema, property)) {
+        var innerEntityTypeSchema = self.schema.entityTypes[entityTypeSchema.properties[property].type];
+        var innerExpandTree = expandTree[property];
+        result = result.map(function(resultEntity) { 
+          return self.expandAndCloneEntity(innerEntityTypeSchema, resultEntity, innerExpandTree);
+        });
+      }
+      else
+        result = self.expandAndCloneEntity(innerEntityTypeSchema, result, innerExpandTree);
+      clonedEntity[property] = result;
+    }
+    else throw new Error('can only expand navigation properties ' + property);
+  }
+  return clonedEntity;
+}
+
+function cloneJsonEntities(entities) {
+  return entities.map(cloneJsonEntity);
+}
+module.exports.cloneJsonEntities = cloneJsonEntities;
+
+function cloneJsonEntity(entity) {
+  //TODO: avoid endless recursion
+  var ret = {};
+  for(var key in entity) {
+    switch(typeof entity[key]) {
+      case 'object':
+        if(isArray(entity[key])) ret[key] = entity[key].map(function(e) { return cloneJsonEntity(e) });
+        else if(entity[key] == null) ret[key] = null;
+        else ret[key] = cloneJsonEntity(entity[key]);
+        break;
+      case 'number':
+      case 'string':
+        ret[key] = entity[key];
+        break;
+      case 'undefined':
+        ret[key] = undefined;
+        break;
+      default:
+        throw new Error('unsupported json entity property ' + key + ': ' + entity[key]);
+    }
+  }
+  return ret;
+}
+module.exports.cloneJsonEntity = cloneJsonEntity;
+
+function isArray(any) {
+  return Object.prototype.toString.call(any) == '[object Array]';
 }
 
 Database.prototype.evalFilter = function(schema, entity, filter) {
@@ -182,6 +250,10 @@ Database.prototype.getProperty = function(schema, entity, property, filter) { //
 
 Database.prototype.isNavigationProperty = function(schema, name) {
   return schema.properties[name].type.substr(0,4) !== "Edm.";
+}
+
+Database.prototype.isCollectionProperty = function(schema, name) {
+  return schema.properties[name].quantity.substr(0,5) === 'many-';
 }
 
 var Result = exports.Result = (function() {

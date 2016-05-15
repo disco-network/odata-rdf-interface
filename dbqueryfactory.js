@@ -12,7 +12,7 @@ DbQueryFactory.prototype.filter = function(filterOption) {
 
 DbQueryFactory.prototype.expand = function(expandOption) {
   var expandTree = this.expandTree = {};
-  expandOption.forEach(function(e) {
+  (expandOption || []).forEach(function(e) {
     var currentBranch = expandTree;
     e.path.forEach(function(prop) {
       currentBranch = currentBranch[prop] = currentBranch[prop] || {};

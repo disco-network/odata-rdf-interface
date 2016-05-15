@@ -10,7 +10,12 @@ function getQueryFromSyntaxTree(ast, schema) {
 
 function getQueryFromCondensedSyntaxTree(ast, schema) {
     var fty = getQueryStackWithFactory(ast, schema);
-    return new queries.EntitySetQuery({ entitySetName: fty.entitySetName, navigationStack: fty.path, filterOption: fty.filterOption });
+    return new queries.EntitySetQuery({ 
+      entitySetName: fty.entitySetName, 
+      navigationStack: fty.path, 
+      filterOption: fty.filterOption, 
+      expandTree: fty.expandTree,
+    });
 }
 
 function getQueryStackWithFactory(ast, schema) {

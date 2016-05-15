@@ -35,20 +35,23 @@ function UnsupportedQuery(text) { this.text = text },
 })
 
 var EntitySetQuery = exports.EntitySetQuery = defClass(Query,
-function EntitySetQuery(args) { this.args = args },
+function EntitySetQuery(args /* := entitySetName, navigationStack, filterOption, expandTree */) { this.args = args },
 {
   run: function(db) {
     var schema = db.getSchema();
     var currentSchema = schema.entitySets[this.args.entitySetName];
     if(!currentSchema) return { error: ErrorTypes.ENTITYSET_NOTFOUND };
-    var firstPrimitiveQuery = new PrimitiveQuery_EntitySet(this.args.entitySetName, this.args.navigationStack, 0, this.args.filterOption); //only apply filter if many items wanted
+    var firstPrimitiveQuery = new PrimitiveQuery_EntitySet(this.args.entitySetName, this.args.navigationStack, 0); //only apply filter if many items wanted
     var secondPrimitiveQuery;
-    this.result = firstPrimitiveQuery.getResult(db);
     if(this.args.navigationStack.length > firstPrimitiveQuery.getLength()) {
+      var firstResult = firstPrimitiveQuery.getResult(db);
       secondPrimitiveQuery = new PrimitiveQuery_Entity(this.args.entitySetName, this.result.result, this.args.navigationStack, firstPrimitiveQuery.getLength());
       this.result = secondPrimitiveQuery.getResult(db);
       if(this.args.navigationStack.length > (firstPrimitiveQuery.getLength()+secondPrimitiveQuery.getLength()))
         throw new Error('unsupported resource path');
+    }
+    else {
+      this.result = firstPrimitiveQuery.getResult(db, { filterOption: this.args.filterOption, expandTree: this.args.expandTree });
     }
   },
   sendResults: function(res) {
@@ -69,10 +72,9 @@ function PrimitiveQuery_Base() {},
 })
 
 var PrimitiveQuery_EntitySet = defClass(PrimitiveQuery_Base,
-function PrimitiveQuery_EntitySet(entitySetName, navigationStack, stackPos, filterOption) {
+function PrimitiveQuery_EntitySet(entitySetName, navigationStack, stackPos) {
   this._len = 0;
   this.entitySetName = entitySetName;
-  this.filterOption = filterOption;
   if(navigationStack[stackPos] && navigationStack[stackPos].type == 'by-id') {
     this.byId = true;
     this.id = navigationStack[stackPos].id;
@@ -81,9 +83,9 @@ function PrimitiveQuery_EntitySet(entitySetName, navigationStack, stackPos, filt
 },
 {
   getLength: function() { return this._len },
-  getResult: function(db) {
+  getResult: function(db, args /* := filterOption, expandTree */) {
     if(!this.byId) {
-      var dbResult = db.getEntities(this.entitySetName, this.filterOption);
+      var dbResult = db.getEntities(this.entitySetName, { filterOption: args.filterOption, expandTree: args.expandTree });
       if(!dbResult.error) return { result: dbResult.result };
       else return { error: ErrorTypes.DB, errorDetails: dbResult.error };
     }
