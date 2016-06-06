@@ -27,13 +27,11 @@ function EntitySetQuery(model, schema) {
     var chosenEntityVar = vargen.next();
 
     var mapping = new StructuredSparqlVariableMapping(chosenEntityVar, vargen);
-    //var propertyPattern = new DirectPropertiesGraphPattern(chosenEntityVar, entityType, propertyVarMapping);
+    var queryContext = new SparqlQueryContext(mapping);
     var graphPattern = new ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
 
-    var evaluator = new SparqlMatchEvaluator();
+    var evaluator = new queries.QueryResultEvaluator();
 
-    //var triplePatterns = [ [ chosenEntityVar, 'rdf:type', setSchema.getEntityType().getNamespacedUri() ] ];
-    //triplePatterns = triplePatterns.concat(propertyPattern.getTriples());
     var triplePatterns = graphPattern.getTriples();
 
     var queryString =
@@ -52,7 +50,7 @@ function EntitySetQuery(model, schema) {
             entity[name] = entity[name] && entity[name].value;
           }*/
           console.log(single);
-          var entity = evaluator.evaluate(single, mapping);
+          var entity = evaluator.evaluate(single, queryContext);
           console.log(entity);
           return entity;
         }) };
@@ -74,7 +72,34 @@ function EntitySetQuery(model, schema) {
   }
 });
 
-var SparqlMatchEvaluator = module.exports.SparqlMatchEvaluator = _.defClass(null,
+var SparqlQueryResult = module.exports.SparqlQueryResult = _.defClass(null,
+function SparqlQueryResult() { },
+{
+
+});
+
+var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
+function SparqlQueryContext(mapping) { this.mapping = mapping },
+{
+  forEachElementaryProperty: function(result, fn) {
+    this.mapping.forEachElementaryProperty(function(propertyName, variableName) {
+      var obj = result[variableName.substr(1)];
+      if(obj) fn(obj.value, propertyName);
+    });
+  },
+  forEachComplexProperty: function(result, fn) {
+    this.mapping.forEachComplexProperty(function(propertyName, propertyMapping) {
+      if(propertyMapping.isEmpty() == false) {
+        fn(result, propertyName);
+      }
+    });
+  },
+  getSubContext: function(propertyName) {
+    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); //is it a good idea to create so many instances?
+  }
+})
+
+/*var SparqlMatchEvaluator = module.exports.SparqlMatchEvaluator = _.defClass(null,
 function SparqlMatchEvaluator() {
 },
 {
@@ -82,7 +107,6 @@ function SparqlMatchEvaluator() {
     var self = this;
     var result = {};
     mappingContext.forEachElementaryProperty(function(propertyName, variableName) {
-      console.log('elementary', propertyName, variableName, matchDictionary);
       var obj = matchDictionary[variableName.substr(1)];
       result[propertyName] = obj && obj.value;
     })
@@ -93,7 +117,7 @@ function SparqlMatchEvaluator() {
     })
     return result;
   }
-});
+});*/
 
 var SparqlBuilder = _.defClass(null,
 function() {
@@ -293,6 +317,7 @@ function handleErrors(result, res) {
 			break;
 		default:
 			res.statusCode = 500;
+      console.log(result.error.stack);
 			res.end('unknown error type ' + result.error);
 	}
 }

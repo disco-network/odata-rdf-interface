@@ -1,5 +1,6 @@
 var schema = require('../schema');
 schema = new schema.Schema();
+var queries = require('../queries');
 var sparqlQueries = require('../queries_sparql');
 
 module.exports = { name: 'sparql', tests: [
@@ -132,36 +133,65 @@ module.exports = { name: 'sparql', tests: [
     tools.assertTrue(function() { return tripleEquals(pattern.getTriples()[2], t3) },
       'third triple is incorrect: ' + pattern.getTriples()[2]);
   } },
+  { name: 'sparql-query-context', run: function(tools) {
+    var vargen = new sparqlQueries.SparqlVariableGenerator();
+    var mapping = new sparqlQueries.StructuredSparqlVariableMapping('?post', vargen);
+    var queryContext = new sparqlQueries.SparqlQueryContext(mapping);
+
+    var idVar = mapping.getElementaryPropertyVariable('Id');
+    var answer = { };
+    answer[idVar.substr(1)] = { token: "literal", value: "5" };
+
+    var ok = false;
+    queryContext.forEachElementaryProperty(answer, function() { ok = true });
+    tools.assertTrue(ok);
+  } },
+  { name: 'sparql-query-sub-context', run: function(tools) {
+    var vargen = new sparqlQueries.SparqlVariableGenerator();
+    var mapping = new sparqlQueries.StructuredSparqlVariableMapping('?post', vargen);
+    var queryContext = new sparqlQueries.SparqlQueryContext(mapping);
+
+    var parentVar = mapping.getComplexProperty('Parent').getVariable();
+    var idVar = mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id');
+    var answer = { };
+    answer[idVar.substr(1)] = { token: "literal", value: "5" };
+
+    var ok = false;
+    queryContext.getSubContext('Parent').forEachElementaryProperty(answer, function() { ok = true });
+    tools.assertTrue(ok);
+  } },
   { name: 'match-evaluator-elementary-properties', run: function(tools) {
     var vargen = new sparqlQueries.SparqlVariableGenerator();
-
     var mapping = new sparqlQueries.StructuredSparqlVariableMapping('?post', vargen);
+    var queryContext = new sparqlQueries.SparqlQueryContext(mapping);
+    var evaluator = new queries.QueryResultEvaluator();
+
     var idVar = mapping.getElementaryPropertyVariable('Id');
-    var evaluator = new sparqlQueries.SparqlMatchEvaluator();
 
     var answer = {};
-    answer[idVar] = { token: "literal", value: "5" };
-    var result = evaluator.evaluate(answer, mapping);
+    answer[idVar.substr(1)] = { token: "literal", value: "5" };
+    var result = evaluator.evaluate(answer, queryContext);
 
-    tools.assertTrue(function() { return result.Id == "5" })
+    tools.assertTrue(function() { return result.Id == "5" }, json(result))
   } },
   { name: 'match-evaluator-complex-properties', run: function(tools) {
     var vargen = new sparqlQueries.SparqlVariableGenerator();
 
     var mapping = new sparqlQueries.StructuredSparqlVariableMapping('?post', vargen);
+    var queryContext = new sparqlQueries.SparqlQueryContext(mapping);
+    var evaluator = new queries.QueryResultEvaluator();
+
     var idVar = mapping.getElementaryPropertyVariable('Id');
     var parentIdVar = mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id');
-    var evaluator = new sparqlQueries.SparqlMatchEvaluator();
 
     var answer = {};
-    answer[parentIdVar] = { token: "literal", value: "5" };
-    answer[idVar] = { token: "literal", value: "1" };
-    var result = evaluator.evaluate(answer, mapping);
+    answer[parentIdVar.substr(1)] = { token: "literal", value: "5" };
+    answer[idVar.substr(1)] = { token: "literal", value: "1" };
+    var result = evaluator.evaluate(answer, queryContext);
 
     tools.assertTrue(function() { return result.Content == null });
-    tools.assertTrue(function() { return result.Id == "1" });
+    tools.assertTrue(function() { return result.Id == "1" }, json(result));
     tools.assertTrue(function() { return result.Parent.Id == "5" });
-
   } },
   { name: 'optional-properties', run: function(tools) {
     var vargen = new sparqlQueries.SparqlVariableGenerator();

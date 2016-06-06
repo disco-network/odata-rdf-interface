@@ -10,11 +10,35 @@ function Query() {},
 var QueryModel = _.defClass(null,
 function QueryModel() { },
 {
-  entitySetName: null,
+  entitySetName: null, // this way declared, the variables are static
   navigationStack: null,
   filterOption: null,
   expandTree: null
 })
+
+var QueryResultEvaluator = _.defClass(null,
+function QueryResultEvaluator() { },
+{
+  // result type corresponds to what's needed by the context instance
+  evaluate: function(result, context) {
+    var self = this;
+    var ret = {};
+    context.forEachElementaryProperty(result, function(value, propertyName) {
+      ret[propertyName] = value;
+    });
+    context.forEachComplexProperty(result, function(subResult, propertyName) {
+      ret[propertyName] = self.evaluate(subResult, context.getSubContext(propertyName));
+    });
+    return ret;
+  }
+})
+
+var QueryContext = _.defClass(null,
+function QueryContext() { },
+{
+  forEachElementaryProperty: _.notImplemented,
+  forEachComplexProperty: _.notImplemented,
+});
 
 var ErrorTypes = {
 	NONE: 0,
@@ -23,4 +47,10 @@ var ErrorTypes = {
 	PROPERTY_NOTFOUND: 3,
 }
 
-module.exports = { Query: Query, QueryModel: QueryModel, ErrorTypes: ErrorTypes };
+module.exports = {
+  Query: Query,
+  QueryModel: QueryModel,
+  QueryResultEvaluator: QueryResultEvaluator,
+  QueryContext: QueryContext,
+  ErrorTypes: ErrorTypes,
+};
