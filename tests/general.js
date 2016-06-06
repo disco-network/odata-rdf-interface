@@ -26,7 +26,7 @@ module.exports = { name: 'general', tests: [
   } },
   { name: 'queryfactory-expandtree', run: function (tools) {
     var expandOption = [ { path: [ "A", "B", "C" ] }, { path: [ "A", "B", "D" ] }, { path: [ "A", "C" ] } ];
-    var fty = new queryFactory.DbQueryFactory('E', { entitySets: { 'E': {} } });
+    var fty = new queryFactory.QueryComposer('E', { entitySets: { 'E': {} } });
     fty.expand(expandOption);
     tools.assertTrue(function() { return fty.expandTree.A.B.C } );
     tools.assertTrue(function() { return fty.expandTree.A.B.D } );

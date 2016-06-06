@@ -1,4 +1,4 @@
-var testPackages = [require('./general'), require('./expand')];
+var testPackages = [require('./general')/*TODO: , require('./expand')*/, require('./mapping'), require('./sparql')];
 
 //run from root directory, not from $root/tests
 
