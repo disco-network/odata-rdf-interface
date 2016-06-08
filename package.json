@@ -2,6 +2,8 @@
   "dependencies": {
     "connect": "~3.4.1",
     "diskdb": "~0.1.14",
-    "rdfstore": "~0.9.10"
+    "rdfstore": "~0.9.10",
+    "gulp-jasmine": "~2.3.0",
+    "gulp": "~3.9.1"
   }
 }

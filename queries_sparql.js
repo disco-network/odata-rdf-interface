@@ -158,16 +158,16 @@ function StructuredSparqlVariableMapping(variableName, vargen) {
 });
 
 var GraphPattern = module.exports.GraphPattern = _.defClass(null,
-function GraphPattern() {
-  this.triples = [];
-  this.optionalTripleLists = [];
+function GraphPattern(triples) {
+  this.triples = triples || [];
+  this.optionalPatterns = [];
 },
 {
   getTriples: function() {
     return this.triples;
   },
-  getOptionalTripleLists: function() {
-    return this.optionalTripleLists;
+  getOptionalPatterns: function() {
+    return this.optionalPatterns;
   },
   integratePatterns: function(patterns) {
     this.triples = _.mergeArrays([this.triples].concat(patterns
@@ -175,18 +175,16 @@ function GraphPattern() {
       return p.getTriples()
     })));
 
-    this.optionalTripleLists = _.mergeArrays([this.optionalTripleLists].concat(patterns
-    .map(function(p) {
-      return p.getOptionalTripleLists()
-    })));
+    for(var i in patterns) { this.integratePatternsAsOptional(patterns[i].getOptionalPatterns()) };
+  },
+  integratePatternsAsOptional: function(patterns) {
+    this.optionalPatterns.push.apply(this.optionalPatterns, patterns);
   }
 });
 
 var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(GraphPattern,
 function(entityType, mapping) {
   GraphPattern.call(this);
-
-  this.triples = [];
 
   var entityVariable = mapping.getVariable();
   var propertyNames = entityType.getPropertyNames();
@@ -196,6 +194,7 @@ function(entityType, mapping) {
     var propertyName = property.getName();
     if(property.isNavigationProperty() === false) {
       if(!property.mirroredFromProperty()) {
+        //TODO: optional
         this.triples.push([
           entityVariable,
           property.getNamespacedUri(),
@@ -204,21 +203,16 @@ function(entityType, mapping) {
       }
       else {
         var mirroringProperty = property.mirroredFromProperty();
+        var propertyValueVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
         var triples = [
-          [ entityVariable,
-            mirroringProperty.getNamespacedUri(),
-            mapping.getComplexProperty(mirroringProperty.getName()).getVariable()
-          ],
-          [ mapping.getComplexProperty(mirroringProperty.getName()).getVariable(),
-            "disco:id",
-            mapping.getElementaryPropertyVariable(propertyName)
-          ]
+          [ entityVariable, mirroringProperty.getNamespacedUri(), propertyValueVar ],
+          [ propertyValueVar,  "disco:id", mapping.getElementaryPropertyVariable(propertyName) ]
         ];
         if(mirroringProperty.isOptional() == false) {
           this.triples = this.triples.concat(triples);
         }
         else {
-          this.optionalTripleLists.push(triples);
+          this.integratePatternsAsOptional([new GraphPattern(triples)]);
         }
       }
     }
@@ -235,12 +229,21 @@ function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
   var propertyMapping = mapping.getComplexProperty(propertyName);
 
   var entityVariable = mapping.getVariable();
-  this.triples = [
-    [ entityVariable, propertySchema.getNamespacedUri(), propertyMapping.getVariable() ]
-  ];
-
   var secondOrderProperties = new DirectPropertiesGraphPattern(propertyType, propertyMapping, propertyName);
-  this.integratePatterns([secondOrderProperties]);
+
+  var mainTriple = [ entityVariable, propertySchema.getNamespacedUri(), propertyMapping.getVariable() ];
+  if(propertySchema.isOptional() == false) {
+    this.triples = [
+      mainTriple
+    ];
+    this.integratePatterns([secondOrderProperties]);
+  }
+  else {
+    var optionalGp = new GraphPattern([ mainTriple ]);
+    optionalGp.integratePatterns([ secondOrderProperties ]);
+    this.integratePatternsAsOptional([ optionalGp ]);
+  }
+
 },
 {
 });

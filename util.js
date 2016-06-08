@@ -19,8 +19,13 @@ function defClass(sup, ctor, props) {
   return ctor;
 }
 
+function mergeArrays(arrays) {
+  return [].concat.apply([], arrays);
+}
+
 module.exports = {
   defClass: defClass,
   notImplemented: notImplemented,
-  Factory: Factory
+  mergeArrays: mergeArrays,
+  Factory: Factory,
 };
