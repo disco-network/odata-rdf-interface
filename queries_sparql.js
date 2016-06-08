@@ -29,7 +29,6 @@ function EntitySetQuery(model, schema) {
     var mapping = new StructuredSparqlVariableMapping(chosenEntityVar, vargen);
     var queryContext = new SparqlQueryContext(mapping);
     var graphPattern = new ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
-
     var evaluator = new queries.QueryResultEvaluator();
 
     var triplePatterns = graphPattern.getTriples();
@@ -38,20 +37,12 @@ function EntitySetQuery(model, schema) {
         'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> '
       + 'PREFIX disco: <http://disco-network.org/resource/> '
       + 'SELECT ' + '*' + ' WHERE {' + triplePatterns.map(function(p) { return p.join(' ') }).join(" . ") + '}';
-    console.log(queryString);
+    console.log(queryString)
     sparqlProvider.querySelect(queryString, function(answer) {
+      console.log(3);
       if(!answer.error) {
         self.result = { result: answer.result.map(function(single) {
-          /*var entity = { };
-          var propertyNames = entityType.getPropertyNames();
-          for(var i in propertyNames) {
-            var name = propertyNames[i];
-            entity[name] = mat[ mapping.getPropertyVariable(name).substr(1) ];
-            entity[name] = entity[name] && entity[name].value;
-          }*/
-          console.log(single);
           var entity = evaluator.evaluate(single, queryContext);
-          console.log(entity);
           return entity;
         }) };
       }
@@ -70,12 +61,6 @@ function EntitySetQuery(model, schema) {
       handleErrors(this.result, res);
     }
   }
-});
-
-var SparqlQueryResult = module.exports.SparqlQueryResult = _.defClass(null,
-function SparqlQueryResult() { },
-{
-
 });
 
 var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
@@ -97,36 +82,7 @@ function SparqlQueryContext(mapping) { this.mapping = mapping },
   getSubContext: function(propertyName) {
     return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); //is it a good idea to create so many instances?
   }
-})
-
-/*var SparqlMatchEvaluator = module.exports.SparqlMatchEvaluator = _.defClass(null,
-function SparqlMatchEvaluator() {
-},
-{
-  evaluate: function(matchDictionary, mappingContext) {
-    var self = this;
-    var result = {};
-    mappingContext.forEachElementaryProperty(function(propertyName, variableName) {
-      var obj = matchDictionary[variableName.substr(1)];
-      result[propertyName] = obj && obj.value;
-    })
-    mappingContext.forEachComplexProperty(function(propertyName, propertyMapping) {
-      if(propertyMapping.isEmpty() == false) {
-        result[propertyName] = self.evaluate(matchDictionary, propertyMapping);
-      }
-    })
-    return result;
-  }
-});*/
-
-var SparqlBuilder = _.defClass(null,
-function() {
-  this.vargen = new SparqlVariableGenerator();
-},
-{
-  buildEntitySetPattern: function(entitySetName) {
-  },
-})
+});
 
 var SparqlVariableGenerator = module.exports.SparqlVariableGenerator = _.defClass(null,
 function() { this.i = -1 },
@@ -214,14 +170,15 @@ function GraphPattern() {
     return this.optionalTripleLists;
   },
   integratePatterns: function(patterns) {
-    this.triples = this.triples.concat(patterns
+    this.triples = _.mergeArrays([this.triples].concat(patterns
     .map(function(p) {
       return p.getTriples()
-    })
-    .concat([[]])
-    .reduce(function(red, x) {
-      return red.concat(x);
-    }));
+    })));
+
+    this.optionalTripleLists = _.mergeArrays([this.optionalTripleLists].concat(patterns
+    .map(function(p) {
+      return p.getOptionalTripleLists()
+    })));
   }
 });
 

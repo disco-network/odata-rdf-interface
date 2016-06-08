@@ -89,6 +89,19 @@ module.exports = { name: 'sparql', tests: [
     tools.assertTrue(function() { return containsTriple(pattern.getTriples(), t2) },
       'does not contain triple #2 [' + t2 + ']: ' + JSON.stringify(pattern.getTriples(),null,2));
   } },
+  { name: 'expand-tree-pattern-special-case', run: function(tools) {
+    var Post = schema.getEntityType('Post');
+    tools.assertTrue(function() { return Post != null });
+    var expandTree = { Content: { Content: {} } };
+
+    var vargen = new sparqlQueries.SparqlVariableGenerator();
+    var mapping = new sparqlQueries.StructuredSparqlVariableMapping('?post', vargen);
+    var pattern = new sparqlQueries.ExpandTreeGraphPattern(Post, expandTree, mapping);
+
+    var t1 = [ '?post', 'disco:parent', mapping.getComplexProperty('Parent').getVariable() ];
+    var t2 = [ mapping.getComplexProperty('Parent').getVariable(), 'disco:id',
+      mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id') ];
+  } },
   { name: 'expand-nested-tree-pattern', run: function(tools) {
     var Post = schema.getEntityType('Post');
     tools.assertTrue(function() { return Post != null });
@@ -206,6 +219,15 @@ module.exports = { name: 'sparql', tests: [
       [ '?post', 'disco:parent', mapping.getComplexProperty('Parent').getVariable() ],
       [ mapping.getComplexProperty('Parent').getVariable(), 'disco:id', mapping.getElementaryPropertyVariable('ParentId') ]
     ]);
+  } },
+  { name: 'optional-properties-integrate-patterns', run: function(tools) {
+    var innerPattern = new sparqlQueries.GraphPattern();
+    innerPattern.optionalTripleLists.push(['a', 'b', 'c']);
+
+    var outerPattern = new sparqlQueries.GraphPattern();
+    outerPattern.integratePatterns([innerPattern]);
+
+    tools.assertTrue(function() { return outerPattern.optionalTripleLists.length == 1 });
   } },
 ] };
 
