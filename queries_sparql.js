@@ -182,7 +182,95 @@ function GraphPattern(triples) {
   }
 });
 
-var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(GraphPattern,
+var TreeGraphPattern = module.exports.TreeGraphPattern = _.defClass(null,
+function TreeGraphPattern(rootName) {
+  this.rootName = rootName;
+  this.branches = { };
+  this.optionalBranches = { };
+},
+{
+  getTriples: function() {
+    var self = this;
+    var triples = [];
+    for(var property in this.branches) {
+      var branches = this.branches[property];
+      branches.forEach(function(branch) {
+        triples.push([ self.name(), property, branch.name() ]);
+        triples.push.apply(triples, branch.getTriples());
+      });
+    }
+    return triples;
+  },
+  getOptionalPatterns: function() {
+    var self = this;
+    var patterns = [];
+    for(var property in this.optionalBranches) {
+      var branches = this.optionalBranches[property];
+      branches.forEach(function(branch) {
+        var gp = new GraphPattern([[ self.name(), property, branch.name() ]]);
+        gp.integratePatterns([ branch ]);
+        patterns.push(gp);
+      })
+    }
+    return patterns;
+  },
+  name: function() {
+    return this.rootName;
+  },
+  branch: function(property, arg) {
+    switch(typeof arg) {
+      case 'undefined': return this.branches[property];
+      case 'string':
+        var pat = new TreeGraphPattern(arg);
+        return this.branch(property, pat);
+      case 'object':
+        if(this.branches[property] !== undefined)
+          this.branches[property].push(arg);
+        else
+          this.branches[property] = [ arg ];
+        return arg;
+    }
+  },
+  optionalBranch: function(property, arg) {
+    switch(typeof arg) {
+      case 'undefined': return this.optionalBranches[property];
+      case 'string':
+        var pat = new TreeGraphPattern(arg);
+        return this.optionalBranch(property, pat);
+      case 'object':
+        if(this.optionalBranches[property] !== undefined)
+          this.optionalBranches[property].push(arg);
+        else
+          this.optionalBranches[property] = [ arg ];
+        return arg;
+    }
+  },
+  branchExists: function(property) {
+    return this.branches[property] !== undefined;
+  },
+  integratePatterns: function() {
+    throw new Error('not supported by tree graph patterns');
+  },
+  integratePatternsAsOptional: function() {
+    throw new Error('not supported by tree graph patterns');
+  },
+  merge: function(other) {
+    var self = this;
+    if(this.rootName !== other.rootName) throw new Error('can\'t merge trees with different roots');
+    for(var property in other.branches) {
+      other.branches[property].forEach(function(branch) {
+        self.branch(property, branch);
+      })
+    }
+    for(var property in other.optionalBranches) {
+      other.optionalBranches[property].forEach(function(branch) {
+        self.optionalBranch(property, branch);
+      })
+    }
+  }
+})
+
+/*var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(GraphPattern,
 function(entityType, mapping) {
   GraphPattern.call(this);
 
@@ -219,36 +307,67 @@ function(entityType, mapping) {
   }
 },
 {
-});
+});*/
 
-var ExpandedPropertyGraphPattern = module.exports.ExpandedPropertyGraphPattern = _.defClass(GraphPattern,
-function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
-  GraphPattern.call(this);
-  var propertySchema = entityType.getProperty(propertyName);
-  var propertyType = propertySchema.getEntityType();
-  var propertyMapping = mapping.getComplexProperty(propertyName);
-
+var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(TreeGraphPattern,
+function(entityType, mapping) {
   var entityVariable = mapping.getVariable();
-  var secondOrderProperties = new DirectPropertiesGraphPattern(propertyType, propertyMapping, propertyName);
+  TreeGraphPattern.call(this, entityVariable);
 
-  var mainTriple = [ entityVariable, propertySchema.getNamespacedUri(), propertyMapping.getVariable() ];
-  if(propertySchema.isOptional() == false) {
-    this.triples = [
-      mainTriple
-    ];
-    this.integratePatterns([secondOrderProperties]);
+  var propertyNames = entityType.getPropertyNames();
+  var properties = propertyNames.map(function(p) { return entityType.getProperty(p) });
+  for(var i in properties) {
+    var property = properties[i];
+    var propertyName = property.getName();
+    if(property.isNavigationProperty() === false) {
+      if(!property.mirroredFromProperty()) {
+        //TODO: optional
+        this.branch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
+      }
+      else {
+        var mirroringProperty = property.mirroredFromProperty();
+        var propertyValueVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+        if(mirroringProperty.isOptional() == false) {
+          this
+            .branch(mirroringProperty.getNamespacedUri(), propertyValueVar)
+            .branch('disco:id', mapping.getElementaryPropertyVariable(propertyName));
+        }
+        else {
+          this
+            .optionalBranch(mirroringProperty.getNamespacedUri(), propertyValueVar)
+            .branch('disco:id', mapping.getElementaryPropertyVariable(propertyName));
+        }
+      }
+    }
   }
-  else {
-    var optionalGp = new GraphPattern([ mainTriple ]);
-    optionalGp.integratePatterns([ secondOrderProperties ]);
-    this.integratePatternsAsOptional([ optionalGp ]);
-  }
-
 },
 {
 });
 
-var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(GraphPattern,
+
+var ExpandedPropertyGraphPattern = module.exports.ExpandedPropertyGraphPattern = _.defClass(TreeGraphPattern,
+function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
+  var entityVariable = mapping.getVariable();
+  TreeGraphPattern.call(this, entityVariable);
+
+  var propertySchema = entityType.getProperty(propertyName);
+  var propertyType = propertySchema.getEntityType();
+  var propertyMapping = mapping.getComplexProperty(propertyName);
+
+  var secondOrderProperties = new DirectPropertiesGraphPattern(propertyType, propertyMapping, propertyName);
+
+  var mainTriple = [ entityVariable, propertySchema.getNamespacedUri(), propertyMapping.getVariable() ];
+  if(propertySchema.isOptional() == false) {
+    this.branch(propertySchema.getNamespacedUri(), secondOrderProperties);
+  }
+  else {
+    this.optionalBranch(propertySchema.getNamespacedUri(), secondOrderProperties);
+  }
+},
+{
+});
+
+/*var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(GraphPattern,
 function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
   GraphPattern.call(this);
 
@@ -265,6 +384,29 @@ function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
   });
 
   this.integratePatterns([directPropertyPattern].concat(directPropertyPatterns.concat(nestedPatterns)));
+},
+{
+});*/
+
+var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(TreeGraphPattern,
+function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
+  var self = this;
+  TreeGraphPattern.call(this, mapping.getVariable());
+
+  var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping);
+  var nestedPatterns = Object.keys(expandTree)
+  .forEach(function(propertyName) {
+    var property = entityType.getProperty(propertyName);
+    var propertyType = property.getEntityType();
+    //Next recursion level
+    var gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
+    if(property.isOptional())
+      self.optionalBranch(property.getNamespacedUri(), gp);
+    else
+      self.branch(property.getNamespacedUri(), gp);
+  });
+
+  this.merge(directPropertyPattern);
 },
 {
 });

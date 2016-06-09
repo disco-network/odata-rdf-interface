@@ -16,6 +16,8 @@ function QueryModel() { },
   expandTree: null
 })
 
+// This class can be used to generate odata output from different sources.
+// The concrete database logic is handled by the result and context parameters.
 var QueryResultEvaluator = _.defClass(null,
 function QueryResultEvaluator() { },
 {

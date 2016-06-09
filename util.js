@@ -23,9 +23,14 @@ function mergeArrays(arrays) {
   return [].concat.apply([], arrays);
 }
 
+function values(dict) {
+  return Object.keys(dict).map(function(k) { return dict[k] });
+}
+
 module.exports = {
   defClass: defClass,
   notImplemented: notImplemented,
   mergeArrays: mergeArrays,
+  values: values,
   Factory: Factory,
 };

@@ -39,6 +39,79 @@ describe('general sparql graph patterns', function() {
   })
 })
 
+describe('tree graph patterns', function() {
+  it('should build a consistent tree', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+
+    gp.branch('disco:id', '?id');
+
+    expect(gp.branchExists('disco:id')).toEqual(true);
+    expect(gp.branchExists('disco:content')).toEqual(false);
+    expect(gp.branch('disco:id')[0].name()).toEqual('?id');
+  })
+  it('should generate triples', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+
+    gp.branch('disco:id', '?id');
+    gp.branch('disco:content', '?cnt').branch('disco:id', '?cntid');
+
+    expect(gp.getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
+    expect(gp.getTriples()).toContain([ '?root', 'disco:content', '?cnt' ]);
+    expect(gp.getTriples()).toContain([ '?cnt', 'disco:id', '?cntid' ]);
+  })
+  it('should allow optional branches', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+
+    gp.optionalBranch('disco:id', '?id');
+
+    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
+  })
+  it('should allow me to integrate other trees as branches', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+    var inner = new squeries.TreeGraphPattern('?inner');
+
+    inner.branch('disco:id', '?id');
+    gp.branch('disco:inner', inner);
+
+    expect(gp.getTriples()).toContain([ '?inner', 'disco:id', '?id' ]);
+  })
+  it('should allow me to integrate other trees as optional branches', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+    var inner = new squeries.TreeGraphPattern('?inner');
+
+    inner.branch('disco:id', '?id');
+    gp.optionalBranch('disco:inner', inner);
+
+    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?inner', 'disco:id', '?id' ]);
+  })
+  it('should allow me to merge with other trees', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+    var other = new squeries.TreeGraphPattern('?root');
+
+    other.branch('disco:id', '?id');
+    gp.merge(other);
+
+    expect(gp.getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
+  })
+  it('should not allow me to merge with trees with different roots', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+    var other = new squeries.TreeGraphPattern('?other');
+
+    other.branch('disco:id', '?id');
+    expect(function() { gp.merge(other) }).toThrow();
+  })
+  it('should detect and handle collisions when merging', function() {
+    var gp = new squeries.TreeGraphPattern('?root');
+    var gp2 = new squeries.TreeGraphPattern('?root');
+
+    gp.branch('id', '?id');
+    gp2.branch('id', '?id2');
+    gp.merge(gp2);
+
+    expect(gp.branch('id').length).toEqual(2);
+  });
+})
+
 describe('direct property graph patterns', function() {
   it('should store the direct properties in the mapping', function() {
     var mapping = mhelper.createStructuredMapping();
@@ -92,6 +165,7 @@ describe('expand tree graph patterns', function() {
     var expandTree = { Content: {} };
     var mapping = mhelper.createStructuredMapping('?post');
     var gp = new squeries.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
+    console.log(1)
 
     expect(mapping.getComplexProperty('Content').elementaryPropertyExists('Id')).toEqual(true);
     expect(gp.getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
@@ -110,8 +184,7 @@ describe('expand tree graph patterns', function() {
     var gp = new squeries.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
 
     expect(mapping.getComplexProperty('Parent').elementaryPropertyExists('Id')).toEqual(true);
-    expect(gp.getOptionalPatterns().length).toBeGreaterThan(1);
-    expect(gp.getOptionalPatterns()[1].getTriples()).toContain(
+    expect(gp.getOptionalPatterns()[0].getTriples()).toContain(
       [ mapping.getComplexProperty('Parent').getVariable(), 'disco:id', mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id') ])
   })
 })
