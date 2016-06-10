@@ -5,7 +5,6 @@ var abnfTokenizer = require('../../abnfjs/tokenizer');
 var abnfParser = require('../../abnfjs/parser');
 var abnfInterpreter = require('../../abnfjs/interpreter');
 
-var queries = require('./odata/queries');
 var ast2query = require('./odata/ast2query');
 var schema = require('./odata/schema');
 

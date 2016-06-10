@@ -39,7 +39,7 @@ function EntitySetQuery(model, schema) {
     var chosenEntityVar = vargen.next();
 
     var mapping = new mappings.StructuredSparqlVariableMapping(chosenEntityVar, vargen);
-    var queryContext = new SparqlQueryContext(mapping);
+    var queryContext = new SparqlQueryContext(mapping, this.model.expandTree);
     var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
     var evaluator = new queries.QueryResultEvaluator();
 
@@ -81,7 +81,10 @@ function EntitySetQuery(model, schema) {
  * This class provides methods to interpret a SPARQL query result as OData.
  */
 var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
-function SparqlQueryContext(mapping) { this.mapping = mapping },
+function SparqlQueryContext(mapping, remainingExpandBranch) {
+  this.mapping = mapping;
+  this.remainingExpandBranch = remainingExpandBranch;
+},
 {
   forEachElementaryProperty: function(result, fn) {
     this.mapping.forEachElementaryProperty(function(propertyName, variableName) {
@@ -90,15 +93,22 @@ function SparqlQueryContext(mapping) { this.mapping = mapping },
     });
   },
   forEachComplexProperty: function(result, fn) {
-    this.mapping.forEachComplexProperty(function(propertyName, propertyMapping) {
+    /*this.mapping.forEachComplexProperty(function(propertyName, propertyMapping) {
       if(propertyMapping.isEmpty() == false) {
         fn(result, propertyName);
       }
-    });
+    });*/
+    for(var propertyName in this.remainingExpandBranch) {
+      var propertyMapping = this.mapping.getComplexProperty(propertyName);
+      if(propertyMapping.isEmpty() == false) {
+        fn(result, propertyName);
+      }
+    }
   },
   /** Return another context associated with a complex property. */
   getSubContext: function(propertyName) {
-    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); /** @todo is it a good idea to create so many instances? */
+    /** @todo is it a good idea to create so many instances? */
+    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName), this.remainingExpandBranch[propertyName]);
   }
 });
 
