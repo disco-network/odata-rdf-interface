@@ -1,4 +1,4 @@
-var queryFactory = require('../dbqueryfactory');
+var queryFactory = require('../querycomposer');
 
 describe("query composer", function() {
   it("should create an expand tree", function() {

@@ -1,12 +1,12 @@
 var queries = require('./queries_sparql');
-var queryComposer = require('./dbqueryfactory');
+var queryComposer = require('./queryomposer');
 var _ = require('./util');
 
 function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
   if(ast.type == 'resourceQuery') {
     if(ast.resourcePath.type !== 'entitySet') throw new Error('unsupported resource path type: ' + ast.resourcePath.type);
     if(ast.resourcePath.navigation && ast.resourcePath.navigation.qualifiedEntityTypeName) throw new Error('qualified entity type name not supported');
-    
+
     var comp = new queryComposer.QueryComposer(ast.resourcePath.entitySetName, schema);
     comp.filter(ast.queryOptions.filter);
     comp.expand(ast.queryOptions.expand);
