@@ -63,102 +63,16 @@ function EntitySetQuery(model, schema) {
   }
 });
 
-var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
-function SparqlQueryContext(mapping) { this.mapping = mapping },
-{
-  forEachElementaryProperty: function(result, fn) {
-    this.mapping.forEachElementaryProperty(function(propertyName, variableName) {
-      var obj = result[variableName.substr(1)];
-      if(obj) fn(obj.value, propertyName);
-    });
-  },
-  forEachComplexProperty: function(result, fn) {
-    this.mapping.forEachComplexProperty(function(propertyName, propertyMapping) {
-      if(propertyMapping.isEmpty() == false) {
-        fn(result, propertyName);
-      }
-    });
-  },
-  getSubContext: function(propertyName) {
-    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); //is it a good idea to create so many instances?
-  }
-});
-
-var SparqlVariableGenerator = module.exports.SparqlVariableGenerator = _.defClass(null,
-function() { this.i = -1 },
-{
-  next: function() {
-    return '?x' + (++this.i).toString();
-  }
-});
-
-var ComplexSparqlVariableGenerator = module.exports.ComplexSparqlVariableGenerator = _.defClass(null,
-function ComplexSparqlVariableGenerator(vargen) {
-  this.vargen = vargen;
-},
-{
-  next: function() {
-    return new StructuredSparqlVariableMapping(this.vargen.next(), this.vargen);
-  }
-});
-
-var SparqlVariableMapping = module.exports.SparqlVariableMapping = _.defClass(null,
-function SparqlVariableMapping(vargen) { this.vargen = vargen },
-{
-  getPropertyVariable: function(propertyName) {
-    this._map = this._map || {};
-    return this._map[propertyName] = this._map[propertyName] || this.vargen.next();
-  },
-  mappingExists: function(propertyName) {
-    return this._map != null && this._map[propertyName] != null;
-  },
-  forEach: function(fn) {
-    for(var key in this._map) {
-      fn(key, this._map[key]);
-    }
-  },
-  isEmpty: function() {
-    return this._map == null || this._map.length == 0;
-  }
-});
-
-var StructuredSparqlVariableMapping = module.exports.StructuredSparqlVariableMapping = _.defClass(null,
-function StructuredSparqlVariableMapping(variableName, vargen) {
-  this.variableName = variableName;
-
-  var complexVargen = new ComplexSparqlVariableGenerator(vargen);
-  this.elementaryProperties = new SparqlVariableMapping(vargen);
-  this.complexProperties = new SparqlVariableMapping(complexVargen);
-},
-{
-  getVariable: function() {
-    return this.variableName;
-  },
-  getElementaryPropertyVariable: function(name) {
-    return this.elementaryProperties.getPropertyVariable(name);
-  },
-  getComplexProperty: function(name) {
-    return this.complexProperties.getPropertyVariable(name);
-  },
-  elementaryPropertyExists: function(name) {
-    return this.elementaryProperties.mappingExists(name);
-  },
-  complexPropertyExists: function(name) {
-    return this.complexProperties.mappingExists(name);
-  },
-  forEachElementaryProperty: function(fn) {
-    this.elementaryProperties.forEach(fn);
-  },
-  forEachComplexProperty: function(fn) {
-    this.complexProperties.forEach(fn);
-  },
-  isEmpty: function() {
-    return this.elementaryProperties.isEmpty() && this.complexProperties.isEmpty();
-  }
-});
-
 var GraphPattern = module.exports.GraphPattern = _.defClass(null,
-function GraphPattern(triples) {
+function() {
+},
+{
+  getTriples: _.notImplemented,
+  getOptionalPatterns: _.notImplemented,
+});
+
+var ComposibleGraphPattern = module.exports.ComposibleGraphPattern = _.defClass(GraphPattern,
+function ComposibleGraphPattern(triples) {
   this.triples = triples || [];
   this.optionalPatterns = [];
 },
@@ -207,7 +121,7 @@ function TreeGraphPattern(rootName) {
     for(var property in this.optionalBranches) {
       var branches = this.optionalBranches[property];
       branches.forEach(function(branch) {
-        var gp = new GraphPattern([[ self.name(), property, branch.name() ]]);
+        var gp = new ComposibleGraphPattern([[ self.name(), property, branch.name() ]]);
         gp.integratePatterns([ branch ]);
         patterns.push(gp);
       })
@@ -248,12 +162,6 @@ function TreeGraphPattern(rootName) {
   branchExists: function(property) {
     return this.branches[property] !== undefined;
   },
-  integratePatterns: function() {
-    throw new Error('not supported by tree graph patterns');
-  },
-  integratePatternsAsOptional: function() {
-    throw new Error('not supported by tree graph patterns');
-  },
   merge: function(other) {
     var self = this;
     if(this.rootName !== other.rootName) throw new Error('can\'t merge trees with different roots');
@@ -269,45 +177,6 @@ function TreeGraphPattern(rootName) {
     }
   }
 })
-
-/*var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(GraphPattern,
-function(entityType, mapping) {
-  GraphPattern.call(this);
-
-  var entityVariable = mapping.getVariable();
-  var propertyNames = entityType.getPropertyNames();
-  var properties = propertyNames.map(function(p) { return entityType.getProperty(p) });
-  for(var i in properties) {
-    var property = properties[i];
-    var propertyName = property.getName();
-    if(property.isNavigationProperty() === false) {
-      if(!property.mirroredFromProperty()) {
-        //TODO: optional
-        this.triples.push([
-          entityVariable,
-          property.getNamespacedUri(),
-          mapping.getElementaryPropertyVariable(propertyName)
-        ]);
-      }
-      else {
-        var mirroringProperty = property.mirroredFromProperty();
-        var propertyValueVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
-        var triples = [
-          [ entityVariable, mirroringProperty.getNamespacedUri(), propertyValueVar ],
-          [ propertyValueVar,  "disco:id", mapping.getElementaryPropertyVariable(propertyName) ]
-        ];
-        if(mirroringProperty.isOptional() == false) {
-          this.triples = this.triples.concat(triples);
-        }
-        else {
-          this.integratePatternsAsOptional([new GraphPattern(triples)]);
-        }
-      }
-    }
-  }
-},
-{
-});*/
 
 var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(TreeGraphPattern,
 function(entityType, mapping) {
@@ -344,7 +213,30 @@ function(entityType, mapping) {
 {
 });
 
+var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(TreeGraphPattern,
+function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
+  var self = this;
+  TreeGraphPattern.call(this, mapping.getVariable());
 
+  var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping);
+  var nestedPatterns = Object.keys(expandTree)
+  .forEach(function(propertyName) {
+    var property = entityType.getProperty(propertyName);
+    var propertyType = property.getEntityType();
+    //Next recursion level
+    var gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
+    if(property.isOptional())
+      self.optionalBranch(property.getNamespacedUri(), gp);
+    else
+      self.branch(property.getNamespacedUri(), gp);
+  });
+
+  this.merge(directPropertyPattern);
+},
+{
+});
+
+//do we still need this class?
 var ExpandedPropertyGraphPattern = module.exports.ExpandedPropertyGraphPattern = _.defClass(TreeGraphPattern,
 function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
   var entityVariable = mapping.getVariable();
@@ -367,48 +259,98 @@ function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
 {
 });
 
-/*var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(GraphPattern,
-function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
-  GraphPattern.call(this);
+var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
+function SparqlQueryContext(mapping) { this.mapping = mapping },
+{
+  forEachElementaryProperty: function(result, fn) {
+    this.mapping.forEachElementaryProperty(function(propertyName, variableName) {
+      var obj = result[variableName.substr(1)];
+      if(obj) fn(obj.value, propertyName);
+    });
+  },
+  forEachComplexProperty: function(result, fn) {
+    this.mapping.forEachComplexProperty(function(propertyName, propertyMapping) {
+      if(propertyMapping.isEmpty() == false) {
+        fn(result, propertyName);
+      }
+    });
+  },
+  getSubContext: function(propertyName) {
+    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); //is it a good idea to create so many instances?
+  }
+});
 
-  var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping);
-  var directPropertyPatterns = Object.keys(expandTree)
-  .map(function(propertyName) {
-    return new ExpandedPropertyGraphPattern(entityType, propertyName, mapping);
-  });
-  var nestedPatterns = Object.keys(expandTree)
-  .map(function(propertyName) {
-    var propertyType = entityType.getProperty(propertyName).getEntityType();
-    //Next recursion level
-    return new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
-  });
+var StructuredSparqlVariableMapping = module.exports.StructuredSparqlVariableMapping = _.defClass(null,
+function StructuredSparqlVariableMapping(variableName, vargen) {
+  this.variableName = variableName;
 
-  this.integratePatterns([directPropertyPattern].concat(directPropertyPatterns.concat(nestedPatterns)));
+  var complexVargen = new ComplexSparqlVariableGenerator(vargen);
+  this.elementaryProperties = new SparqlVariableMapping(vargen);
+  this.complexProperties = new SparqlVariableMapping(complexVargen);
 },
 {
-});*/
+  getVariable: function() {
+    return this.variableName;
+  },
+  getElementaryPropertyVariable: function(name) {
+    return this.elementaryProperties.getPropertyVariable(name);
+  },
+  getComplexProperty: function(name) {
+    return this.complexProperties.getPropertyVariable(name);
+  },
+  elementaryPropertyExists: function(name) {
+    return this.elementaryProperties.mappingExists(name);
+  },
+  complexPropertyExists: function(name) {
+    return this.complexProperties.mappingExists(name);
+  },
+  forEachElementaryProperty: function(fn) {
+    this.elementaryProperties.forEach(fn);
+  },
+  forEachComplexProperty: function(fn) {
+    this.complexProperties.forEach(fn);
+  },
+  isEmpty: function() {
+    return this.elementaryProperties.isEmpty() && this.complexProperties.isEmpty();
+  }
+});
 
-var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(TreeGraphPattern,
-function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
-  var self = this;
-  TreeGraphPattern.call(this, mapping.getVariable());
+var SparqlVariableMapping = module.exports.SparqlVariableMapping = _.defClass(null,
+function SparqlVariableMapping(vargen) { this.vargen = vargen },
+{
+  getPropertyVariable: function(propertyName) {
+    this._map = this._map || {};
+    return this._map[propertyName] = this._map[propertyName] || this.vargen.next();
+  },
+  mappingExists: function(propertyName) {
+    return this._map != null && this._map[propertyName] != null;
+  },
+  forEach: function(fn) {
+    for(var key in this._map) {
+      fn(key, this._map[key]);
+    }
+  },
+  isEmpty: function() {
+    return this._map == null || this._map.length == 0;
+  }
+});
 
-  var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping);
-  var nestedPatterns = Object.keys(expandTree)
-  .forEach(function(propertyName) {
-    var property = entityType.getProperty(propertyName);
-    var propertyType = property.getEntityType();
-    //Next recursion level
-    var gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
-    if(property.isOptional())
-      self.optionalBranch(property.getNamespacedUri(), gp);
-    else
-      self.branch(property.getNamespacedUri(), gp);
-  });
-
-  this.merge(directPropertyPattern);
+var ComplexSparqlVariableGenerator = module.exports.ComplexSparqlVariableGenerator = _.defClass(null,
+function ComplexSparqlVariableGenerator(vargen) {
+  this.vargen = vargen;
 },
 {
+  next: function() {
+    return new StructuredSparqlVariableMapping(this.vargen.next(), this.vargen);
+  }
+});
+
+var SparqlVariableGenerator = module.exports.SparqlVariableGenerator = _.defClass(null,
+function() { this.i = -1 },
+{
+  next: function() {
+    return '?x' + (++this.i).toString();
+  }
 });
 
 function handleErrors(result, res) {

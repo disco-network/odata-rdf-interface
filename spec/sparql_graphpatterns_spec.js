@@ -4,15 +4,15 @@ var squeries = require('../queries_sparql');
 var mhelper = require('./helpers/sparql_mappings');
 var gphelper = require('./helpers/sparql_graphpatterns');
 
-describe('general sparql graph patterns', function() {
+describe('composible sparql graph patterns', function() {
   it('should give me its triples', function() {
-    var gp = new squeries.GraphPattern();
+    var gp = new squeries.ComposibleGraphPattern();
 
     expect(gp.getTriples()).toEqual([]);
   })
   it('should integrate other patterns', function() {
-    var gp = new squeries.GraphPattern();
-    var innerGp = new squeries.GraphPattern();
+    var gp = new squeries.ComposibleGraphPattern();
+    var innerGp = new squeries.ComposibleGraphPattern();
 
     innerGp.triples = [['a','b','c']];
     gp.integratePatterns([innerGp]);
@@ -20,8 +20,8 @@ describe('general sparql graph patterns', function() {
     expect(gp.getTriples()).toEqual(innerGp.getTriples());
   })
   it('should integrate optional subpatterns of other patterns', function() {
-    var gp = new squeries.GraphPattern();
-    var innerGp = new squeries.GraphPattern();
+    var gp = new squeries.ComposibleGraphPattern();
+    var innerGp = new squeries.ComposibleGraphPattern();
 
     innerGp.optionalPatterns = [ new squeries.GraphPattern([ 'a','b','c' ]) ];
     gp.integratePatterns([innerGp]);
@@ -29,8 +29,8 @@ describe('general sparql graph patterns', function() {
     expect(gp.getOptionalPatterns()).toEqual(innerGp.getOptionalPatterns());
   })
   it('should integrate patterns as optional', function() {
-    var gp = new squeries.GraphPattern();
-    var innerGp = new squeries.GraphPattern();
+    var gp = new squeries.ComposibleGraphPattern();
+    var innerGp = new squeries.ComposibleGraphPattern();
 
     innerGp.triples = [['a','b','c']];
     gp.integratePatternsAsOptional([innerGp]);

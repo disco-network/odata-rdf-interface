@@ -6,7 +6,7 @@ var fs = require('fs');
 
 module.exports = { name: 'general', tests: [
   { name: 'odata4-mod-filter', run: function (tools) {
-    var abnf = fs.readFileSync('./odata4-mod.abnf', 'utf8');
+    var abnf = fs.readFileSync('../odata4-mod.abnf', 'utf8');
     var tok = abnfTokenizer.tokenize(abnf);
     var par = abnfParser.parse(tok);
     var inter = new abnfInterpreter.Interpreter(par);
