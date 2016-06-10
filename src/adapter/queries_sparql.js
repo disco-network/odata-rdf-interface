@@ -1,9 +1,8 @@
 /** @module */
-var _ = require('./util');
+var _ = require('../util');
 var mappings = require('./sparql_mappings');
 var gpatterns = require('./sparql_graphpatterns');
-var queries = require('./queries');
-var Query = require('./queries').Query;
+var queries = require('../odata/queries');
 
 var exports = module.exports = {};
 
@@ -24,7 +23,7 @@ function QueryFactory(model, schema) { this.model = model; this.schema = schema 
  * @name EntitySetQuery
  * @description Handles read-only OData queries.
  */
-var EntitySetQuery = exports.EntitySetQuery = _.defClass(Query,
+var EntitySetQuery = exports.EntitySetQuery = _.defClass(queries.Query,
 function EntitySetQuery(model, schema) {
   this.model = model;
   this.schema = schema;

@@ -8,3 +8,7 @@ gulp.task('tests', function() {
 
 //alternative name for the 'tests' task
 gulp.task('specs', ['tests']);
+
+gulp.task('server', function() {
+  require('./src/server');
+});

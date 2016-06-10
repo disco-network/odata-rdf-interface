@@ -1,13 +1,18 @@
 var connect = require('connect');
 var fs = require('fs')
-var abnfTokenizer = require('../abnfjs/tokenizer');
-var abnfParser = require('../abnfjs/parser');
-var abnfInterpreter = require('../abnfjs/interpreter');
-var queries = require('./queries');
-var sparqlQueries = require('./queries_sparql');
-var ast2query = require('./ast2query');
-var schema = require('./schema');
-var providerModule = require('./sparql_provider');
+
+var abnfTokenizer = require('../../abnfjs/tokenizer');
+var abnfParser = require('../../abnfjs/parser');
+var abnfInterpreter = require('../../abnfjs/interpreter');
+
+var queries = require('./odata/queries');
+var ast2query = require('./odata/ast2query');
+var schema = require('./odata/schema');
+
+var sparqlQueries = require('./adapter/queries_sparql');
+
+var providerModule = require('./sparql/sparql_provider');
+
 var rdfstore = require('rdfstore');
 
 var config = {
@@ -17,7 +22,7 @@ var config = {
 
 var schm = new schema.Schema();
 
-var abnf = fs.readFileSync('./odata4-mod.abnf', 'utf8');
+var abnf = fs.readFileSync('./src/odata/odata4-mod.abnf', 'utf8');
 var tokens = abnfTokenizer.tokenize(abnf);
 var grammar = abnfParser.parse(tokens);
 var interpreter = new abnfInterpreter.Interpreter(grammar);

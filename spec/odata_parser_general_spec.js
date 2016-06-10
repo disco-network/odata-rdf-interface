@@ -27,7 +27,7 @@ describe("odata parser", function() {
   });
 
   function initODataParser() {
-    var abnf = fs.readFileSync('./odata4-mod.abnf', 'utf8');
+    var abnf = fs.readFileSync('./src/odata/odata4-mod.abnf', 'utf8');
     var tok = abnfTokenizer.tokenize(abnf);
     var par = abnfParser.parse(tok);
     var inter = new abnfInterpreter.Interpreter(par);

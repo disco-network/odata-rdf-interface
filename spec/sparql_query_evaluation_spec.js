@@ -1,5 +1,5 @@
-var squeries = require('../queries_sparql');
-var queries = require('../queries');
+var squeries = require('../src/adapter/queries_sparql');
+var queries = require('../src/odata/queries');
 var mhelper = require('./helpers/sparql_mappings');
 
 describe('query context', function() {

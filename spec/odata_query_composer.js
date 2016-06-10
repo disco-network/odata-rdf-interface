@@ -1,4 +1,4 @@
-var composer = require('../querycomposer');
+var composer = require('../src/odata/querycomposer');
 
 describe("query composer", function() {
   it("should create an expand tree", function() {

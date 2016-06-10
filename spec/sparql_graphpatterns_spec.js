@@ -1,6 +1,6 @@
-var schema = new (require('../schema').Schema)();
-var queries = require('../queries');
-var gpatterns = require('../sparql_graphpatterns');
+var schema = new (require('../src/odata/schema').Schema)();
+var queries = require('../src/odata/queries');
+var gpatterns = require('../src/adapter/sparql_graphpatterns');
 var mhelper = require('./helpers/sparql_mappings');
 
 describe('composible sparql graph patterns', function() {

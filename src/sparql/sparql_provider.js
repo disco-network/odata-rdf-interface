@@ -1,4 +1,5 @@
-var _ = require('./util');
+/** @module */
+var _ = require('../util');
 var base = require('./sparql_provider_base')
 
 var SparqlProvider = _.defClass(base.SparqlProviderBase,

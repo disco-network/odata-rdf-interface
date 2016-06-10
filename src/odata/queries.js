@@ -1,4 +1,5 @@
-var _ = require('./util')
+/** @module */
+var _ = require('../util')
 
 var Query = _.defClass(null,
 function Query() {},

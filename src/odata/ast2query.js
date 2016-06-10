@@ -1,6 +1,7 @@
-var queries = require('./queries_sparql');
+/** @module */
+var _ = require('../util');
+var queries = require('../adapter/queries_sparql');
 var queryComposer = require('./querycomposer');
-var _ = require('./util');
 
 function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
   if(ast.type == 'resourceQuery') {
