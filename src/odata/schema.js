@@ -8,9 +8,9 @@ var raw = {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
         ContentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Content", nullable: false },
         ParentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Parent" },
-        Parent: { type: "Post", optional: true, quantity: "many-to-one", mirroredIndexProperty: "ParentId", foreignSet: "Posts", foreignProperty: "Children", rdfName: "parent", nullable: true },
-        Children: { type: "Post", quantity: "one-to-many", foreignSet: "Posts", foreignProperty: "Parent" },
-        Content: { type: "Post", quantity: "many-to-one", mirroredIndexProperty: "ContentId", rdfName: "content" }
+        Parent: { type: "Post", optional: true, quantity: "one-to-many", mirroredIndexProperty: "ParentId", foreignSet: "Posts", foreignProperty: "Children", rdfName: "parent", nullable: true },
+        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
+        Content: { type: "Post", quantity: "one-to-many", mirroredIndexProperty: "ContentId", rdfName: "content" }
       },
       rdfName: "Post"
     },
