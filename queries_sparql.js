@@ -1,9 +1,14 @@
+/** @module */
 var _ = require('./util');
 var queries = require('./queries');
 var Query = require('./queries').Query;
 
 var exports = module.exports = {};
 
+/**
+ * @class
+ * Used to generate query objects which can be run to modify and/or retrieve data.
+ */
 var QueryFactory = exports.QueryFactory = _.defClass(null,
 function QueryFactory(model, schema) { this.model = model; this.schema = schema },
 {
@@ -12,12 +17,18 @@ function QueryFactory(model, schema) { this.model = model; this.schema = schema 
   }
 });
 
+/**
+ * @namespace
+ * @name EntitySetQuery
+ * @description Handles read-only OData queries.
+ */
 var EntitySetQuery = exports.EntitySetQuery = _.defClass(Query,
 function EntitySetQuery(model, schema) {
   this.model = model;
   this.schema = schema;
 },
 {
+  /** @method */
   run: function(sparqlProvider, cb) {
     var self = this;
     var setSchema = this.schema.getEntitySet(this.model.entitySetName);
@@ -52,6 +63,9 @@ function EntitySetQuery(model, schema) {
       cb();
     });
   },
+  /** @method
+   * @description Pass the results of the query to the HTTP result object
+   */
   sendResults: function(res) {
     if(!this.result.error) {
       res.writeHeader(200, { 'Content-type': 'application/json' });
@@ -63,6 +77,10 @@ function EntitySetQuery(model, schema) {
   }
 });
 
+/**
+ * @class
+ * Provides a SPARQL graph pattern consisting of mandatory and optional triples.
+ */
 var GraphPattern = module.exports.GraphPattern = _.defClass(null,
 function() {
 },
@@ -71,6 +89,11 @@ function() {
   getOptionalPatterns: _.notImplemented,
 });
 
+/**
+ * @class
+ * Provides a SPARQL graph pattern whose triples are directly composible
+ * and manipulatable.
+ */
 var ComposibleGraphPattern = module.exports.ComposibleGraphPattern = _.defClass(GraphPattern,
 function ComposibleGraphPattern(triples) {
   this.triples = triples || [];
@@ -96,6 +119,11 @@ function ComposibleGraphPattern(triples) {
   }
 });
 
+/**
+ * @class
+ * Provides a SPARQL graph pattern whose triples are generated from a
+ * property tree
+ */
 var TreeGraphPattern = module.exports.TreeGraphPattern = _.defClass(null,
 function TreeGraphPattern(rootName) {
   this.rootName = rootName;
@@ -178,6 +206,11 @@ function TreeGraphPattern(rootName) {
   }
 })
 
+/**
+ * @class
+ * Provides a SPARQL graph pattern involving all the direct and elementary
+ * properties belonging to the OData entity type passed as schema.
+ */
 var DirectPropertiesGraphPattern = module.exports.DirectPropertiesGraphPattern = _.defClass(TreeGraphPattern,
 function(entityType, mapping) {
   var entityVariable = mapping.getVariable();
@@ -213,6 +246,12 @@ function(entityType, mapping) {
 {
 });
 
+/**
+ * @class
+ * Provides a SPARQL graph pattern according to an entity type schema,
+ * an expand tree and a StructuredSparqlVariableMapping so that it contains
+ * all the data necessary for an OData $expand query.
+ */
 var ExpandTreeGraphPattern = module.exports.ExpandTreeGraphPattern = _.defClass(TreeGraphPattern,
 function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
   var self = this;
@@ -236,7 +275,7 @@ function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
 {
 });
 
-//do we still need this class?
+/** @todo do we still need this class? */
 var ExpandedPropertyGraphPattern = module.exports.ExpandedPropertyGraphPattern = _.defClass(TreeGraphPattern,
 function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
   var entityVariable = mapping.getVariable();
@@ -259,6 +298,9 @@ function ExpandedPropertyGraphPattern(entityType, propertyName, mapping) {
 {
 });
 
+/** @class
+ * This class provides methods to interpret a SPARQL query result as OData.
+ */
 var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
 function SparqlQueryContext(mapping) { this.mapping = mapping },
 {
@@ -275,11 +317,16 @@ function SparqlQueryContext(mapping) { this.mapping = mapping },
       }
     });
   },
+  /** Return another context associated with a complex property. */
   getSubContext: function(propertyName) {
-    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); //is it a good idea to create so many instances?
+    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName)); /** @todo is it a good idea to create so many instances? */
   }
 });
 
+/**
+ * @class
+ * Maps an OData property hierarchy to the corresponding SPARQL variables.
+ */
 var StructuredSparqlVariableMapping = module.exports.StructuredSparqlVariableMapping = _.defClass(null,
 function StructuredSparqlVariableMapping(variableName, vargen) {
   this.variableName = variableName;
@@ -292,9 +339,17 @@ function StructuredSparqlVariableMapping(variableName, vargen) {
   getVariable: function() {
     return this.variableName;
   },
+  /**
+   * Registers an elementary property in this mapping if it does not exist yet
+   * and returns the SPARQL variable name.
+   */
   getElementaryPropertyVariable: function(name) {
     return this.elementaryProperties.getPropertyVariable(name);
   },
+  /**
+   * Registers an complex property in this mapping if it does not exist yet
+   * and returns the structured mapping.
+   */
   getComplexProperty: function(name) {
     return this.complexProperties.getPropertyVariable(name);
   },
@@ -315,6 +370,10 @@ function StructuredSparqlVariableMapping(variableName, vargen) {
   }
 });
 
+/**
+ * @class
+ * Maps property names to their unique SPARQL variable name.
+ */
 var SparqlVariableMapping = module.exports.SparqlVariableMapping = _.defClass(null,
 function SparqlVariableMapping(vargen) { this.vargen = vargen },
 {
@@ -335,6 +394,10 @@ function SparqlVariableMapping(vargen) { this.vargen = vargen },
   }
 });
 
+/**
+ * @class
+ * Generates instances of StructuredSparqlVariableMapping.
+ */
 var ComplexSparqlVariableGenerator = module.exports.ComplexSparqlVariableGenerator = _.defClass(null,
 function ComplexSparqlVariableGenerator(vargen) {
   this.vargen = vargen;
