@@ -1,18 +1,17 @@
 var schema = new (require('../schema').Schema)();
 var queries = require('../queries');
-var squeries = require('../queries_sparql');
+var gpatterns = require('../sparql_graphpatterns');
 var mhelper = require('./helpers/sparql_mappings');
-var gphelper = require('./helpers/sparql_graphpatterns');
 
 describe('composible sparql graph patterns', function() {
   it('should give me its triples', function() {
-    var gp = new squeries.ComposibleGraphPattern();
+    var gp = new gpatterns.ComposibleGraphPattern();
 
     expect(gp.getTriples()).toEqual([]);
   })
   it('should integrate other patterns', function() {
-    var gp = new squeries.ComposibleGraphPattern();
-    var innerGp = new squeries.ComposibleGraphPattern();
+    var gp = new gpatterns.ComposibleGraphPattern();
+    var innerGp = new gpatterns.ComposibleGraphPattern();
 
     innerGp.triples = [['a','b','c']];
     gp.integratePatterns([innerGp]);
@@ -20,17 +19,17 @@ describe('composible sparql graph patterns', function() {
     expect(gp.getTriples()).toEqual(innerGp.getTriples());
   })
   it('should integrate optional subpatterns of other patterns', function() {
-    var gp = new squeries.ComposibleGraphPattern();
-    var innerGp = new squeries.ComposibleGraphPattern();
+    var gp = new gpatterns.ComposibleGraphPattern();
+    var innerGp = new gpatterns.ComposibleGraphPattern();
 
-    innerGp.optionalPatterns = [ new squeries.GraphPattern([ 'a','b','c' ]) ];
+    innerGp.optionalPatterns = [ new gpatterns.ComposibleGraphPattern([ 'a','b','c' ]) ];
     gp.integratePatterns([innerGp]);
 
     expect(gp.getOptionalPatterns()).toEqual(innerGp.getOptionalPatterns());
   })
   it('should integrate patterns as optional', function() {
-    var gp = new squeries.ComposibleGraphPattern();
-    var innerGp = new squeries.ComposibleGraphPattern();
+    var gp = new gpatterns.ComposibleGraphPattern();
+    var innerGp = new gpatterns.ComposibleGraphPattern();
 
     innerGp.triples = [['a','b','c']];
     gp.integratePatternsAsOptional([innerGp]);
@@ -41,7 +40,7 @@ describe('composible sparql graph patterns', function() {
 
 describe('tree graph patterns', function() {
   it('should build a consistent tree', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
+    var gp = new gpatterns.TreeGraphPattern('?root');
 
     gp.branch('disco:id', '?id');
 
@@ -50,7 +49,7 @@ describe('tree graph patterns', function() {
     expect(gp.branch('disco:id')[0].name()).toEqual('?id');
   })
   it('should generate triples', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
+    var gp = new gpatterns.TreeGraphPattern('?root');
 
     gp.branch('disco:id', '?id');
     gp.branch('disco:content', '?cnt').branch('disco:id', '?cntid');
@@ -60,15 +59,15 @@ describe('tree graph patterns', function() {
     expect(gp.getTriples()).toContain([ '?cnt', 'disco:id', '?cntid' ]);
   })
   it('should allow optional branches', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
+    var gp = new gpatterns.TreeGraphPattern('?root');
 
     gp.optionalBranch('disco:id', '?id');
 
     expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
   })
   it('should allow me to integrate other trees as branches', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
-    var inner = new squeries.TreeGraphPattern('?inner');
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var inner = new gpatterns.TreeGraphPattern('?inner');
 
     inner.branch('disco:id', '?id');
     gp.branch('disco:inner', inner);
@@ -76,8 +75,8 @@ describe('tree graph patterns', function() {
     expect(gp.getTriples()).toContain([ '?inner', 'disco:id', '?id' ]);
   })
   it('should allow me to integrate other trees as optional branches', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
-    var inner = new squeries.TreeGraphPattern('?inner');
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var inner = new gpatterns.TreeGraphPattern('?inner');
 
     inner.branch('disco:id', '?id');
     gp.optionalBranch('disco:inner', inner);
@@ -85,8 +84,8 @@ describe('tree graph patterns', function() {
     expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?inner', 'disco:id', '?id' ]);
   })
   it('should allow me to merge with other trees', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
-    var other = new squeries.TreeGraphPattern('?root');
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var other = new gpatterns.TreeGraphPattern('?root');
 
     other.branch('disco:id', '?id');
     gp.merge(other);
@@ -94,15 +93,15 @@ describe('tree graph patterns', function() {
     expect(gp.getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
   })
   it('should not allow me to merge with trees with different roots', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
-    var other = new squeries.TreeGraphPattern('?other');
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var other = new gpatterns.TreeGraphPattern('?other');
 
     other.branch('disco:id', '?id');
     expect(function() { gp.merge(other) }).toThrow();
   })
   it('should detect and handle collisions when merging', function() {
-    var gp = new squeries.TreeGraphPattern('?root');
-    var gp2 = new squeries.TreeGraphPattern('?root');
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var gp2 = new gpatterns.TreeGraphPattern('?root');
 
     gp.branch('id', '?id');
     gp2.branch('id', '?id2');
@@ -115,7 +114,7 @@ describe('tree graph patterns', function() {
 describe('direct property graph patterns', function() {
   it('should store the direct properties in the mapping', function() {
     var mapping = mhelper.createStructuredMapping();
-    var gp = new squeries.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
 
     expect(mapping.elementaryPropertyExists('Id')).toEqual(true);
     expect(mapping.elementaryPropertyExists('ParentId')).toEqual(true);
@@ -125,20 +124,20 @@ describe('direct property graph patterns', function() {
   })
   it('should create the triples corresponding to the direct properties', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
 
     expect(gp.getTriples()).toContain([ '?post', 'disco:id', mapping.getElementaryPropertyVariable('Id') ]);
   })
   it('should create the triples corresponding to the mirrored direct properties', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
 
     expect(gp.getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
     expect(gp.getTriples()).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getElementaryPropertyVariable('ContentId') ]);
   })
   it('should create optional triples', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
 
     expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?post', 'disco:parent', mapping.getComplexProperty('Parent').getVariable() ]);
   })
@@ -147,14 +146,14 @@ describe('direct property graph patterns', function() {
 describe('expanded property graph patterns', function() {
   it('should create the triples corresponding to the property and its direct subproperties', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.ExpandedPropertyGraphPattern(schema.getEntityType('Post'), 'Content', mapping);
+    var gp = new gpatterns.ExpandedPropertyGraphPattern(schema.getEntityType('Post'), 'Content', mapping);
 
     expect(gp.getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
     expect(gp.getTriples()).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getComplexProperty('Content').getElementaryPropertyVariable('Id') ]);
   })
   it('should create optional triples', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.ExpandedPropertyGraphPattern(schema.getEntityType('Post'), 'Parent', mapping);
+    var gp = new gpatterns.ExpandedPropertyGraphPattern(schema.getEntityType('Post'), 'Parent', mapping);
 
     expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?post', 'disco:parent', mapping.getComplexProperty('Parent').getVariable() ]);
   })
@@ -164,8 +163,7 @@ describe('expand tree graph patterns', function() {
   it('should expand the first depth level', function() {
     var expandTree = { Content: {} };
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
-    console.log(1)
+    var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
 
     expect(mapping.getComplexProperty('Content').elementaryPropertyExists('Id')).toEqual(true);
     expect(gp.getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
@@ -174,14 +172,14 @@ describe('expand tree graph patterns', function() {
   it('should expand the second depth level', function() {
     var expandTree = { Content: { Content: {} } };
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
+    var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
 
     expect(mapping.getComplexProperty('Content').getComplexProperty('Content').elementaryPropertyExists('Id')).toEqual(true);
   })
   it('should expand the optional properties of the first depth level', function() {
     var expandTree = { Parent: {} };
     var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new squeries.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
+    var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
 
     expect(mapping.getComplexProperty('Parent').elementaryPropertyExists('Id')).toEqual(true);
     expect(gp.getOptionalPatterns()[0].getTriples()).toContain(

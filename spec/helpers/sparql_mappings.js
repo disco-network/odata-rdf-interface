@@ -1,13 +1,13 @@
-var squeries = require('../../queries_sparql');
+var mappings = require('../../sparql_mappings');
 
 function createUnstructuredMapping() {
-  var mapping = new squeries.SparqlVariableMapping(new squeries.SparqlVariableGenerator());
+  var mapping = new mappings.SparqlVariableMapping(new mappings.SparqlVariableGenerator());
   return mapping;
 }
 
 function createStructuredMapping(rootVariableName) {
-  var vargen = new squeries.SparqlVariableGenerator();
-  var mapping = new squeries.StructuredSparqlVariableMapping(rootVariableName || vargen.next(), vargen);
+  var vargen = new mappings.SparqlVariableGenerator();
+  var mapping = new mappings.StructuredSparqlVariableMapping(rootVariableName || vargen.next(), vargen);
   return mapping;
 }
 
