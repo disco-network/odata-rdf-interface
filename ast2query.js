@@ -1,5 +1,5 @@
 var queries = require('./queries_sparql');
-var queryComposer = require('./queryomposer');
+var queryComposer = require('./querycomposer');
 var _ = require('./util');
 
 function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
