@@ -2,7 +2,7 @@
 var _ = require('../util');
 var mappings = require('./sparql_mappings');
 var gpatterns = require('./sparql_graphpatterns');
-var queries = require('../odata/queries');
+var odataQueries = require('../odata/queries');
 
 var exports = module.exports = {};
 
@@ -23,7 +23,7 @@ function QueryFactory(model, schema) { this.model = model; this.schema = schema 
  * @name EntitySetQuery
  * @description Handles read-only OData queries.
  */
-var EntitySetQuery = exports.EntitySetQuery = _.defClass(queries.Query,
+var EntitySetQuery = exports.EntitySetQuery = _.defClass(odataQueries.Query,
 function EntitySetQuery(model, schema) {
   this.model = model;
   this.schema = schema;
@@ -41,7 +41,7 @@ function EntitySetQuery(model, schema) {
     var mapping = new mappings.StructuredSparqlVariableMapping(chosenEntityVar, vargen);
     var queryContext = new SparqlQueryContext(mapping, this.model.expandTree);
     var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
-    var evaluator = new queries.QueryResultEvaluator();
+    var evaluator = new odataQueries.QueryResultEvaluator();
 
     var triplePatterns = graphPattern.getTriples();
 
@@ -80,41 +80,54 @@ function EntitySetQuery(model, schema) {
 /** @class
  * This class provides methods to interpret a SPARQL query result as OData.
  */
-var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(queries.QueryContext,
-function SparqlQueryContext(mapping, remainingExpandBranch) {
+var SparqlQueryContext = module.exports.SparqlQueryContext = _.defClass(odataQueries.QueryContext,
+function SparqlQueryContext(mapping, rootTypeSchema, remainingExpandBranch) {
   this.mapping = mapping;
+  this.rootTypeSchema = rootTypeSchema;
   this.remainingExpandBranch = remainingExpandBranch;
 },
 {
-  forEachElementaryProperty: function(result, fn) {
+  forEachElementaryPropertyOfResult: function(result, fn) {
+    var self = this;
     this.mapping.forEachElementaryProperty(function(propertyName, variableName) {
       var obj = result[variableName.substr(1)];
-      if(obj) fn(obj.value, propertyName);
+      if(obj) fn(obj.value, self.rootTypeSchema.getProperty(propertyName));
     });
   },
-  forEachComplexProperty: function(result, fn) {
-    /*this.mapping.forEachComplexProperty(function(propertyName, propertyMapping) {
-      if(propertyMapping.isEmpty() == false) {
-        fn(result, propertyName);
-      }
-    });*/
+  forEachComplexPropertyOfResult: function(result, fn) {
     for(var propertyName in this.remainingExpandBranch) {
-      var propertyMapping = this.mapping.getComplexProperty(propertyName);
-      if(propertyMapping.isEmpty() == false) {
-        fn(result, propertyName);
-      }
+      fn(result, this.rootTypeSchema.getProperty(propertyName));
     }
+  },
+  forEachElementaryPropertySchema: function(fn) {
+    this.mapping.forEachComplexProperty(function(propertyName, variableName) {
+      fn(this.rootTypeSchema.getProperty(propertyName));
+    });
+  },
+  forEachComplexPropertySchema: function(fn) {
+    for(var propertyName in this.remainingExpandBranch) {
+      fn(this.rootTypeSchema.getProperty(propertyName));
+    }
+  },
+  getElementaryPropertyOfResult: function(result, propertyName) {
+    return result[this.mapping.getElementaryPropertyVariable(propertyName).substr(1)].value;
   },
   /** Return another context associated with a complex property. */
   getSubContext: function(propertyName) {
     /** @todo is it a good idea to create so many instances? */
-    return new SparqlQueryContext(this.mapping.getComplexProperty(propertyName), this.remainingExpandBranch[propertyName]);
+    return new SparqlQueryContext(
+      this.mapping.getComplexProperty(propertyName),
+      this.rootTypeSchema.getProperty(propertyName).getEntityType(),
+      this.remainingExpandBranch[propertyName]);
   }
 });
 
+/** Stores the query results of a SPARQL query to satisfy an OData request.
+ * To the data belongs an object with the properties of quantity one and @construction */
+
 function handleErrors(result, res) {
 	switch(result.error) {
-		case queries.ErrorTypes.DB:
+		case odataQueries.ErrorTypes.DB:
 			res.statusCode = 500;
 			res.end('database error ' + result.errorDetails);
 			break;

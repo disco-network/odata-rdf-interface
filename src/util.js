@@ -27,6 +27,17 @@ function values(dict) {
   return Object.keys(dict).map(function(k) { return dict[k] });
 }
 
+function multiSwitch(values, cases) {
+  for(var i in cases) {
+    var c = cases[i];
+    var match = true;
+    for(var j in values) {
+      if(values[j] !== cases.conditions[j]) match = false;
+    }
+    if(match) cases.do();
+  }
+}
+
 module.exports = {
   defClass: defClass,
   notImplemented: notImplemented,

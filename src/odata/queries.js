@@ -11,14 +11,15 @@ function Query() {},
 var QueryModel = _.defClass(null,
 function QueryModel() { },
 {
-  entitySetName: null, // this way declared, the variables are static
-  navigationStack: null,
+  entitySetName: null, /* the variable defaults are stored in the prototype */
+  path: null, /** navigation path */
   filterOption: null,
   expandTree: null
 })
 
-// This class can be used to generate odata output from different sources.
-// The concrete database logic is handled by the result and context parameters.
+/** This class can be used to generate odata output from different sources.
+ * The concrete database logic is handled by the result and context parameters.
+ */
 var QueryResultEvaluator = _.defClass(null,
 function QueryResultEvaluator() { },
 {
@@ -26,11 +27,11 @@ function QueryResultEvaluator() { },
   evaluate: function(result, context) {
     var self = this;
     var ret = {};
-    context.forEachElementaryProperty(result, function(value, propertyName) {
-      ret[propertyName] = value;
+    context.forEachElementaryPropertyOfResult(result, function(value, property) {
+      ret[property.getName()] = value;
     });
-    context.forEachComplexProperty(result, function(subResult, propertyName) {
-      ret[propertyName] = self.evaluate(subResult, context.getSubContext(propertyName));
+    context.forEachComplexPropertyOfResult(result, function(subResult, property) {
+      ret[property.getName()] = self.evaluate(subResult, context.getSubContext(property.getName()));
     });
     return ret;
   }
@@ -39,8 +40,8 @@ function QueryResultEvaluator() { },
 var QueryContext = _.defClass(null,
 function QueryContext() { },
 {
-  forEachElementaryProperty: _.notImplemented,
-  forEachComplexProperty: _.notImplemented,
+  forEachElementaryPropertyOfResult: _.notImplemented,
+  forEachComplexPropertyOfResult: _.notImplemented,
 });
 
 var ErrorTypes = {

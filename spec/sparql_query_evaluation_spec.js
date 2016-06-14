@@ -1,3 +1,4 @@
+var schema = new (require('../src/odata/schema').Schema)();
 var squeries = require('../src/adapter/queries_sparql');
 var queries = require('../src/odata/queries');
 var mhelper = require('./helpers/sparql_mappings');
@@ -5,27 +6,27 @@ var mhelper = require('./helpers/sparql_mappings');
 describe('query context', function() {
   it('should recognize and enumerate over elementary properties', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var queryContext = new squeries.SparqlQueryContext(mapping);
+    var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType('Post'), { });
 
     var idVar = mapping.getElementaryPropertyVariable('Id');
     var answer = { };
     answer[idVar.substr(1)] = { token: "literal", value: "5" };
 
     var ok = false;
-    queryContext.forEachElementaryProperty(answer, function() { ok = true });
+    queryContext.forEachElementaryPropertyOfResult(answer, function() { ok = true });
 
     expect(ok).toEqual(true);
   });
   it('should return me a subcontext and recognize its elementary properties', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var queryContext = new squeries.SparqlQueryContext(mapping, { Parent: {} });
+    var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType('Post'), { Parent: {} });
 
     var idVar = mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id');
     var answer = { };
     answer[idVar.substr(1)] = { token: "literal", value: "5" };
 
     var ok = false;
-    queryContext.getSubContext('Parent').forEachElementaryProperty(answer, function() { ok = true });
+    queryContext.getSubContext('Parent').forEachElementaryPropertyOfResult(answer, function() { ok = true });
 
     expect(ok).toEqual(true);
   })
@@ -34,7 +35,7 @@ describe('query context', function() {
 describe('match evaluator', function() {
   it('should evaluate elem. and complex properties', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var queryContext = new squeries.SparqlQueryContext(mapping, { Parent: {} });
+    var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType('Post'), { Parent: {} });
     var evaluator = new queries.QueryResultEvaluator();
 
     var idVar = mapping.getElementaryPropertyVariable('Id');
@@ -51,7 +52,7 @@ describe('match evaluator', function() {
   })
   it('should only include complex properties which are in the expand tree', function() {
     var mapping = mhelper.createStructuredMapping('?post');
-    var queryContext = new squeries.SparqlQueryContext(mapping, {});
+    var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType('Post'), {});
     var evaluator = new queries.QueryResultEvaluator();
 
     var parentIdVar = mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id');

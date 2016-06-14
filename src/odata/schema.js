@@ -112,6 +112,9 @@ function Property(completeSchema, parentTypeSchema, name) {
   isNavigationProperty: function() {
     return this.getEntityType().isElementary() == false;
   },
+  isQuantityOne: function() {
+    return this.getRaw().quantity.substr(0,4) === 'one-';
+  },
   isOptional: function() {
     return this.getRaw().optional == true;
   },
