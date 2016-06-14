@@ -39,7 +39,7 @@ function EntitySetQuery(model, schema) {
     var chosenEntityVar = vargen.next();
 
     var mapping = new mappings.StructuredSparqlVariableMapping(chosenEntityVar, vargen);
-    var queryContext = new SparqlQueryContext(mapping, this.model.expandTree);
+    var queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
     var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
     var evaluator = new odataQueries.QueryResultEvaluator();
 

@@ -41,7 +41,6 @@ app.use(config.path, function(req, res, next) {
   var query = (new sparqlQueries.QueryFactory(queryModel, schm)).create();
 
 	query.run(provider, function() {
-		console.log('beforeSend')
 	  query.sendResults(res);
 	});
 });
