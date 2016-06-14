@@ -12,7 +12,7 @@ var sparqlQueries = require('./adapter/queries_sparql');
 
 var providerModule = require('./sparql/sparql_provider');
 
-var rdfstore = require('rdfstore');
+var rdfstore = require('../rdfstore-js');
 
 var config = {
 	port: 52999,

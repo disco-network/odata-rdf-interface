@@ -14,5 +14,8 @@ before_script:
   - npm install -g gulp
   - npm install
   - git clone http://github.com/datokrat/abnfjs.git
+  - git clone http://github.com/disco-network/rdfstore-js.git
+  - npm --production --prefix ./abnfjs install ./abnfjs
+  - npm --production --prefix ./rdfstore-js install ./rdfstore-js
 script: gulp specs
 sudo: false
