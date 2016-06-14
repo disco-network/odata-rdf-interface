@@ -1,9 +1,9 @@
 var connect = require('connect');
 var fs = require('fs')
 
-var abnfTokenizer = require('../../abnfjs/tokenizer');
-var abnfParser = require('../../abnfjs/parser');
-var abnfInterpreter = require('../../abnfjs/interpreter');
+var abnfTokenizer = require('../abnfjs/tokenizer');
+var abnfParser = require('../abnfjs/parser');
+var abnfInterpreter = require('../abnfjs/interpreter');
 
 var ast2query = require('./odata/ast2query');
 var schema = require('./odata/schema');

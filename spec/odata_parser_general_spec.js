@@ -1,6 +1,6 @@
-var abnfTokenizer = require('../../abnfjs/tokenizer');
-var abnfParser = require('../../abnfjs/parser');
-var abnfInterpreter = require('../../abnfjs/interpreter');
+var abnfTokenizer = require('../abnfjs/tokenizer');
+var abnfParser = require('../abnfjs/parser');
+var abnfInterpreter = require('../abnfjs/interpreter');
 var fs = require('fs');
 
 describe("odata parser", function() {

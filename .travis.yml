@@ -9,8 +9,10 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-4.8
+      - git
 before_script:
   - npm install -g gulp
   - npm install
+  - git clone http://github.com/datokrat/abnfjs.git
 script: gulp specs
 sudo: false
