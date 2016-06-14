@@ -21,3 +21,9 @@ Possible queries are:
 
  * /Posts
  * /Posts?$expand=Content
+
+# what's missing?
+
+ * $filter queries
+ * navigation properties with many values
+ * $batch queries
