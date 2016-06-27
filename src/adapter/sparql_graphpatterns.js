@@ -12,6 +12,7 @@ function() {
 {
   getTriples: _.notImplemented,
   getOptionalPatterns: _.notImplemented,
+  getUnionPatterns: _.notImplemented,
 });
 
 /**
@@ -23,6 +24,7 @@ var ComposibleGraphPattern = module.exports.ComposibleGraphPattern = _.defClass(
 function ComposibleGraphPattern(triples) {
   this.triples = triples || [];
   this.optionalPatterns = [];
+  this.unionPatterns = []; /** @construction */
 },
 {
   getTriples: function() {
@@ -49,26 +51,29 @@ function ComposibleGraphPattern(triples) {
  * Provides a SPARQL graph pattern whose triples are generated from a
  * property tree
  */
-var TreeGraphPattern = module.exports.TreeGraphPattern = _.defClass(null,
+var TreeGraphPattern = module.exports.TreeGraphPattern = _.defClass(GraphPattern,
 function TreeGraphPattern(rootName) {
   this.rootName = rootName;
   this.branches = { };
   this.optionalBranches = { };
+  this.unionPatterns = [ ];
 },
 {
-  getTriples: function() {
+  getTriples: function(optimize) {
     var self = this;
     var triples = [];
     for(var property in this.branches) {
       var branches = this.branches[property];
       branches.forEach(function(branch) {
         triples.push([ self.name(), property, branch.name() ]);
-        triples.push.apply(triples, branch.getTriples());
+        triples.push.apply(triples, branch.getTriples(optimize));
       });
     }
+    var unions = this.getUnionPatterns(false);
+    if(optimize === true && unions.length === 1) triples.push.apply(triples, unions[0].getTriples(true));
     return triples;
   },
-  getOptionalPatterns: function() {
+  getOptionalPatterns: function(optimize) {
     var self = this;
     var patterns = [];
     for(var property in this.optionalBranches) {
@@ -79,7 +84,13 @@ function TreeGraphPattern(rootName) {
         patterns.push(gp);
       })
     }
+    var unions = this.getUnionPatterns(false);
+    if(optimize === true && unions.length === 1) patterns.push.apply(patterns, unions[0].getOptionalPatterns(true));
     return patterns;
+  },
+  getUnionPatterns: function(optimize) {
+    if(optimize === true && this.unionPatterns.length === 1) return this.unionPatterns[0].getUnionPatterns(true);
+    return this.unionPatterns;
   },
   name: function() {
     return this.rootName;
@@ -111,6 +122,11 @@ function TreeGraphPattern(rootName) {
           this.optionalBranches[property] = [ arg ];
         return arg;
     }
+  },
+  newUnionPattern: function(pattern) {
+    pattern = pattern || new TreeGraphPattern(this.name());
+    this.unionPatterns.push(pattern);
+    return pattern;
   },
   branchExists: function(property) {
     return this.branches[property] !== undefined;
@@ -189,13 +205,20 @@ function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
     var propertyType = property.getEntityType();
     //Next recursion level
     var gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
-    if(property.isOptional())
-      self.optionalBranch(property.getNamespacedUri(), gp);
-    else
-      self.branch(property.getNamespacedUri(), gp);
+    if(!property.isQuantityOne()) {
+      self.newUnionPattern().branch(property.getNamespacedUri(), gp);
+    }
+    else if(property.isOptional()) {
+      directPropertyPattern.optionalBranch(property.getNamespacedUri(), gp);
+    }
+    else {
+      directPropertyPattern.branch(property.getNamespacedUri(), gp);
+    }
   });
 
-  this.merge(directPropertyPattern);
+  //this.merge(directPropertyPattern);
+  this.newUnionPattern(directPropertyPattern);
+  //console.log(this);
 },
 {
 });

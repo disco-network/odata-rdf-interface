@@ -9,7 +9,7 @@ This project depends on a copy of [abnfjs](https://github.com/datokrat/abnfjs) l
     $ npm --production --prefix ./abnfjs install ./abnfjs
     $ npm --production --prefix ./rdfstore-js install ./rdfstore-js
 
-Apart of this, the dependencies are:
+Apart from this, the dependencies are:
  * the popular "connect" package
 
 # examples

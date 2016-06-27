@@ -109,6 +109,37 @@ describe('tree graph patterns', function() {
 
     expect(gp.branch('id').length).toEqual(2);
   });
+  it('should allow UNION branches', function() {
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var union1 = new gpatterns.TreeGraphPattern('?u1');
+    var union2 = new gpatterns.TreeGraphPattern('?u2');
+
+    var upat = gp.newUnionPattern();
+    upat.branch('id', union1);
+    upat.branch('id', union2);
+
+    expect(gp.getUnionPatterns().length).toEqual(1);
+    expect(gp.getUnionPatterns(false).length).toEqual(1);
+    expect(gp.getUnionPatterns(true).length).toEqual(0);
+    expect(gp.getUnionPatterns(false)[0].branch('id').length).toEqual(2);
+  })
+  it('should optimize a single union branch away', function() {
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    var union1 = new gpatterns.TreeGraphPattern('?u1');
+
+    union1.branch('prop', '?var');
+
+    var upat = gp.newUnionPattern();
+    upat.branch('id', union1);
+
+    expect(gp.getUnionPatterns(true).length).toEqual(0);
+    expect(gp.getTriples(true)).toContain([ '?root', 'id', '?u1' ]);
+    /** @todo same test for optional clauses in unions */
+  })
+  it('should have inverse branches', function() {
+    var gp = new gpatterns.TreeGraphPattern('?root');
+    gp.inverseBranch('disco:parent', '?child');
+  })
 })
 
 describe('direct property graph patterns', function() {
@@ -166,8 +197,11 @@ describe('expand tree graph patterns', function() {
     var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
 
     expect(mapping.getComplexProperty('Content').elementaryPropertyExists('Id')).toEqual(true);
-    expect(gp.getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
-    expect(gp.getTriples()).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getComplexProperty('Content').getElementaryPropertyVariable('Id') ]);
+    expect(gp.getUnionPatterns().length).toEqual(1);
+    expect(gp.getUnionPatterns()[0].getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
+    //expect(gp.getTriples(true)).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
+    expect(gp.getUnionPatterns()[0].branch('disco:content')[1].getUnionPatterns()[0].getTriples()).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getComplexProperty('Content').getElementaryPropertyVariable('Id') ]);
+    //expect(gp.getTriples(true)).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getComplexProperty('Content').getElementaryPropertyVariable('Id') ]);
   })
   it('should expand the second depth level', function() {
     var expandTree = { Content: { Content: {} } };
@@ -182,7 +216,9 @@ describe('expand tree graph patterns', function() {
     var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
 
     expect(mapping.getComplexProperty('Parent').elementaryPropertyExists('Id')).toEqual(true);
-    expect(gp.getOptionalPatterns()[0].getTriples()).toContain(
+    expect(gp.getUnionPatterns()[0].optionalBranch('disco:parent')[1].getUnionPatterns()[0].getTriples()).toContain(
       [ mapping.getComplexProperty('Parent').getVariable(), 'disco:id', mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id') ])
+    //expect(gp.getOptionalPatterns(true)[0].getTriples()).toContain(
+      //[ mapping.getComplexProperty('Parent').getVariable(), 'disco:id', mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id') ])
   })
 })
