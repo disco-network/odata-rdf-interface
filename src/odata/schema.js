@@ -72,6 +72,9 @@ function RdfBasedSchemaResource(completeSchema, rawSchemaBranch, name) {
   },
   getRaw: function() {
     return this.rawSchemaBranch;
+  },
+  hasDirectRdfRepresentation: function() {
+    return this.rdfName != null;
   }
 });
 
@@ -117,6 +120,14 @@ function Property(completeSchema, parentTypeSchema, name) {
   },
   isOptional: function() {
     return this.getRaw().optional == true;
+  },
+  hasInverseProperty: function() {
+    return this.getRaw().foreignProperty != null;
+  },
+  getInverseProperty: function() {
+    var setName = this.getRaw().foreignSet;
+    var propName = this.getRaw().foreignProperty;
+    return this.completeSchema.getEntitySet(setName).getEntityType().getProperty(propName);
   },
   mirroredFromProperty: function() {
     var name = this.getRaw().mirroredFromNavigationProperty;

@@ -55,6 +55,7 @@ var TreeGraphPattern = module.exports.TreeGraphPattern = _.defClass(GraphPattern
 function TreeGraphPattern(rootName) {
   this.rootName = rootName;
   this.branches = { };
+  this.inverseBranches = { };
   this.optionalBranches = { };
   this.unionPatterns = [ ];
 },
@@ -106,6 +107,20 @@ function TreeGraphPattern(rootName) {
           this.branches[property].push(arg);
         else
           this.branches[property] = [ arg ];
+        return arg;
+    }
+  },
+  inverseBranch: function(property, arg) {
+    switch(typeof arg) {
+      case 'undefined': return this.inverseBranches[property];
+      case 'string':
+        var pat = new TreeGraphPattern(arg);
+        return this.inverseBranch(property, pat);
+      case 'object':
+        if(this.inverseBranches[property] !== undefined)
+          this.inverseBranches[property].push(arg);
+        else
+          this.inverseBranches[property] = [ arg ];
         return arg;
     }
   },
@@ -205,7 +220,12 @@ function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
     var propertyType = property.getEntityType();
     //Next recursion level
     var gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
-    if(!property.isQuantityOne()) {
+    if(!property.hasDirectRdfRepresentation()) {
+      var inverseProperty = property.getInverseProperty();
+      var unionPattern = self.newUnionPattern();
+      unionPattern.inverseBranch(inverseProperty.getNamespacedUri(), gp);
+    }
+    else if(!property.isQuantityOne()) {
       self.newUnionPattern().branch(property.getNamespacedUri(), gp);
     }
     else if(property.isOptional()) {

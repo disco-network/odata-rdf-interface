@@ -12,6 +12,6 @@ describe('OData properties with quantity "many"', function() {
     var childVar = mapping.getComplexProperty('Children').getVariable();
 
     expect(gp.getUnionPatterns().length).toEqual(2);
-    expect(gp.getUnionPatterns()[1].getTriples()).toContain([ childVar, 'disco:parent', '?post' ]);
+    expect(gp.getUnionPatterns()[0].inverseBranch('disco:parent').length).toEqual(1);
   })
 })
