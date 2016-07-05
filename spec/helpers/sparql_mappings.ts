@@ -1,4 +1,4 @@
-import mappings = require('../../src/adapter/sparql_mappings');
+import mappings = require("../../src/adapter/sparql_mappings");
 
 export function createUnstructuredMapping() {
   let mapping = new mappings.SparqlVariableMapping(new mappings.SparqlVariableGenerator());
