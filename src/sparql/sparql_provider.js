@@ -18,3 +18,5 @@ var SparqlProvider = (function () {
     return SparqlProvider;
 }());
 exports.SparqlProvider = SparqlProvider;
+
+//# sourceMappingURL=../../maps/src/sparql/sparql_provider.js.map

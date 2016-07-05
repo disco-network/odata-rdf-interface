@@ -56,3 +56,5 @@ describe('structured odata to sparql mappings', function () {
         expect(mapping.elementaryPropertyExists('Id')).toEqual(true);
     });
 });
+
+//# sourceMappingURL=../maps/spec/sparql_mappings_spec.js.map

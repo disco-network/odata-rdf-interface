@@ -9,3 +9,5 @@ describe('schema', function () {
         expect(schema.getEntityType('Post').getProperty('Content').isQuantityOne()).toEqual(true);
     });
 });
+
+//# sourceMappingURL=../maps/spec/odata_schema_spec.js.map

@@ -12,6 +12,7 @@
     "typescript": "~1.8.10",
     "tslint": "~3.13.0",
     "gulp-tslint": "~5.0.0",
-    "gulp-typescript": "~2.13.6"
+    "gulp-typescript": "~2.13.6",
+    "gulp-sourcemaps": "~1.6.0"
   }
 }

@@ -11,3 +11,5 @@ function createStructuredMapping(rootVariableName) {
     return mapping;
 }
 exports.createStructuredMapping = createStructuredMapping;
+
+//# sourceMappingURL=../../maps/spec/helpers/sparql_mappings.js.map

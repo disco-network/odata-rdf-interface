@@ -22,3 +22,5 @@ describe("the query string builder", function () {
             "{ ?root disco:parent ?parent } UNION { ?child disco:parent ?root } }");
     });
 });
+
+//# sourceMappingURL=../maps/spec/build_querystring_spec.js.map

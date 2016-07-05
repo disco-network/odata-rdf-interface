@@ -10,3 +10,5 @@ describe("query composer", function () {
         expect(comp.expandTree.A.C).toBeDefined();
     });
 });
+
+//# sourceMappingURL=../maps/spec/odata_query_composer.js.map

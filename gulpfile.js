@@ -1,7 +1,8 @@
 var gulp = require('gulp'),
     jasmine = require('gulp-jasmine'),
     tslint = require('gulp-tslint'),
-    tsc = require('gulp-typescript');
+    tsc = require('gulp-typescript'),
+    sourcemaps = require('gulp-sourcemaps');
 
 gulp.task('lint', function() {
   return gulp.src([
@@ -19,8 +20,11 @@ gulp.task('build', function() {
     './**/**.ts',
     '!./node_modules/**'
   ])
+  .pipe(sourcemaps.init())
   .pipe(tsc(tsProject))
-  .js.pipe(gulp.dest('.'));
+  .js
+  .pipe(sourcemaps.write('./maps'))
+  .pipe(gulp.dest('.'));
 })
 
 gulp.task('tests', ['build'], function() {

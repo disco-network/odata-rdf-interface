@@ -48,3 +48,5 @@ var QueryComposer = (function () {
     return QueryComposer;
 }());
 exports.QueryComposer = QueryComposer;
+
+//# sourceMappingURL=../../maps/src/odata/querycomposer.js.map

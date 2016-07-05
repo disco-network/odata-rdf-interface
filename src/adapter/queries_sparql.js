@@ -44,10 +44,7 @@ var EntitySetQuery = (function () {
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
         var queryString = queryStringBuilder.fromGraphPattern(graphPattern);
-        /*"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
-      + "PREFIX disco: <http://disco-network.org/resource/> "
-      + "SELECT " + "*" + " WHERE {" + triplePatterns.map(function(p) { return p.join(" "); }).join(" . ") + "}";*/
-        console.log(graphPattern, queryString);
+        console.log(queryString);
         sparqlProvider.querySelect(queryString, function (answer) {
             if (!answer.error) {
                 _this.result = { result: answer.result.map(function (single) {
@@ -134,3 +131,5 @@ function handleErrors(result, res) {
             res.end("unknown error type " + result.error);
     }
 }
+
+//# sourceMappingURL=../../maps/src/adapter/queries_sparql.js.map

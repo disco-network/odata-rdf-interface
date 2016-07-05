@@ -52,3 +52,5 @@ describe("match evaluator", function () {
         expect(result.Parent).toBeUndefined();
     });
 });
+
+//# sourceMappingURL=../maps/spec/sparql_query_evaluation_spec.js.map

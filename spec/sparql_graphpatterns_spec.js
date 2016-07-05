@@ -163,3 +163,5 @@ describe("expand tree graph patterns", function () {
             mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id")]);
     });
 });
+
+//# sourceMappingURL=../maps/spec/sparql_graphpatterns_spec.js.map

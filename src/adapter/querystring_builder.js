@@ -29,3 +29,5 @@ var QueryStringBuilder = (function () {
     return QueryStringBuilder;
 }());
 exports.QueryStringBuilder = QueryStringBuilder;
+
+//# sourceMappingURL=../../maps/src/adapter/querystring_builder.js.map

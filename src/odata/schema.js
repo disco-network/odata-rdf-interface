@@ -147,3 +147,5 @@ var Property = (function (_super) {
     return Property;
 }(RdfBasedSchemaResource));
 exports.Property = Property;
+
+//# sourceMappingURL=../../maps/src/odata/schema.js.map

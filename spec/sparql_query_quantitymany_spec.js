@@ -13,3 +13,5 @@ describe('OData properties with quantity "many"', function () {
         expect(gp.getUnionPatterns()[0].inverseBranch('disco:parent').length).toEqual(1);
     });
 });
+
+//# sourceMappingURL=../maps/spec/sparql_query_quantitymany_spec.js.map

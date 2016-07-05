@@ -29,3 +29,5 @@ function getQueryModelFromEvaluatedAst(/*evaluated*/ ast, schema) {
         throw new Error("unsupported query type: " + ast.type);
 }
 exports.getQueryModelFromEvaluatedAst = getQueryModelFromEvaluatedAst;
+
+//# sourceMappingURL=../../maps/src/odata/ast2query.js.map
