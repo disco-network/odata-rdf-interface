@@ -5,9 +5,10 @@ This project is supposed to become a Node.js-based OData endpoint working on top
 This project depends on various packages.
  * the popular "connect" package,
  * [abnfjs](https://github.com/datokrat/abnfjs), a GitHub project parsing and interpreting ABNF specifications, and 
- * [disco-network/rdfstore-js](https://github.com/disco-network/rdfstore-js) located at "./rdfstore-js". To install them in your working directory, run:
+ * [rdfstore-js](https://github.com/disco-network/rdfstore-js). 
+ 
+To install them in your working directory, please use NPM:
 
-To install all the packages, please use NPM:
     $ npm install
 
 # examples
