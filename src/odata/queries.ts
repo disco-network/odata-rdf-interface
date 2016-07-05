@@ -18,7 +18,7 @@ export interface QueryModel {
  */
 export class QueryResultEvaluator {
   // result type corresponds to what's needed by the context instance
-  public evaluate(result, context: QueryContext): Object {
+  public evaluate(result, context: QueryContext): any {
     var self = this;
     var ret = {};
     context.forEachElementaryPropertyOfResult(result, function(value, property) {

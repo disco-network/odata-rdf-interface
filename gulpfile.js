@@ -1,16 +1,13 @@
 var gulp = require('gulp'),
     jasmine = require('gulp-jasmine'),
-	  //source = require('vinyl-source-stream'),
-    //buffer = require('vinyl-buffer'),
     tslint = require('gulp-tslint'),
     tsc = require('gulp-typescript');
-    //sourcemaps = require('gulp-sourcemaps'),
-    //runSequence = require('run-sequence');
 
 gulp.task('lint', function() {
   return gulp.src([
     'src/**/**.ts',
-    'spec/**.ts'
+    'spec/**.ts',
+    'typings/**.d.ts'
   ])
   .pipe(tslint({ }))
   .pipe(tslint.report('verbose'));
@@ -19,14 +16,14 @@ gulp.task('lint', function() {
 var tsProject = tsc.createProject("tsconfig.json");
 gulp.task('build', function() {
   return gulp.src([
-    'src/**/**.ts',
-    'spec/**.ts'
+    './**/**.ts',
+    '!./node_modules/**'
   ])
   .pipe(tsc(tsProject))
   .js.pipe(gulp.dest('.'));
 })
 
-gulp.task('tests', function() {
+gulp.task('tests', ['build'], function() {
   return gulp.src('./spec/*.js')
     .pipe(jasmine({ includeStackTrace: true, verbose: true }));
 });

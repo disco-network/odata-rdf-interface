@@ -16,11 +16,11 @@ export interface GraphPattern {
  * and manipulatable.
  */
 export class ComposibleGraphPattern implements GraphPattern {
-  private triples: any[][];
-  private optionalPatterns: GraphPattern[];
-  private unionPatterns: GraphPattern[];
+  public triples: any[][];
+  public optionalPatterns: GraphPattern[];
+  public unionPatterns: GraphPattern[];
 
-	constructor(triples: any[][]) {
+	constructor(triples?: any[][]) {
     this.triples = triples || [];
     this.optionalPatterns = [];
     this.unionPatterns = []; /** @todo consider unionPatterns */
@@ -60,7 +60,7 @@ export class TreeGraphPattern implements GraphPattern {
   private branches: { [id: string]: TreeGraphPattern[] };
   private inverseBranches: { [id: string]: TreeGraphPattern[] };
   private optionalBranches: { [id: string]: TreeGraphPattern[] };
-  private unionPatterns: GraphPattern[];
+  private unionPatterns: TreeGraphPattern[];
 
   constructor(rootName: string) {
     this.rootName = rootName;
@@ -98,7 +98,7 @@ export class TreeGraphPattern implements GraphPattern {
     return patterns;
   }
 
-  public getUnionPatterns(): GraphPattern[] {
+  public getUnionPatterns(): TreeGraphPattern[] {
     return this.unionPatterns;
   }
 
@@ -106,10 +106,10 @@ export class TreeGraphPattern implements GraphPattern {
     return this.rootName;
   }
 
-  public branch(property: string, arg: void): TreeGraphPattern[];
+  public branch(property: string): TreeGraphPattern[];
   public branch(property: string, arg: string): TreeGraphPattern;
   public branch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
-  public branch(property: string, arg) {
+  public branch(property: string, arg?) {
     switch(typeof arg) {
       case 'undefined': return this.branches[property];
       case 'string':
@@ -124,10 +124,10 @@ export class TreeGraphPattern implements GraphPattern {
     }
   }
 
-  public inverseBranch(property: string, arg: void): TreeGraphPattern[];
+  public inverseBranch(property: string): TreeGraphPattern[];
   public inverseBranch(property: string, arg: string): TreeGraphPattern;
   public inverseBranch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
-  public inverseBranch(property: string, arg) {
+  public inverseBranch(property: string, arg?) {
     switch(typeof arg) {
       case 'undefined': return this.inverseBranches[property];
       case 'string':
@@ -142,10 +142,10 @@ export class TreeGraphPattern implements GraphPattern {
     }
   }
 
-  public optionalBranch(property: string, arg: void): TreeGraphPattern[];
+  public optionalBranch(property: string): TreeGraphPattern[];
   public optionalBranch(property: string, arg: string): TreeGraphPattern;
   public optionalBranch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
-  public optionalBranch(property, arg) {
+  public optionalBranch(property, arg?) {
     switch(typeof arg) {
       case 'undefined': return this.optionalBranches[property];
       case 'string':

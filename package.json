@@ -1,6 +1,10 @@
 {
+  "name": "odata-rdf-interface",
+  "version": "0.0.1",
   "dependencies": {
-    "connect": "~3.4.1"
+    "connect": "~3.4.1",
+    "abnfjs": "git+https://git@github.com/datokrat/abnfjs",
+    "rdfstore": "git+https://git@github.com/disco-network/rdfstore-js.git"
   },
   "devDependencies": {
     "gulp-jasmine": "~2.3.0",

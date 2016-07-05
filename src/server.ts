@@ -1,18 +1,18 @@
-/*var connect = require('connect');
-var fs = require('fs')
+import connect = require('connect');
+import fs = require('fs')
 
-var abnfTokenizer = require('../abnfjs/tokenizer');
-var abnfParser = require('../abnfjs/parser');
-var abnfInterpreter = require('../abnfjs/interpreter');
+import abnfTokenizer = require('abnfjs/tokenizer');
+import abnfParser = require('abnfjs/parser');
+import abnfInterpreter = require('abnfjs/interpreter');
 
-var ast2query = require('./odata/ast2query');
-var schema = require('./odata/schema');
+import ast2query = require('./odata/ast2query');
+import schema = require('./odata/schema');
 
-var sparqlQueries = require('./adapter/queries_sparql');
+import sparqlQueries = require('./adapter/queries_sparql');
 
-var providerModule = require('./sparql/sparql_provider');
+import providerModule = require('./sparql/sparql_provider');
 
-var rdfstore = require('../rdfstore-js');
+import rdfstore = require('rdfstore');
 
 var config = {
 	port: 52999,
@@ -89,4 +89,3 @@ function startServer() {
   app.listen(config.port)
   console.log('server is listening on port ' + config.port);
 }
-*/
