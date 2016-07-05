@@ -7,27 +7,25 @@ var __extends = (this && this.__extends) || function (d, b) {
 
 var notImplemented = function() { throw new Error('not implemented') }
 
-Factory = defClass(null,
-function Factory() { },
-{
-  create: notImplemented
-});
+export interface Factory {
+  create(): any;
+}
 
-function defClass(sup, ctor, props) {
+/*export function defClass(sup, ctor, props) {
   if(sup) __extends(ctor, sup);
   for(var i in props) ctor.prototype[i] = props[i];
   return ctor;
-}
+}*/
 
-function mergeArrays(arrays) {
+export function mergeArrays(arrays) {
   return [].concat.apply([], arrays);
 }
 
-function values(dict) {
+export function values(dict) {
   return Object.keys(dict).map(function(k) { return dict[k] });
 }
 
-function multiSwitch(values, cases) {
+export function multiSwitch(values, cases) {
   for(var i in cases) {
     var c = cases[i];
     var match = true;
@@ -37,11 +35,3 @@ function multiSwitch(values, cases) {
     if(match) cases.do();
   }
 }
-
-module.exports = {
-  defClass: defClass,
-  notImplemented: notImplemented,
-  mergeArrays: mergeArrays,
-  values: values,
-  Factory: Factory,
-};

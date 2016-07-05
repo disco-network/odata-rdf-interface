@@ -1,5 +1,5 @@
 /** @module */
-var _ = require('../util');
+import _ = require('../util');
 
 var raw = {
   entityTypes: {
@@ -26,113 +26,123 @@ var raw = {
   }
 };
 
-var Schema = _.defClass(null,
-function Schema() {
-  this.raw = raw;
-},
-{
-  getEntitySet: function(name) {
+export class Schema {
+  public raw = raw;
+  
+  public getEntitySet(name: string): EntitySet {
     return new EntitySet(this, name);
-  },
-  getEntityType: function(name) {
+  }
+
+  public getEntityType(name: string): EntityType {
     return new EntityType(this, name);
   }
-});
+}
 
-var EntitySet = _.defClass(null,
-function EntitySet(completeSchema, name) {
-  this.completeSchema = completeSchema;
-  this.name = name;
-},
-{
-  getEntityType: function() {
+export class EntitySet {
+	constructor(private completeSchema: Schema, private name: string) {
+    this.completeSchema = completeSchema;
+    this.name = name;
+  }
+  
+  public getEntityType(): EntityType {
     return this.completeSchema.getEntityType(this.getEntityTypeName());
-  },
-  getEntityTypeName: function() {
+  }
+
+  public getEntityTypeName(): string {
     return this.completeSchema.raw.entitySets[this.name].type;
   }
-});
+}
 
-var RdfBasedSchemaResource = _.defClass(null,
-function RdfBasedSchemaResource(completeSchema, rawSchemaBranch, name) {
-  this.name = name;
-  this.completeSchema = completeSchema;
-  this.rawSchemaBranch = rawSchemaBranch;
-  this.rdfName = rawSchemaBranch && rawSchemaBranch.rdfName;
-},
-{
-  getUri: function() {
+export class RdfBasedSchemaResource {
+  private rdfName: string;
+
+	constructor(protected completeSchema: Schema, private rawSchemaBranch, private name: string) {
+    this.rdfName = rawSchemaBranch && rawSchemaBranch.rdfName;
+  }
+
+  public getUri(): string {
     return this.completeSchema.raw.defaultNamespace.uri + this.rdfName;
-  },
-  getNamespacedUri: function() {
+  }
+
+  public getNamespacedUri(): string {
     return this.completeSchema.raw.defaultNamespace.prefix + ':' + this.rdfName;
-  },
-  getName: function() {
+  }
+
+  public getName(): string {
     return this.name;
-  },
-  getRaw: function() {
+  }
+  
+  public getRaw() {
     return this.rawSchemaBranch;
-  },
-  hasDirectRdfRepresentation: function() {
+  }
+  
+  public hasDirectRdfRepresentation(): boolean {
     return this.rdfName != null;
   }
-});
+}
 
-var EntityType = _.defClass(RdfBasedSchemaResource,
-function EntityType(completeSchema, name) {
-  RdfBasedSchemaResource.call(this, completeSchema, completeSchema.raw.entityTypes[name], name);
-},
-{
-  getUri: function() {
+export class EntityType extends RdfBasedSchemaResource {
+	constructor(completeSchema: Schema, name: string) {
+    super(completeSchema, completeSchema.raw.entityTypes[name], name);
+  }
+
+  public getUri(): string {
     if(this.isElementary()) throw new Error('elementary types don\'t have a URI representation [' + this.getName() + ']');
-    return RdfBasedSchemaResource.prototype.getUri.call(this);
-  },
-  getNamespacedUri: function() {
+    return super.getUri();
+  }
+
+  public getNamespacedUri(): string {
     if(this.isElementary()) throw new Error('elementary types don\'t have a URI representation [' + this.getName() + ']');
-    return RdfBasedSchemaResource.prototype.getNamespacedUri.call(this);
-  },
-  isElementary: function() {
+    return super.getUri();
+  }
+
+  public isElementary(): boolean {
     return this.getName().substr(0,4) == 'Edm.';
-  },
-  getProperty: function(name) {
+  }
+
+  public getProperty(name: string): Property {
     return new Property(this.completeSchema, this, name);
-  },
-  getPropertyNames: function(fn) {
+  }
+
+  public getPropertyNames(): string[] {
     if(this.isElementary()) throw new Error('elementary types don\'t have properties [' + this.getName() + ']');
     return Object.keys(this.getRaw().properties);
   }
-});
+}
 
-var Property = _.defClass(RdfBasedSchemaResource,
-function Property(completeSchema, parentTypeSchema, name) {
-  RdfBasedSchemaResource.call(this, completeSchema, parentTypeSchema.getRaw().properties[name], name);
-  this.parentType = parentTypeSchema;
-},
-{
-  getEntityType: function() {
+export class Property extends RdfBasedSchemaResource {
+  constructor(completeSchema: Schema, private parentType: EntityType, name: string) {
+    super(completeSchema, parentType.getRaw().properties[name], name);
+  }
+
+  public getEntityType(): EntityType {
     return this.completeSchema.getEntityType(this.getRaw().type);
-  },
-  isNavigationProperty: function() {
+  }
+
+  public isNavigationProperty(): boolean {
     return this.getEntityType().isElementary() == false;
-  },
-  isQuantityOne: function() {
+  }
+
+  public isQuantityOne(): boolean {
     return this.getRaw().quantity.substr(0,4) === 'one-';
-  },
-  isOptional: function() {
+  }
+
+  public isOptional(): boolean {
     return this.getRaw().optional == true;
-  },
-  hasInverseProperty: function() {
+  }
+
+  public hasInverseProperty(): boolean {
     return this.getRaw().foreignProperty != null;
-  },
-  getInverseProperty: function() {
+  }
+
+  public getInverseProperty(): Property {
     var setName = this.getRaw().foreignSet;
     var propName = this.getRaw().foreignProperty;
     return this.completeSchema.getEntitySet(setName).getEntityType().getProperty(propName);
-  },
-  mirroredFromProperty: function() {
+  }
+
+  public mirroredFromProperty(): Property {
     var name = this.getRaw().mirroredFromNavigationProperty;
     return name && new Property(this.completeSchema, this.parentType, this.getRaw().mirroredFromNavigationProperty);
   }
-});
-
-module.exports = { Schema: Schema }
+}

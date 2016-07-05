@@ -1,35 +1,47 @@
 /** @module */
-module.exports = { };
-var _ = require('../util');
+import _ = require('../util');
+import Queries = require('./queries');
 
-var QueryComposer = module.exports.QueryComposer = _.defClass(null,
-function QueryComposer(entitySetName, dbSchema) {
-  this.entitySetName = entitySetName;
-  this.path = [];
-  this.dbSchema = dbSchema;
-  this.currentSchema = dbSchema.entitySets[entitySetName];
-  this.currentIsCollection = true;
-},
-{
-  filter: function(filterOption) {
+export class QueryComposer implements Queries.QueryModel {
+  public entitySetName: string;
+  public path: any[];
+  public filterOption: any;
+  public expandTree: any;
+
+  private schema: any;
+  private currentSchema: any;
+  private currentIsCollection: boolean;
+
+  constructor(entitySetName: string, schema) {
+    this.entitySetName = entitySetName;
+    this.path = [];
+    this.schema = schema;
+    this.currentSchema = schema.entitySets[entitySetName];
+    this.currentIsCollection = true;
+  }
+  
+  public filter(filterOption): void {
     this.filterOption = filterOption;
-  },
-  expand: function(expandOption) {
+  }
+
+  public expand(expandOption): void {
     var expandTree = this.expandTree = {};
     (expandOption || []).forEach(function(e) {
       var currentBranch = expandTree;
-      e.path.forEach(function(prop) {
+      e.path.forEach(prop => {
         currentBranch = currentBranch[prop] = currentBranch[prop] || {};
       });
     })
-  },
-  selectById: function(id) {
+  }
+
+  public selectById(id): void {
     if(!this.currentIsCollection) throw new Error('current query part should be a collection');
     this.path.push({ type: 'by-id', id: id, resultQuantity: 'one' });
     this.currentIsCollection = false;
-    this.currentSchema = this.dbSchema.entityTypes[this.currentSchema.type];
-  },
-  selectProperty: function(property) {
+    this.currentSchema = this.schema.entityTypes[this.currentSchema.type];
+  }
+
+  public selectProperty(property: string): void {
     if(this.currentIsCollection) throw new Error('current query part should be no collection');
     if(this.currentSchema.properties[property] == null) throw new Error('property does not exist: ' + property);
     var propertySchema = this.currentSchema.properties[property];
@@ -39,11 +51,13 @@ function QueryComposer(entitySetName, dbSchema) {
       this.currentSchema = this.collectionSchema(propertySchema.type);
     else
       this.currentSchema = this.singleSchema(propertySchema.type);
-  },
-  collectionSchema: function(type) {
-    return { type: type };
-  },
-  singleSchema: function(type) {
-    return this.dbSchema.entityTypes[type];
   }
-});
+
+  public collectionSchema(type) {
+    return { type: type };
+  }
+
+  public singleSchema(type) {
+    return this.schema.entityTypes[type];
+  }
+}

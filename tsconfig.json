@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "emitDecoratorMetadata": true,
+        "target": "ES5",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "outDir": "bin",
+        "sourceMap": true
+    }
+}

@@ -1,9 +1,9 @@
 /** @module */
-var _ = require('../util');
-var queries = require('../adapter/queries_sparql');
-var queryComposer = require('./querycomposer');
+import _ = require('../util');
+import queries = require('../adapter/queries_sparql');
+import queryComposer = require('./querycomposer');
 
-function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
+export function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
   if(ast.type == 'resourceQuery') {
     if(ast.resourcePath.type !== 'entitySet') throw new Error('unsupported resource path type: ' + ast.resourcePath.type);
     if(ast.resourcePath.navigation && ast.resourcePath.navigation.qualifiedEntityTypeName) throw new Error('qualified entity type name not supported');
@@ -28,5 +28,3 @@ function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
   }
   else throw new Error('unsupported query type: ' + ast.type);
 }
-
-module.exports = { getQueryModelFromEvaluatedAst: getQueryModelFromEvaluatedAst };

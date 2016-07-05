@@ -1,4 +1,4 @@
-var connect = require('connect');
+/*var connect = require('connect');
 var fs = require('fs')
 
 var abnfTokenizer = require('../abnfjs/tokenizer');
@@ -89,3 +89,4 @@ function startServer() {
   app.listen(config.port)
   console.log('server is listening on port ' + config.port);
 }
+*/
