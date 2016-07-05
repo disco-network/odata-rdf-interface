@@ -21,19 +21,19 @@ var QueryComposer = (function () {
     };
     QueryComposer.prototype.selectById = function (id) {
         if (!this.currentIsCollection)
-            throw new Error('current query part should be a collection');
-        this.path.push({ type: 'by-id', id: id, resultQuantity: 'one' });
+            throw new Error("current query part should be a collection");
+        this.path.push({ type: "by-id", id: id, resultQuantity: "one" });
         this.currentIsCollection = false;
         this.currentSchema = this.schema.entityTypes[this.currentSchema.type];
     };
     QueryComposer.prototype.selectProperty = function (property) {
         if (this.currentIsCollection)
-            throw new Error('current query part should be no collection');
+            throw new Error("current query part should be no collection");
         if (this.currentSchema.properties[property] == null)
-            throw new Error('property does not exist: ' + property);
+            throw new Error("property does not exist: " + property);
         var propertySchema = this.currentSchema.properties[property];
-        this.currentIsCollection = propertySchema.quantity == 'one-to-many' || propertySchema.quantity == 'many-to-many';
-        this.path.push({ type: 'property', name: property, resultQuantity: 'many' });
+        this.currentIsCollection = propertySchema.quantity === "many-to-one" || propertySchema.quantity === "many-to-many";
+        this.path.push({ type: "property", name: property, resultQuantity: "many" });
         if (this.currentIsCollection)
             this.currentSchema = this.collectionSchema(propertySchema.type);
         else

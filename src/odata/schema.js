@@ -1,3 +1,4 @@
+/** @module */
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -11,22 +12,24 @@ var raw = {
                 Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
                 ContentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Content", nullable: false },
                 ParentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Parent" },
-                Parent: { type: "Post", optional: true, quantity: "one-to-many", mirroredIndexProperty: "ParentId", foreignSet: "Posts", foreignProperty: "Children", rdfName: "parent", nullable: true },
+                Parent: { type: "Post", optional: true, quantity: "one-to-many",
+                    mirroredIndexProperty: "ParentId", foreignSet: "Posts", foreignProperty: "Children",
+                    rdfName: "parent", nullable: true },
                 Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
-                Content: { type: "Post", quantity: "one-to-many", mirroredIndexProperty: "ContentId", rdfName: "content" }
+                Content: { type: "Post", quantity: "one-to-many", mirroredIndexProperty: "ContentId", rdfName: "content" },
             },
-            rdfName: "Post"
+            rdfName: "Post",
         },
     },
     entitySets: {
         Posts: {
-            type: "Post"
-        }
+            type: "Post",
+        },
     },
     defaultNamespace: {
         prefix: "disco",
-        uri: "http://disco-network.org/resource/"
-    }
+        uri: "http://disco-network.org/resource/",
+    },
 };
 var Schema = (function () {
     function Schema() {
@@ -68,7 +71,7 @@ var RdfBasedSchemaResource = (function () {
         return this.completeSchema.raw.defaultNamespace.uri + this.rdfName;
     };
     RdfBasedSchemaResource.prototype.getNamespacedUri = function () {
-        return this.completeSchema.raw.defaultNamespace.prefix + ':' + this.rdfName;
+        return this.completeSchema.raw.defaultNamespace.prefix + ":" + this.rdfName;
     };
     RdfBasedSchemaResource.prototype.getName = function () {
         return this.name;
@@ -89,23 +92,23 @@ var EntityType = (function (_super) {
     }
     EntityType.prototype.getUri = function () {
         if (this.isElementary())
-            throw new Error('elementary types don\'t have a URI representation [' + this.getName() + ']');
+            throw new Error("elementary types don\'t have a URI representation [" + this.getName() + "]");
         return _super.prototype.getUri.call(this);
     };
     EntityType.prototype.getNamespacedUri = function () {
         if (this.isElementary())
-            throw new Error('elementary types don\'t have a URI representation [' + this.getName() + ']');
+            throw new Error("elementary types don\'t have a URI representation [" + this.getName() + "]");
         return _super.prototype.getUri.call(this);
     };
     EntityType.prototype.isElementary = function () {
-        return this.getName().substr(0, 4) == 'Edm.';
+        return this.getName().substr(0, 4) === "Edm.";
     };
     EntityType.prototype.getProperty = function (name) {
         return new Property(this.completeSchema, this, name);
     };
     EntityType.prototype.getPropertyNames = function () {
         if (this.isElementary())
-            throw new Error('elementary types don\'t have properties [' + this.getName() + ']');
+            throw new Error("elementary types don\'t have properties [" + this.getName() + "]");
         return Object.keys(this.getRaw().properties);
     };
     return EntityType;
@@ -121,13 +124,13 @@ var Property = (function (_super) {
         return this.completeSchema.getEntityType(this.getRaw().type);
     };
     Property.prototype.isNavigationProperty = function () {
-        return this.getEntityType().isElementary() == false;
+        return this.getEntityType().isElementary() === false;
     };
     Property.prototype.isQuantityOne = function () {
-        return this.getRaw().quantity.substr(0, 4) === 'one-';
+        return this.getRaw().quantity.substr(0, 4) === "one-";
     };
     Property.prototype.isOptional = function () {
-        return this.getRaw().optional == true;
+        return this.getRaw().optional === true;
     };
     Property.prototype.hasInverseProperty = function () {
         return this.getRaw().foreignProperty != null;

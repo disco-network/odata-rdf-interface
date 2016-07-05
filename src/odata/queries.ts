@@ -1,5 +1,4 @@
 /** @module */
-import _ = require('../util')
 
 export interface Query {
   run(sparqlProvider, cb: () => void): void;
@@ -19,8 +18,8 @@ export interface QueryModel {
 export class QueryResultEvaluator {
   // result type corresponds to what's needed by the context instance
   public evaluate(result, context: QueryContext): any {
-    var self = this;
-    var ret = {};
+    let self = this;
+    let ret = {};
     context.forEachElementaryPropertyOfResult(result, function(value, property) {
       ret[property.getName()] = value;
     });
@@ -38,8 +37,8 @@ export interface QueryContext {
 }
 
 export enum ErrorTypes {
-	NONE,
-	DB,
-	ENTITYSET_NOTFOUND,
-	PROPERTY_NOTFOUND,
+  NONE,
+  DB,
+  ENTITYSET_NOTFOUND,
+  PROPERTY_NOTFOUND,
 }

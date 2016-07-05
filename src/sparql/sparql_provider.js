@@ -5,7 +5,7 @@ var SparqlProvider = (function () {
         this.graphName = graphName;
     }
     SparqlProvider.prototype.querySelect = function (queryString, cb) {
-        //TODO: ensure that query has kind SELECT
+        // TODO: ensure that query has kind SELECT
         this.store.executeWithEnvironment(queryString, [this.graphName], [], function (err, results) {
             if (!err) {
                 cb({ result: results });

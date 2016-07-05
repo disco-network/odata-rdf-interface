@@ -1,6 +1,5 @@
 /** @module */
-import _ = require('../util');
-import Queries = require('./queries');
+import Queries = require("./queries");
 
 export class QueryComposer implements Queries.QueryModel {
   public entitySetName: string;
@@ -19,35 +18,35 @@ export class QueryComposer implements Queries.QueryModel {
     this.currentSchema = schema.entitySets[entitySetName];
     this.currentIsCollection = true;
   }
-  
+
   public filter(filterOption): void {
     this.filterOption = filterOption;
   }
 
   public expand(expandOption): void {
-    var expandTree = this.expandTree = {};
+    let expandTree = this.expandTree = {};
     (expandOption || []).forEach(function(e) {
-      var currentBranch = expandTree;
+      let currentBranch = expandTree;
       e.path.forEach(prop => {
         currentBranch = currentBranch[prop] = currentBranch[prop] || {};
       });
-    })
+    });
   }
 
   public selectById(id): void {
-    if(!this.currentIsCollection) throw new Error('current query part should be a collection');
-    this.path.push({ type: 'by-id', id: id, resultQuantity: 'one' });
+    if (!this.currentIsCollection) throw new Error("current query part should be a collection");
+    this.path.push({ type: "by-id", id: id, resultQuantity: "one" });
     this.currentIsCollection = false;
     this.currentSchema = this.schema.entityTypes[this.currentSchema.type];
   }
 
   public selectProperty(property: string): void {
-    if(this.currentIsCollection) throw new Error('current query part should be no collection');
-    if(this.currentSchema.properties[property] == null) throw new Error('property does not exist: ' + property);
-    var propertySchema = this.currentSchema.properties[property];
-    this.currentIsCollection = propertySchema.quantity == 'one-to-many' || propertySchema.quantity == 'many-to-many';
-    this.path.push({ type: 'property', name: property, resultQuantity: 'many' });
-    if(this.currentIsCollection)
+    if (this.currentIsCollection) throw new Error("current query part should be no collection");
+    if (this.currentSchema.properties[property] == null) throw new Error("property does not exist: " + property);
+    let propertySchema = this.currentSchema.properties[property];
+    this.currentIsCollection = propertySchema.quantity === "many-to-one" || propertySchema.quantity === "many-to-many";
+    this.path.push({ type: "property", name: property, resultQuantity: "many" });
+    if (this.currentIsCollection)
       this.currentSchema = this.collectionSchema(propertySchema.type);
     else
       this.currentSchema = this.singleSchema(propertySchema.type);

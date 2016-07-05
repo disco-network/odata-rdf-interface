@@ -1,7 +1,9 @@
 "use strict";
-var mappings = require('./sparql_mappings');
-var gpatterns = require('./sparql_graphpatterns');
-var ODataQueries = require('../odata/queries');
+/** @module */
+var mappings = require("./sparql_mappings");
+var gpatterns = require("./sparql_graphpatterns");
+var qsBuilder = require("./querystring_builder");
+var ODataQueries = require("../odata/queries");
 /**
  * @class
  * Used to generate query objects which can be run to modify and/or retrieve data.
@@ -37,11 +39,15 @@ var EntitySetQuery = (function () {
         var queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
         var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
         var evaluator = new ODataQueries.QueryResultEvaluator();
-        var triplePatterns = graphPattern.getTriples();
-        var queryString = 'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> '
-            + 'PREFIX disco: <http://disco-network.org/resource/> '
-            + 'SELECT ' + '*' + ' WHERE {' + triplePatterns.map(function (p) { return p.join(' '); }).join(" . ") + '}';
-        console.log(queryString);
+        // let triplePatterns = graphPattern.getTriples();
+        var queryStringBuilder = new qsBuilder.QueryStringBuilder();
+        queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+        queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
+        var queryString = queryStringBuilder.fromGraphPattern(graphPattern);
+        /*"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
+      + "PREFIX disco: <http://disco-network.org/resource/> "
+      + "SELECT " + "*" + " WHERE {" + triplePatterns.map(function(p) { return p.join(" "); }).join(" . ") + "}";*/
+        console.log(graphPattern, queryString);
         sparqlProvider.querySelect(queryString, function (answer) {
             if (!answer.error) {
                 _this.result = { result: answer.result.map(function (single) {
@@ -60,7 +66,7 @@ var EntitySetQuery = (function () {
      */
     EntitySetQuery.prototype.sendResults = function (res) {
         if (!this.result.error) {
-            res.writeHeader(200, { 'Content-type': 'application/json' });
+            res.writeHeader(200, { "Content-type": "application/json" });
             res.end(JSON.stringify(this.result.result, null, 2));
         }
         else {
@@ -114,16 +120,17 @@ var SparqlQueryContext = (function () {
 }());
 exports.SparqlQueryContext = SparqlQueryContext;
 /** Stores the query results of a SPARQL query to satisfy an OData request.
- * To the data belongs an object with the properties of quantity one and @construction */
+ * To the data belongs an object with the properties of quantity one and @construction
+ */
 function handleErrors(result, res) {
     switch (result.error) {
         case ODataQueries.ErrorTypes.DB:
             res.statusCode = 500;
-            res.end('database error ' + result.errorDetails);
+            res.end("database error " + result.errorDetails);
             break;
         default:
             res.statusCode = 500;
             console.log(result.error.stack);
-            res.end('unknown error type ' + result.error);
+            res.end("unknown error type " + result.error);
     }
 }

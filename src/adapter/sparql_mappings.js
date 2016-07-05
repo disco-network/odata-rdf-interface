@@ -1,3 +1,4 @@
+/** @module */
 "use strict";
 /**
  * Maps an OData property hierarchy to the corresponding SPARQL variables.
@@ -54,19 +55,19 @@ var SparqlVariableMapping = (function () {
         this.vargen = vargen;
     }
     SparqlVariableMapping.prototype.getPropertyVariable = function (propertyName) {
-        this._map = this._map || {};
-        return this._map[propertyName] = this._map[propertyName] || this.vargen.next();
+        this.map = this.map || {};
+        return this.map[propertyName] = this.map[propertyName] || this.vargen.next();
     };
     SparqlVariableMapping.prototype.mappingExists = function (propertyName) {
-        return this._map != null && this._map[propertyName] != null;
+        return this.map != null && this.map[propertyName] != null;
     };
     SparqlVariableMapping.prototype.forEach = function (fn) {
-        for (var key in this._map) {
-            fn(key, this._map[key]);
+        for (var key in this.map) {
+            fn(key, this.map[key]);
         }
     };
     SparqlVariableMapping.prototype.isEmpty = function () {
-        return this._map == null || Object.keys(this._map).length === 0;
+        return this.map == null || Object.keys(this.map).length === 0;
     };
     return SparqlVariableMapping;
 }());
@@ -89,7 +90,7 @@ var SparqlVariableGenerator = (function () {
         this.i = -1;
     }
     SparqlVariableGenerator.prototype.next = function () {
-        return '?x' + (++this.i).toString();
+        return "?x" + (++this.i).toString();
     };
     return SparqlVariableGenerator;
 }());

@@ -1,196 +1,206 @@
 
-import SchemaModule = require('../src/odata/schema');
+import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
-import queries = require('../src/odata/queries');
-import gpatterns = require('../src/adapter/sparql_graphpatterns');
-import mhelper = require('./helpers/sparql_mappings');
+import gpatterns = require("../src/adapter/sparql_graphpatterns");
+import mhelper = require("./helpers/sparql_mappings");
 
-describe('composible sparql graph patterns', function() {
-  it('should give me its triples', function() {
-    var gp = new gpatterns.ComposibleGraphPattern();
+describe("composible sparql graph patterns", function() {
+  it("should give me its triples", function() {
+    let gp = new gpatterns.ComposibleGraphPattern();
 
     expect(gp.getTriples()).toEqual([]);
-  })
-  it('should integrate other patterns', function() {
-    var gp = new gpatterns.ComposibleGraphPattern();
-    var innerGp = new gpatterns.ComposibleGraphPattern();
+  });
+  it("should integrate other patterns", function() {
+    let gp = new gpatterns.ComposibleGraphPattern();
+    let innerGp = new gpatterns.ComposibleGraphPattern();
 
-    innerGp.triples = [['a','b','c']];
+    innerGp.triples = [["a", "b", "c"]];
     gp.integratePatterns([innerGp]);
 
     expect(gp.getTriples()).toEqual(innerGp.getTriples());
-  })
-  it('should integrate optional subpatterns of other patterns', function() {
-    var gp = new gpatterns.ComposibleGraphPattern();
-    var innerGp = new gpatterns.ComposibleGraphPattern();
+  });
+  it("should integrate optional subpatterns of other patterns", function() {
+    let gp = new gpatterns.ComposibleGraphPattern();
+    let innerGp = new gpatterns.ComposibleGraphPattern();
 
-    innerGp.optionalPatterns = [ new gpatterns.ComposibleGraphPattern([ ['a','b','c'] ]) ];
+    innerGp.optionalPatterns = [ new gpatterns.ComposibleGraphPattern([ ["a", "b", "c"] ]) ];
     gp.integratePatterns([innerGp]);
 
     expect(gp.getOptionalPatterns()).toEqual(innerGp.getOptionalPatterns());
-  })
-  it('should integrate patterns as optional', function() {
-    var gp = new gpatterns.ComposibleGraphPattern();
-    var innerGp = new gpatterns.ComposibleGraphPattern();
+  });
+  it("should integrate patterns as optional", function() {
+    let gp = new gpatterns.ComposibleGraphPattern();
+    let innerGp = new gpatterns.ComposibleGraphPattern();
 
-    innerGp.triples = [['a','b','c']];
+    innerGp.triples = [["a", "b", "c"]];
     gp.integratePatternsAsOptional([innerGp]);
 
     expect(gp.getOptionalPatterns()[0]).toEqual(innerGp);
-  })
-})
+  });
+});
 
-describe('tree graph patterns', function() {
-  it('should build a consistent tree', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
+describe("tree graph patterns", function() {
+  it("should build a consistent tree", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
 
-    gp.branch('disco:id', '?id');
+    gp.branch("disco:id", "?id");
 
-    expect(gp.branchExists('disco:id')).toEqual(true);
-    expect(gp.branchExists('disco:content')).toEqual(false);
-    expect(gp.branch('disco:id')[0].name()).toEqual('?id');
-  })
-  it('should generate triples', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
+    expect(gp.branchExists("disco:id")).toEqual(true);
+    expect(gp.branchExists("disco:content")).toEqual(false);
+    expect(gp.branch("disco:id")[0].name()).toEqual("?id");
+  });
+  it("should generate triples", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
 
-    gp.branch('disco:id', '?id');
-    gp.branch('disco:content', '?cnt').branch('disco:id', '?cntid');
+    gp.branch("disco:id", "?id");
+    gp.branch("disco:content", "?cnt").branch("disco:id", "?cntid");
 
-    expect(gp.getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
-    expect(gp.getTriples()).toContain([ '?root', 'disco:content', '?cnt' ]);
-    expect(gp.getTriples()).toContain([ '?cnt', 'disco:id', '?cntid' ]);
-  })
-  it('should allow optional branches', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
+    expect(gp.getTriples()).toContain([ "?root", "disco:id", "?id" ]);
+    expect(gp.getTriples()).toContain([ "?root", "disco:content", "?cnt" ]);
+    expect(gp.getTriples()).toContain([ "?cnt", "disco:id", "?cntid" ]);
+  });
+  it("should allow value leaves", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    gp.branch("disco:id", new gpatterns.ValueLeaf("1"));
 
-    gp.optionalBranch('disco:id', '?id');
+    expect(gp.getTriples()).toContain([ "?root", "disco:id", "\"1\""]);
+  });
+  it("should allow optional branches", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
 
-    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
-  })
-  it('should allow me to integrate other trees as branches', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    var inner = new gpatterns.TreeGraphPattern('?inner');
+    gp.optionalBranch("disco:id", "?id");
 
-    inner.branch('disco:id', '?id');
-    gp.branch('disco:inner', inner);
+    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ "?root", "disco:id", "?id" ]);
+  });
+  it("should allow me to integrate other trees as branches", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    let inner = new gpatterns.TreeGraphPattern("?inner");
 
-    expect(gp.getTriples()).toContain([ '?inner', 'disco:id', '?id' ]);
-  })
-  it('should allow me to integrate other trees as optional branches', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    var inner = new gpatterns.TreeGraphPattern('?inner');
+    inner.branch("disco:id", "?id");
+    gp.branch("disco:inner", inner);
 
-    inner.branch('disco:id', '?id');
-    gp.optionalBranch('disco:inner', inner);
+    expect(gp.getTriples()).toContain([ "?inner", "disco:id", "?id" ]);
+  });
+  it("should allow me to integrate other trees as optional branches", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    let inner = new gpatterns.TreeGraphPattern("?inner");
 
-    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?inner', 'disco:id', '?id' ]);
-  })
-  it('should allow me to merge with other trees', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    var other = new gpatterns.TreeGraphPattern('?root');
+    inner.branch("disco:id", "?id");
+    gp.optionalBranch("disco:inner", inner);
 
-    other.branch('disco:id', '?id');
+    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ "?inner", "disco:id", "?id" ]);
+  });
+  it("should allow me to merge with other trees", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    let other = new gpatterns.TreeGraphPattern("?root");
+
+    other.branch("disco:id", "?id");
     gp.merge(other);
 
-    expect(gp.getTriples()).toContain([ '?root', 'disco:id', '?id' ]);
-  })
-  it('should not allow me to merge with trees with different roots', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    var other = new gpatterns.TreeGraphPattern('?other');
+    expect(gp.getTriples()).toContain([ "?root", "disco:id", "?id" ]);
+  });
+  it("should not allow me to merge with trees with different roots", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    let other = new gpatterns.TreeGraphPattern("?other");
 
-    other.branch('disco:id', '?id');
-    expect(function() { gp.merge(other) }).toThrow();
-  })
-  it('should detect and handle collisions when merging', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    var gp2 = new gpatterns.TreeGraphPattern('?root');
+    other.branch("disco:id", "?id");
+    expect(function() { gp.merge(other); }).toThrow();
+  });
+  it("should detect and handle collisions when merging", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    let gp2 = new gpatterns.TreeGraphPattern("?root");
 
-    gp.branch('id', '?id');
-    gp2.branch('id', '?id2');
+    gp.branch("id", "?id");
+    gp2.branch("id", "?id2");
     gp.merge(gp2);
 
-    expect(gp.branch('id').length).toEqual(2);
+    expect(gp.branch("id").length).toEqual(2);
   });
-  it('should allow UNION branches', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    var union1 = new gpatterns.TreeGraphPattern('?u1');
-    var union2 = new gpatterns.TreeGraphPattern('?u2');
+  it("should allow UNION branches", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    let union1 = new gpatterns.TreeGraphPattern("?u1");
+    let union2 = new gpatterns.TreeGraphPattern("?u2");
 
-    var upat = gp.newUnionPattern();
-    upat.branch('id', union1);
-    upat.branch('id', union2);
+    let upat = gp.newUnionPattern();
+    upat.branch("id", union1);
+    upat.branch("id", union2);
 
     expect(gp.getUnionPatterns().length).toEqual(1);
     expect(gp.getUnionPatterns().length).toEqual(1);
-    expect(gp.getUnionPatterns()[0].branch('id').length).toEqual(2);
-  })
-  it('should have inverse branches', function() {
-    var gp = new gpatterns.TreeGraphPattern('?root');
-    gp.inverseBranch('disco:parent', '?child');
-  })
-})
+    expect(gp.getUnionPatterns()[0].branch("id").length).toEqual(2);
+  });
+  it("should have inverse branches", function() {
+    let gp = new gpatterns.TreeGraphPattern("?root");
+    gp.inverseBranch("disco:parent", "?child");
+  });
+});
 
-describe('direct property graph patterns', function() {
-  it('should store the direct properties in the mapping', function() {
-    var mapping = mhelper.createStructuredMapping();
-    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+describe("direct property graph patterns", function() {
+  it("should store the direct properties in the mapping", function() {
+    let mapping = mhelper.createStructuredMapping();
+    new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
 
-    expect(mapping.elementaryPropertyExists('Id')).toEqual(true);
-    expect(mapping.elementaryPropertyExists('ParentId')).toEqual(true);
-    expect(mapping.elementaryPropertyExists('ContentId')).toEqual(true);
-    expect(mapping.elementaryPropertyExists('Parent')).toEqual(false);
-    expect(mapping.elementaryPropertyExists('Content')).toEqual(false);
-  })
-  it('should create the triples corresponding to the direct properties', function() {
-    var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
+    expect(mapping.elementaryPropertyExists("ParentId")).toEqual(true);
+    expect(mapping.elementaryPropertyExists("ContentId")).toEqual(true);
+    expect(mapping.elementaryPropertyExists("Parent")).toEqual(false);
+    expect(mapping.elementaryPropertyExists("Content")).toEqual(false);
+  });
+  it("should create the triples corresponding to the direct properties", function() {
+    let mapping = mhelper.createStructuredMapping("?post");
+    let gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
 
-    expect(gp.getTriples()).toContain([ '?post', 'disco:id', mapping.getElementaryPropertyVariable('Id') ]);
-  })
-  it('should create the triples corresponding to the mirrored direct properties', function() {
-    var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    expect(gp.getTriples()).toContain([ "?post", "disco:id", mapping.getElementaryPropertyVariable("Id") ]);
+  });
+  it("should create the triples corresponding to the mirrored direct properties", function() {
+    let mapping = mhelper.createStructuredMapping("?post");
+    let gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
 
-    expect(gp.getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
-    expect(gp.getTriples()).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getElementaryPropertyVariable('ContentId') ]);
-  })
-  it('should create optional triples', function() {
-    var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType('Post'), mapping);
+    expect(gp.getTriples()).toContain(
+      [ "?post", "disco:content", mapping.getComplexProperty("Content").getVariable() ]);
+    expect(gp.getTriples()).toContain(
+      [ mapping.getComplexProperty("Content").getVariable(), "disco:id",
+      mapping.getElementaryPropertyVariable("ContentId") ]);
+  });
+  it("should create optional triples", function() {
+    let mapping = mhelper.createStructuredMapping("?post");
+    let gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
 
-    expect(gp.getOptionalPatterns()[0].getTriples()).toContain([ '?post', 'disco:parent', mapping.getComplexProperty('Parent').getVariable() ]);
-  })
-})
+    expect(gp.getOptionalPatterns()[0].getTriples()).toContain(
+      [ "?post", "disco:parent", mapping.getComplexProperty("Parent").getVariable() ]);
+  });
+});
 
-describe('expand tree graph patterns', function() {
-  it('should expand the first depth level', function() {
-    var expandTree = { Content: {} };
-    var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
+describe("expand tree graph patterns", function() {
+  it("should expand the first depth level", function() {
+    let expandTree = { Content: {} };
+    let mapping = mhelper.createStructuredMapping("?post");
+    let gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
 
-    expect(mapping.getComplexProperty('Content').elementaryPropertyExists('Id')).toEqual(true);
+    expect(mapping.getComplexProperty("Content").elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns().length).toEqual(1);
-    expect(gp.getUnionPatterns()[0].getTriples()).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
-    //expect(gp.getTriples(true)).toContain([ '?post', 'disco:content', mapping.getComplexProperty('Content').getVariable() ]);
-    expect(gp.getUnionPatterns()[0].branch('disco:content')[1].getUnionPatterns()[0].getTriples()).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getComplexProperty('Content').getElementaryPropertyVariable('Id') ]);
-    //expect(gp.getTriples(true)).toContain([ mapping.getComplexProperty('Content').getVariable(), 'disco:id', mapping.getComplexProperty('Content').getElementaryPropertyVariable('Id') ]);
-  })
-  it('should expand the second depth level', function() {
-    var expandTree = { Content: { Content: {} } };
-    var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
+    expect(gp.getUnionPatterns()[0].getTriples()).toContain(
+      [ "?post", "disco:content", mapping.getComplexProperty("Content").getVariable() ]);
+    expect(gp.getUnionPatterns()[0].branch("disco:content")[1].getUnionPatterns()[0].getTriples())
+    .toContain([ mapping.getComplexProperty("Content").getVariable(), "disco:id",
+      mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id") ]);
+  });
+  it("should expand the second depth level", function() {
+    let expandTree = { Content: { Content: {} } };
+    let mapping = mhelper.createStructuredMapping("?post");
+    new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
 
-    expect(mapping.getComplexProperty('Content').getComplexProperty('Content').elementaryPropertyExists('Id')).toEqual(true);
-  })
-  it('should expand the optional properties of the first depth level', function() {
-    var expandTree = { Parent: {} };
-    var mapping = mhelper.createStructuredMapping('?post');
-    var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType('Post'), expandTree, mapping);
+    expect(mapping.getComplexProperty("Content").getComplexProperty("Content")
+    .elementaryPropertyExists("Id")).toEqual(true);
+  });
+  it("should expand the optional properties of the first depth level", function() {
+    let expandTree = { Parent: {} };
+    let mapping = mhelper.createStructuredMapping("?post");
+    let gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
 
-    expect(mapping.getComplexProperty('Parent').elementaryPropertyExists('Id')).toEqual(true);
-    expect(gp.getUnionPatterns()[0].optionalBranch('disco:parent')[1].getUnionPatterns()[0].getTriples()).toContain(
-      [ mapping.getComplexProperty('Parent').getVariable(), 'disco:id', mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id') ])
-    //expect(gp.getOptionalPatterns(true)[0].getTriples()).toContain(
-      //[ mapping.getComplexProperty('Parent').getVariable(), 'disco:id', mapping.getComplexProperty('Parent').getElementaryPropertyVariable('Id') ])
-  })
-})
+    expect(mapping.getComplexProperty("Parent").elementaryPropertyExists("Id")).toEqual(true);
+    expect(gp.getUnionPatterns()[0].optionalBranch("disco:parent")[1].getUnionPatterns()[0].getTriples()).toContain(
+      [ mapping.getComplexProperty("Parent").getVariable(), "disco:id",
+        mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id") ]);
+  });
+});

@@ -1,5 +1,4 @@
 /** @module */
-import _ = require('../util');
 
 /**
  * Maps an OData property hierarchy to the corresponding SPARQL variables.
@@ -11,7 +10,7 @@ export class StructuredSparqlVariableMapping {
   private complexProperties: SparqlVariableMapping<StructuredSparqlVariableMapping>;
 
   constructor(private variableName: string, vargen: SparqlVariableGenerator) {
-    var complexVargen = new ComplexSparqlVariableGenerator(vargen);
+    let complexVargen = new ComplexSparqlVariableGenerator(vargen);
     this.elementaryProperties = new SparqlVariableMapping(vargen);
     this.complexProperties = new SparqlVariableMapping(complexVargen);
   }
@@ -61,26 +60,26 @@ export class StructuredSparqlVariableMapping {
  * Maps property names to their unique SPARQL variable name.
  */
 export class SparqlVariableMapping<Variable> {
-  private _map: Object;
+  private map: Object;
 
   constructor(private vargen: VariableGenerator<Variable>) { }
   public getPropertyVariable(propertyName: string) {
-    this._map = this._map || {};
-    return this._map[propertyName] = this._map[propertyName] || this.vargen.next();
+    this.map = this.map || {};
+    return this.map[propertyName] = this.map[propertyName] || this.vargen.next();
   }
 
   public mappingExists(propertyName: string): boolean {
-    return this._map != null && this._map[propertyName] != null;
+    return this.map != null && this.map[propertyName] != null;
   }
 
   public forEach(fn: (prop: string, variable: Variable) => void): void {
-    for(var key in this._map) {
-      fn(key, this._map[key]);
+    for (let key in this.map) {
+      fn(key, this.map[key]);
     }
   }
 
   public isEmpty(): boolean {
-    return this._map == null || Object.keys(this._map).length === 0;
+    return this.map == null || Object.keys(this.map).length === 0;
   }
 }
 
@@ -97,7 +96,7 @@ export class ComplexSparqlVariableGenerator implements VariableGenerator<Structu
 export class SparqlVariableGenerator implements VariableGenerator<string> {
   private i: number = -1;
   public next(): string {
-    return '?x' + (++this.i).toString();
+    return "?x" + (++this.i).toString();
   }
 }
 
