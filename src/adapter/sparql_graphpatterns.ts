@@ -1,14 +1,15 @@
 /** @module */
 import _ = require("../util");
 import Mappings = require("./sparql_mappings");
+import Schema = require("../odata/schema");
 
 /**
  * Provides a SPARQL graph pattern consisting of mandatory and optional triples.
  */
 export interface GraphPattern {
-  getTriples(): Array<Array<any>>;
-  getOptionalPatterns(): Array<GraphPattern>;
-  getUnionPatterns(): Array<GraphPattern>;
+  getTriples(): any[][];
+  getOptionalPatterns(): GraphPattern[];
+  getUnionPatterns(): GraphPattern[];
 }
 
 /**
@@ -90,6 +91,40 @@ export class TreeGraphPattern implements GraphPattern {
       });
     }
     return triples;
+  }
+
+  public getDirectTriples(): any[][] {
+    let triples: any[][] = [];
+    for (let property in this.valueLeaves) {
+      let leaves = this.valueLeaves[property];
+      leaves.forEach(leaf => {
+        triples.push([ this.name(), property, "\"" + leaf.value + "\"" ]);
+      });
+    }
+    for (let property in this.branches) {
+      let branches = this.branches[property];
+      branches.forEach(branch => {
+        triples.push([ this.name(), property, branch.name() ]);
+      });
+    }
+    for (let property in this.inverseBranches) {
+      let branches = this.inverseBranches[property];
+      branches.forEach(branch => {
+        triples.push([ branch.name(), property, this.name() ]);
+      });
+    }
+    return triples;
+  }
+
+  public getBranchPatterns(): TreeGraphPattern[] {
+    let branches: TreeGraphPattern[] = [];
+    for (let property in this.branches) {
+      branches.push.apply(branches, this.branches[property]);
+    }
+    for (let property in this.inverseBranches) {
+      branches.push.apply(branches, this.branches[property]);
+    }
+    return branches;
   }
 
   public getOptionalPatterns(): GraphPattern[] {
@@ -220,17 +255,20 @@ export class ValueLeaf {
 /**
  * Provides a SPARQL graph pattern involving all the direct and elementary
  * properties belonging to the OData entity type passed as schema.
+ * Please separate the options like this: "no-id-property|some-other-option"
  */
 export class DirectPropertiesGraphPattern extends TreeGraphPattern {
-  constructor(entityType, mapping: Mappings.StructuredSparqlVariableMapping) {
+  constructor(entityType: Schema.EntityType, mapping: Mappings.StructuredSparqlVariableMapping, options: string) {
     let entityVariable: string = mapping.getVariable();
     super(entityVariable);
 
     let propertyNames = entityType.getPropertyNames();
     let properties = propertyNames.map(p => entityType.getProperty(p));
-    for (let i in properties) {
+
+    for (let i = 0; i < properties.length; ++i) {
       let property = properties[i];
       let propertyName = property.getName();
+      if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.isNavigationProperty() === false) {
         if (!property.mirroredFromProperty()) {
           // TODO: optional
@@ -261,10 +299,13 @@ export class DirectPropertiesGraphPattern extends TreeGraphPattern {
  * all the data necessary for an OData $expand query.
  */
 export class ExpandTreeGraphPattern extends TreeGraphPattern {
-  constructor(entityType, expandTree, mapping: Mappings.StructuredSparqlVariableMapping) {
+  constructor(entityType: Schema.EntityType, expandTree, mapping: Mappings.StructuredSparqlVariableMapping) {
     super(mapping.getVariable());
 
-    let directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping);
+    this.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
+
+    let directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping, "no-id-property");
+    this.newUnionPattern(directPropertyPattern);
     Object.keys(expandTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
       let propertyType = property.getEntityType();
@@ -276,17 +317,9 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
         let unionPattern = this.newUnionPattern();
         unionPattern.inverseBranch(inverseProperty.getNamespacedUri(), gp);
       }
-      else if (!property.isQuantityOne()) {
+      else {
         this.newUnionPattern().branch(property.getNamespacedUri(), gp);
       }
-      else if (property.isOptional()) {
-        directPropertyPattern.optionalBranch(property.getNamespacedUri(), gp);
-      }
-      else {
-        directPropertyPattern.branch(property.getNamespacedUri(), gp);
-      }
     });
-
-    this.newUnionPattern(directPropertyPattern);
   }
 }

@@ -21,6 +21,20 @@ describe("the query string builder", function () {
         expect(queryString).toEqual("{ ?root disco:id \"1\" . " +
             "{ ?root disco:parent ?parent } UNION { ?child disco:parent ?root } }");
     });
+    it("should build queries with nested UNIONs", function () {
+        var pattern = new gpatterns.TreeGraphPattern("?root");
+        pattern.newUnionPattern().newUnionPattern().branch("disco:id", new gpatterns.ValueLeaf("1"));
+        var builder = new qbuilder.QueryStringBuilder();
+        var queryString = builder.buildGraphPatternString(pattern);
+        expect(queryString).toEqual("{ { { ?root disco:id \"1\" } } }");
+    });
+    it("should build unions of branches", function () {
+        var pattern = new gpatterns.TreeGraphPattern("?root");
+        pattern.branch("disco:content", "?cnt").newUnionPattern().branch("disco:id", "?id");
+        var builder = new qbuilder.QueryStringBuilder();
+        var queryString = builder.buildGraphPatternString(pattern);
+        expect(queryString).toEqual("{ ?root disco:content ?cnt . { ?cnt disco:id ?id } }");
+    });
 });
 
 //# sourceMappingURL=../maps/spec/build_querystring_spec.js.map

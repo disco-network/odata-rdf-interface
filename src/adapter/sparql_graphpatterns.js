@@ -88,20 +88,65 @@ var TreeGraphPattern = (function () {
         }
         return triples;
     };
+    TreeGraphPattern.prototype.getDirectTriples = function () {
+        var _this = this;
+        var triples = [];
+        var _loop_4 = function(property) {
+            var leaves = this_4.valueLeaves[property];
+            leaves.forEach(function (leaf) {
+                triples.push([_this.name(), property, "\"" + leaf.value + "\""]);
+            });
+        };
+        var this_4 = this;
+        for (var property in this.valueLeaves) {
+            _loop_4(property);
+        }
+        var _loop_5 = function(property) {
+            var branches = this_5.branches[property];
+            branches.forEach(function (branch) {
+                triples.push([_this.name(), property, branch.name()]);
+            });
+        };
+        var this_5 = this;
+        for (var property in this.branches) {
+            _loop_5(property);
+        }
+        var _loop_6 = function(property) {
+            var branches = this_6.inverseBranches[property];
+            branches.forEach(function (branch) {
+                triples.push([branch.name(), property, _this.name()]);
+            });
+        };
+        var this_6 = this;
+        for (var property in this.inverseBranches) {
+            _loop_6(property);
+        }
+        return triples;
+    };
+    TreeGraphPattern.prototype.getBranchPatterns = function () {
+        var branches = [];
+        for (var property in this.branches) {
+            branches.push.apply(branches, this.branches[property]);
+        }
+        for (var property in this.inverseBranches) {
+            branches.push.apply(branches, this.branches[property]);
+        }
+        return branches;
+    };
     TreeGraphPattern.prototype.getOptionalPatterns = function () {
         var self = this;
         var patterns = [];
-        var _loop_4 = function(property) {
-            var branches = this_4.optionalBranches[property];
+        var _loop_7 = function(property) {
+            var branches = this_7.optionalBranches[property];
             branches.forEach(function (branch) {
                 var gp = new ComposibleGraphPattern([[self.name(), property, branch.name()]]);
                 gp.integratePatterns([branch]);
                 patterns.push(gp);
             });
         };
-        var this_4 = this;
+        var this_7 = this;
         for (var property in this.optionalBranches) {
-            _loop_4(property);
+            _loop_7(property);
         }
         return patterns;
     };
@@ -180,21 +225,21 @@ var TreeGraphPattern = (function () {
         var _this = this;
         if (this.rootName !== other.rootName)
             throw new Error("can\'t merge trees with different roots");
-        var _loop_5 = function(property) {
+        var _loop_8 = function(property) {
             other.branches[property].forEach(function (branch) {
                 _this.branch(property, branch);
             });
         };
         for (var property in other.branches) {
-            _loop_5(property);
+            _loop_8(property);
         }
-        var _loop_6 = function(property) {
+        var _loop_9 = function(property) {
             other.optionalBranches[property].forEach(function (branch) {
                 _this.optionalBranch(property, branch);
             });
         };
         for (var property in other.optionalBranches) {
-            _loop_6(property);
+            _loop_9(property);
         }
     };
     return TreeGraphPattern;
@@ -210,17 +255,20 @@ exports.ValueLeaf = ValueLeaf;
 /**
  * Provides a SPARQL graph pattern involving all the direct and elementary
  * properties belonging to the OData entity type passed as schema.
+ * Please separate the options like this: "no-id-property|some-other-option"
  */
 var DirectPropertiesGraphPattern = (function (_super) {
     __extends(DirectPropertiesGraphPattern, _super);
-    function DirectPropertiesGraphPattern(entityType, mapping) {
+    function DirectPropertiesGraphPattern(entityType, mapping, options) {
         var entityVariable = mapping.getVariable();
         _super.call(this, entityVariable);
         var propertyNames = entityType.getPropertyNames();
         var properties = propertyNames.map(function (p) { return entityType.getProperty(p); });
-        for (var i in properties) {
+        for (var i = 0; i < properties.length; ++i) {
             var property = properties[i];
             var propertyName = property.getName();
+            if (propertyName === "Id" && options.indexOf("no-id-property") >= 0)
+                continue;
             if (property.isNavigationProperty() === false) {
                 if (!property.mirroredFromProperty()) {
                     // TODO: optional
@@ -256,7 +304,9 @@ var ExpandTreeGraphPattern = (function (_super) {
     function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
         var _this = this;
         _super.call(this, mapping.getVariable());
-        var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping);
+        this.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
+        var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping, "no-id-property");
+        this.newUnionPattern(directPropertyPattern);
         Object.keys(expandTree).forEach(function (propertyName) {
             var property = entityType.getProperty(propertyName);
             var propertyType = property.getEntityType();
@@ -267,17 +317,10 @@ var ExpandTreeGraphPattern = (function (_super) {
                 var unionPattern = _this.newUnionPattern();
                 unionPattern.inverseBranch(inverseProperty.getNamespacedUri(), gp);
             }
-            else if (!property.isQuantityOne()) {
+            else {
                 _this.newUnionPattern().branch(property.getNamespacedUri(), gp);
             }
-            else if (property.isOptional()) {
-                directPropertyPattern.optionalBranch(property.getNamespacedUri(), gp);
-            }
-            else {
-                directPropertyPattern.branch(property.getNamespacedUri(), gp);
-            }
         });
-        this.newUnionPattern(directPropertyPattern);
     }
     return ExpandTreeGraphPattern;
 }(TreeGraphPattern));

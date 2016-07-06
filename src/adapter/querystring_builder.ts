@@ -7,13 +7,30 @@ export class QueryStringBuilder {
     this.prefixes[prefix] = uri;
   }
 
-  public buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string {
-    let triples = graphPattern.getTriples().map(t => t.join(" "));
+  public buildGraphPatternContentString(graphPattern: gpatterns.TreeGraphPattern): string {
+    let triples = graphPattern.getDirectTriples().map(t => t.join(" ")).join(" . ");
+    let subPatterns = graphPattern.getBranchPatterns()
+      .map(p => this.buildGraphPatternContentString(p))
+      .filter(str => str !== "")
+      .join(" . ");
     let unions = graphPattern.getUnionPatterns()
       .map(p => this.buildGraphPatternString(p))
       .join(" UNION ");
-    let parts = ( unions !== "" ) ? triples.concat(unions) : triples;
-    return "{ " + parts.join(" . ") + " }";
+    let parts = [];
+    if (triples !== "") parts.push(triples);
+    if (subPatterns !== "") parts.push(subPatterns);
+    if (unions !== "") parts.push(unions);
+
+    return parts.join(" . ");
+  }
+
+  public buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string {
+    /*let triples = graphPattern.getTriples().map(t => t.join(" "));
+    let unions = graphPattern.getUnionPatterns()
+      .map(p => this.buildGraphPatternString(p))
+      .join(" UNION ");
+    let parts = ( unions !== "" ) ? triples.concat(unions) : triples;*/
+    return "{ " + this.buildGraphPatternContentString(graphPattern) + " }";
   }
   public buildPrefixString() {
     let parts: string[] = [ ];

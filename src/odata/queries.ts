@@ -1,4 +1,5 @@
 /** @module */
+import Schema = require("./schema");
 
 export interface Query {
   run(sparqlProvider, cb: () => void): void;
@@ -17,22 +18,62 @@ export interface QueryModel {
  */
 export class QueryResultEvaluator {
   // result type corresponds to what's needed by the context instance
-  public evaluate(result, context: QueryContext): any {
-    let self = this;
-    let ret = {};
-    context.forEachElementaryPropertyOfResult(result, function(value, property) {
-      ret[property.getName()] = value;
+  public evaluate(results: any[], context: QueryContext): any[] {
+    let entities = {};
+
+    results.forEach(result => {
+      let id = context.getUniqueIdOfResult(result);
+      if (entities[id] === undefined) {
+        entities[id] = {};
+      }
+      context.forEachElementaryPropertyOfResult(result, (value, property) => {
+        this.assignElementaryProperty(entities[id], property, value);
+      });
+      context.forEachComplexPropertyOfResult(result, (subResult, property, hasValue) => {
+        if (hasValue)
+          this.assignComplexProperty(entities[id], property, subResult, context);
+      });
     });
-    context.forEachComplexPropertyOfResult(result, function(subResult, property) {
-      ret[property.getName()] = self.evaluate(subResult, context.getSubContext(property.getName()));
-    });
-    return ret;
+
+    return Object.keys(entities).map(key => entities[key]);
+  }
+
+  private assignElementaryProperty(entity, property: Schema.Property, value) {
+    let oldValue = entity[property.getName()];
+    if (property.isQuantityOne()) {
+      if (oldValue !== undefined && value !== undefined && oldValue !== value)
+        throw new Error("found different values for a property of quantity one: " + property.getName());
+      else
+        entity[property.getName()] = value;
+    }
+  }
+
+  private assignComplexProperty(entity, property: Schema.Property, result, context: QueryContext) {
+    let oldValue = entity[property.getName()];
+    if (property.isQuantityOne()) {
+      if (oldValue !== undefined)
+        throw new Error("found different values for a property of quantity one: " + property.getName());
+      else {
+        let subEntity = entity[property.getName()] = {};
+        let subContext = context.getSubContext(property.getName());
+        subContext.forEachElementaryPropertyOfResult(result, (subValue, subProperty) => {
+          this.assignElementaryProperty(subEntity, subProperty, subValue);
+        });
+        subContext.forEachComplexPropertyOfResult(result, (subResult, subProperty, hasValue) => {
+          if (hasValue)
+            this.assignComplexProperty(subEntity, subProperty, subResult, subContext);
+        });
+      }
+    }
   }
 }
 
 export interface QueryContext {
-  forEachElementaryPropertyOfResult(result, fn: (value, property) => void): void;
-  forEachComplexPropertyOfResult(result, fn: (subResult, property) => void): void;
+  /** Iterate over all elementary properties expected by the query and pass their value. */
+  forEachElementaryPropertyOfResult(result, fn: (value, property: Schema.Property) => void): void;
+  /** Iterate over all complex properties expected by the query. */
+  forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property, hasValue: boolean) => void): void;
+  getUniqueIdOfResult(result): string;
   getSubContext(property: string): QueryContext;
 }
 

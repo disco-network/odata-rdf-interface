@@ -6,14 +6,32 @@ var QueryStringBuilder = (function () {
     QueryStringBuilder.prototype.insertPrefix = function (prefix, uri) {
         this.prefixes[prefix] = uri;
     };
-    QueryStringBuilder.prototype.buildGraphPatternString = function (graphPattern) {
+    QueryStringBuilder.prototype.buildGraphPatternContentString = function (graphPattern) {
         var _this = this;
-        var triples = graphPattern.getTriples().map(function (t) { return t.join(" "); });
+        var triples = graphPattern.getDirectTriples().map(function (t) { return t.join(" "); }).join(" . ");
+        var subPatterns = graphPattern.getBranchPatterns()
+            .map(function (p) { return _this.buildGraphPatternContentString(p); })
+            .filter(function (str) { return str !== ""; })
+            .join(" . ");
         var unions = graphPattern.getUnionPatterns()
             .map(function (p) { return _this.buildGraphPatternString(p); })
             .join(" UNION ");
-        var parts = (unions !== "") ? triples.concat(unions) : triples;
-        return "{ " + parts.join(" . ") + " }";
+        var parts = [];
+        if (triples !== "")
+            parts.push(triples);
+        if (subPatterns !== "")
+            parts.push(subPatterns);
+        if (unions !== "")
+            parts.push(unions);
+        return parts.join(" . ");
+    };
+    QueryStringBuilder.prototype.buildGraphPatternString = function (graphPattern) {
+        /*let triples = graphPattern.getTriples().map(t => t.join(" "));
+        let unions = graphPattern.getUnionPatterns()
+          .map(p => this.buildGraphPatternString(p))
+          .join(" UNION ");
+        let parts = ( unions !== "" ) ? triples.concat(unions) : triples;*/
+        return "{ " + this.buildGraphPatternContentString(graphPattern) + " }";
     };
     QueryStringBuilder.prototype.buildPrefixString = function () {
         var parts = [];

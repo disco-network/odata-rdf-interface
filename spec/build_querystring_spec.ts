@@ -28,4 +28,26 @@ describe("the query string builder", function() {
       "{ ?root disco:parent ?parent } UNION { ?child disco:parent ?root } }"
     );
   });
+  it("should build queries with nested UNIONs", function() {
+    let pattern = new gpatterns.TreeGraphPattern("?root");
+    pattern.newUnionPattern().newUnionPattern().branch("disco:id", new gpatterns.ValueLeaf("1"));
+
+    let builder = new qbuilder.QueryStringBuilder();
+    let queryString = builder.buildGraphPatternString(pattern);
+
+    expect(queryString).toEqual(
+      "{ { { ?root disco:id \"1\" } } }"
+    );
+  });
+  it("should build unions of branches", function() {
+    let pattern = new gpatterns.TreeGraphPattern("?root");
+    pattern.branch("disco:content", "?cnt").newUnionPattern().branch("disco:id", "?id");
+
+    let builder = new qbuilder.QueryStringBuilder();
+    let queryString = builder.buildGraphPatternString(pattern);
+
+    expect(queryString).toEqual(
+      "{ ?root disco:content ?cnt . { ?cnt disco:id ?id } }"
+    );
+  });
 });

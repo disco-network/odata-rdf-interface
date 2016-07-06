@@ -3,6 +3,7 @@ import mappings = require("./sparql_mappings");
 import gpatterns = require("./sparql_graphpatterns");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
+import Schema = require("../odata/schema");
 
 /**
  * @class
@@ -36,6 +37,8 @@ export class EntitySetQuery implements ODataQueries.Query {
     let graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
     let evaluator = new ODataQueries.QueryResultEvaluator();
 
+    console.log("pattern", JSON.stringify(graphPattern, null, 2));
+
     // let triplePatterns = graphPattern.getTriples();
 
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
@@ -45,10 +48,7 @@ export class EntitySetQuery implements ODataQueries.Query {
     console.log(queryString);
     sparqlProvider.querySelect(queryString, answer => {
       if (!answer.error) {
-        this.result = { result: answer.result.map(single => {
-          let entity = evaluator.evaluate(single, queryContext);
-          return entity;
-        }) };
+        this.result = { result: evaluator.evaluate(answer.result, queryContext) };
       }
       else {
         this.result = { error: answer.error };
@@ -76,16 +76,23 @@ export class EntitySetQuery implements ODataQueries.Query {
  */
 export class SparqlQueryContext implements ODataQueries.QueryContext {
   private mapping: mappings.StructuredSparqlVariableMapping;
-  private rootTypeSchema: any;
+  private rootTypeSchema: Schema.EntityType;
   private remainingExpandBranch: Object;
 
-  constructor(mapping: mappings.StructuredSparqlVariableMapping, rootTypeSchema, remainingExpandBranch) {
+  constructor(mapping: mappings.StructuredSparqlVariableMapping, rootTypeSchema: Schema.EntityType,
+              remainingExpandBranch) {
     this.mapping = mapping;
     this.rootTypeSchema = rootTypeSchema;
     this.remainingExpandBranch = remainingExpandBranch;
   }
 
-  public forEachElementaryPropertyOfResult(result, fn: (property: string, variable: string) => void): void {
+  public getUniqueIdOfResult(result): string {
+    let variableName = this.mapping.getElementaryPropertyVariable("Id");
+    let obj = result[variableName.substr(1)];
+    if (obj) return obj.value;
+  }
+
+  public forEachElementaryPropertyOfResult(result, fn: (property: string, variable: Schema.Property) => void): void {
     let self = this;
     this.mapping.forEachElementaryProperty(function(propertyName, variableName) {
       let obj = result[variableName.substr(1)];
@@ -93,10 +100,12 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
     });
   }
 
-  public forEachComplexPropertyOfResult(result, fn: (property: string,
-      variable: mappings.StructuredSparqlVariableMapping) => void): void {
+  public forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property,
+          hasValue: boolean) => void): void {
     for (let propertyName in this.remainingExpandBranch) {
-      fn(result, this.rootTypeSchema.getProperty(propertyName));
+      let propertyIdVar = this.mapping.getComplexProperty(propertyName).getElementaryPropertyVariable("Id");
+      let hasValue = result[propertyIdVar.substr(1)] !== undefined;
+      fn(result, this.rootTypeSchema.getProperty(propertyName), hasValue);
     }
   }
 

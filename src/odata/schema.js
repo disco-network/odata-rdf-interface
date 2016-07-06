@@ -127,7 +127,7 @@ var Property = (function (_super) {
         return this.getEntityType().isElementary() === false;
     };
     Property.prototype.isQuantityOne = function () {
-        return this.getRaw().quantity.substr(0, 4) === "one-";
+        return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
     };
     Property.prototype.isOptional = function () {
         return this.getRaw().optional === true;

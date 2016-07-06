@@ -127,7 +127,7 @@ export class Property extends RdfBasedSchemaResource {
   }
 
   public isQuantityOne(): boolean {
-    return this.getRaw().quantity.substr(0, 4) === "one-";
+    return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
   }
 
   public isOptional(): boolean {

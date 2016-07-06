@@ -110,7 +110,7 @@ describe("tree graph patterns", function () {
 describe("direct property graph patterns", function () {
     it("should store the direct properties in the mapping", function () {
         var mapping = mhelper.createStructuredMapping();
-        new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
+        new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping, "");
         expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
         expect(mapping.elementaryPropertyExists("ParentId")).toEqual(true);
         expect(mapping.elementaryPropertyExists("ContentId")).toEqual(true);
@@ -119,19 +119,19 @@ describe("direct property graph patterns", function () {
     });
     it("should create the triples corresponding to the direct properties", function () {
         var mapping = mhelper.createStructuredMapping("?post");
-        var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
+        var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping, "");
         expect(gp.getTriples()).toContain(["?post", "disco:id", mapping.getElementaryPropertyVariable("Id")]);
     });
     it("should create the triples corresponding to the mirrored direct properties", function () {
         var mapping = mhelper.createStructuredMapping("?post");
-        var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
+        var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping, "");
         expect(gp.getTriples()).toContain(["?post", "disco:content", mapping.getComplexProperty("Content").getVariable()]);
         expect(gp.getTriples()).toContain([mapping.getComplexProperty("Content").getVariable(), "disco:id",
             mapping.getElementaryPropertyVariable("ContentId")]);
     });
     it("should create optional triples", function () {
         var mapping = mhelper.createStructuredMapping("?post");
-        var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping);
+        var gp = new gpatterns.DirectPropertiesGraphPattern(schema.getEntityType("Post"), mapping, "");
         expect(gp.getOptionalPatterns()[0].getTriples()).toContain(["?post", "disco:parent", mapping.getComplexProperty("Parent").getVariable()]);
     });
 });
@@ -141,11 +141,15 @@ describe("expand tree graph patterns", function () {
         var mapping = mhelper.createStructuredMapping("?post");
         var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
         expect(mapping.getComplexProperty("Content").elementaryPropertyExists("Id")).toEqual(true);
-        expect(gp.getUnionPatterns().length).toEqual(1);
+        expect(gp.getUnionPatterns().length).toEqual(2);
         expect(gp.getUnionPatterns()[0].getTriples()).toContain(["?post", "disco:content", mapping.getComplexProperty("Content").getVariable()]);
-        expect(gp.getUnionPatterns()[0].branch("disco:content")[1].getUnionPatterns()[0].getTriples())
+        expect(gp.getUnionPatterns()[1].branch("disco:content")[0].getDirectTriples())
             .toContain([mapping.getComplexProperty("Content").getVariable(), "disco:id",
             mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id")]);
+        /* OLD: expect(gp.getUnionPatterns()[1].branch("disco:content")[0].getUnionPatterns()[0].getTriples())
+        .toContain([ mapping.getComplexProperty("Content").getVariable(), "disco:id",
+          mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id") ]);*/
+        expect(gp.getDirectTriples()).toContain(["?post", "disco:id", mapping.getElementaryPropertyVariable("Id")]);
     });
     it("should expand the second depth level", function () {
         var expandTree = { Content: { Content: {} } };
@@ -159,7 +163,7 @@ describe("expand tree graph patterns", function () {
         var mapping = mhelper.createStructuredMapping("?post");
         var gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
         expect(mapping.getComplexProperty("Parent").elementaryPropertyExists("Id")).toEqual(true);
-        expect(gp.getUnionPatterns()[0].optionalBranch("disco:parent")[1].getUnionPatterns()[0].getTriples()).toContain([mapping.getComplexProperty("Parent").getVariable(), "disco:id",
+        expect(gp.getUnionPatterns()[1].branch("disco:parent")[0].getDirectTriples()).toContain([mapping.getComplexProperty("Parent").getVariable(), "disco:id",
             mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id")]);
     });
 });

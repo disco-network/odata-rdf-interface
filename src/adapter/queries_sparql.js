@@ -39,6 +39,7 @@ var EntitySetQuery = (function () {
         var queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
         var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
         var evaluator = new ODataQueries.QueryResultEvaluator();
+        console.log("pattern", JSON.stringify(graphPattern, null, 2));
         // let triplePatterns = graphPattern.getTriples();
         var queryStringBuilder = new qsBuilder.QueryStringBuilder();
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
@@ -47,10 +48,7 @@ var EntitySetQuery = (function () {
         console.log(queryString);
         sparqlProvider.querySelect(queryString, function (answer) {
             if (!answer.error) {
-                _this.result = { result: answer.result.map(function (single) {
-                        var entity = evaluator.evaluate(single, queryContext);
-                        return entity;
-                    }) };
+                _this.result = { result: evaluator.evaluate(answer.result, queryContext) };
             }
             else {
                 _this.result = { error: answer.error };
@@ -82,6 +80,12 @@ var SparqlQueryContext = (function () {
         this.rootTypeSchema = rootTypeSchema;
         this.remainingExpandBranch = remainingExpandBranch;
     }
+    SparqlQueryContext.prototype.getUniqueIdOfResult = function (result) {
+        var variableName = this.mapping.getElementaryPropertyVariable("Id");
+        var obj = result[variableName.substr(1)];
+        if (obj)
+            return obj.value;
+    };
     SparqlQueryContext.prototype.forEachElementaryPropertyOfResult = function (result, fn) {
         var self = this;
         this.mapping.forEachElementaryProperty(function (propertyName, variableName) {
@@ -92,7 +96,9 @@ var SparqlQueryContext = (function () {
     };
     SparqlQueryContext.prototype.forEachComplexPropertyOfResult = function (result, fn) {
         for (var propertyName in this.remainingExpandBranch) {
-            fn(result, this.rootTypeSchema.getProperty(propertyName));
+            var propertyIdVar = this.mapping.getComplexProperty(propertyName).getElementaryPropertyVariable("Id");
+            var hasValue = result[propertyIdVar.substr(1)] !== undefined;
+            fn(result, this.rootTypeSchema.getProperty(propertyName), hasValue);
         }
     };
     SparqlQueryContext.prototype.forEachElementaryPropertySchema = function (fn) {

@@ -1,4 +1,3 @@
-/** @module */
 "use strict";
 /** This class can be used to generate odata output from different sources.
  * The concrete database logic is handled by the result and context parameters.
@@ -7,16 +6,51 @@ var QueryResultEvaluator = (function () {
     function QueryResultEvaluator() {
     }
     // result type corresponds to what's needed by the context instance
-    QueryResultEvaluator.prototype.evaluate = function (result, context) {
-        var self = this;
-        var ret = {};
-        context.forEachElementaryPropertyOfResult(result, function (value, property) {
-            ret[property.getName()] = value;
+    QueryResultEvaluator.prototype.evaluate = function (results, context) {
+        var _this = this;
+        var entities = {};
+        results.forEach(function (result) {
+            var id = context.getUniqueIdOfResult(result);
+            if (entities[id] === undefined) {
+                entities[id] = {};
+            }
+            context.forEachElementaryPropertyOfResult(result, function (value, property) {
+                _this.assignElementaryProperty(entities[id], property, value);
+            });
+            context.forEachComplexPropertyOfResult(result, function (subResult, property, hasValue) {
+                if (hasValue)
+                    _this.assignComplexProperty(entities[id], property, subResult, context);
+            });
         });
-        context.forEachComplexPropertyOfResult(result, function (subResult, property) {
-            ret[property.getName()] = self.evaluate(subResult, context.getSubContext(property.getName()));
-        });
-        return ret;
+        return Object.keys(entities).map(function (key) { return entities[key]; });
+    };
+    QueryResultEvaluator.prototype.assignElementaryProperty = function (entity, property, value) {
+        var oldValue = entity[property.getName()];
+        if (property.isQuantityOne()) {
+            if (oldValue !== undefined && value !== undefined && oldValue !== value)
+                throw new Error("found different values for a property of quantity one: " + property.getName());
+            else
+                entity[property.getName()] = value;
+        }
+    };
+    QueryResultEvaluator.prototype.assignComplexProperty = function (entity, property, result, context) {
+        var _this = this;
+        var oldValue = entity[property.getName()];
+        if (property.isQuantityOne()) {
+            if (oldValue !== undefined)
+                throw new Error("found different values for a property of quantity one: " + property.getName());
+            else {
+                var subEntity_1 = entity[property.getName()] = {};
+                var subContext_1 = context.getSubContext(property.getName());
+                subContext_1.forEachElementaryPropertyOfResult(result, function (subValue, subProperty) {
+                    _this.assignElementaryProperty(subEntity_1, subProperty, subValue);
+                });
+                subContext_1.forEachComplexPropertyOfResult(result, function (subResult, subProperty, hasValue) {
+                    if (hasValue)
+                        _this.assignComplexProperty(subEntity_1, subProperty, subResult, subContext_1);
+                });
+            }
+        }
     };
     return QueryResultEvaluator;
 }());
