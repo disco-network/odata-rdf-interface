@@ -40,11 +40,9 @@ describe("match evaluator", function() {
     let evaluator = new queries.QueryResultEvaluator();
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
-    let parentVar = mapping.getComplexProperty("Parent").getVariable();
     let parentIdVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
 
     let responses = [{}];
-    responses[0][parentVar.substr(1)] = { token: "uri", value: "http://example.org/5" };
     responses[0][parentIdVar.substr(1)] = { token: "literal", value: "5" };
     responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
     let results = evaluator.evaluate(responses, queryContext);
@@ -72,13 +70,11 @@ describe("match evaluator", function() {
     let evaluator = new queries.QueryResultEvaluator();
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
-    let contentVar = mapping.getComplexProperty("Content").getVariable();
     let contentIdVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
 
     let responses = [{}, {}];
     responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
     responses[1][idVar.substr(1)] = { token: "literal", value: "1" };
-    responses[1][contentVar.substr(1)] = { token: "uri", value: "http://example.org/2" };
     responses[1][contentIdVar.substr(1)] = { token: "literal", value: "2" };
     let results = evaluator.evaluate(responses, queryContext);
 
@@ -86,4 +82,28 @@ describe("match evaluator", function() {
     expect(results[0].Id).toEqual("1");
     expect(results[0].Content.Id).toEqual("2");
   });
+  it("should support expand trees of depth two", function() {
+    let mapping = mhelper.createStructuredMapping("?post");
+    let queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"),
+      { Content: { Content: {} } });
+    let evaluator = new queries.QueryResultEvaluator();
+
+    let idVar = mapping.getElementaryPropertyVariable("Id");
+    let cidVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
+    let ccidVar = mapping.getComplexProperty("Content").getComplexProperty("Content")
+      .getElementaryPropertyVariable("Id");
+
+    let responses = [{}, {}];
+    let [ response1, response2 ] = responses;
+    response1[idVar.substr(1)] = response2[idVar.substr(1)] = makeLiteral("1");
+    response1[cidVar.substr(1)] = response2[cidVar.substr(1)] = makeLiteral("2");
+    response2[ccidVar.substr(1)] = makeLiteral("3");
+    let results = evaluator.evaluate(responses, queryContext);
+
+    expect(results.length).toEqual(1);
+  });
 });
+
+function makeLiteral(value) {
+  return { token: "literal", value: value };
+}

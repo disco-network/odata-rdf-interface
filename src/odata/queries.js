@@ -37,19 +37,19 @@ var QueryResultEvaluator = (function () {
         var _this = this;
         var oldValue = entity[property.getName()];
         if (property.isQuantityOne()) {
+            var subEntity_1;
             if (oldValue !== undefined)
-                throw new Error("found different values for a property of quantity one: " + property.getName());
-            else {
-                var subEntity_1 = entity[property.getName()] = {};
-                var subContext_1 = context.getSubContext(property.getName());
-                subContext_1.forEachElementaryPropertyOfResult(result, function (subValue, subProperty) {
-                    _this.assignElementaryProperty(subEntity_1, subProperty, subValue);
-                });
-                subContext_1.forEachComplexPropertyOfResult(result, function (subResult, subProperty, hasValue) {
-                    if (hasValue)
-                        _this.assignComplexProperty(subEntity_1, subProperty, subResult, subContext_1);
-                });
-            }
+                subEntity_1 = oldValue;
+            else
+                subEntity_1 = entity[property.getName()] = {};
+            var subContext_1 = context.getSubContext(property.getName());
+            subContext_1.forEachElementaryPropertyOfResult(result, function (subValue, subProperty) {
+                _this.assignElementaryProperty(subEntity_1, subProperty, subValue);
+            });
+            subContext_1.forEachComplexPropertyOfResult(result, function (subResult, subProperty, hasValue) {
+                if (hasValue)
+                    _this.assignComplexProperty(subEntity_1, subProperty, subResult, subContext_1);
+            });
         }
     };
     return QueryResultEvaluator;

@@ -32,10 +32,8 @@ describe("match evaluator", function () {
         var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"), { Parent: {} });
         var evaluator = new queries.QueryResultEvaluator();
         var idVar = mapping.getElementaryPropertyVariable("Id");
-        var parentVar = mapping.getComplexProperty("Parent").getVariable();
         var parentIdVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
         var responses = [{}];
-        responses[0][parentVar.substr(1)] = { token: "uri", value: "http://example.org/5" };
         responses[0][parentIdVar.substr(1)] = { token: "literal", value: "5" };
         responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
         var results = evaluator.evaluate(responses, queryContext);
@@ -58,18 +56,35 @@ describe("match evaluator", function () {
         var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"), { Content: {} });
         var evaluator = new queries.QueryResultEvaluator();
         var idVar = mapping.getElementaryPropertyVariable("Id");
-        var contentVar = mapping.getComplexProperty("Content").getVariable();
         var contentIdVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
         var responses = [{}, {}];
         responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
         responses[1][idVar.substr(1)] = { token: "literal", value: "1" };
-        responses[1][contentVar.substr(1)] = { token: "uri", value: "http://example.org/2" };
         responses[1][contentIdVar.substr(1)] = { token: "literal", value: "2" };
         var results = evaluator.evaluate(responses, queryContext);
         expect(results.length).toEqual(1);
         expect(results[0].Id).toEqual("1");
         expect(results[0].Content.Id).toEqual("2");
     });
+    it("should support expand trees of depth two", function () {
+        var mapping = mhelper.createStructuredMapping("?post");
+        var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"), { Content: { Content: {} } });
+        var evaluator = new queries.QueryResultEvaluator();
+        var idVar = mapping.getElementaryPropertyVariable("Id");
+        var cidVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
+        var ccidVar = mapping.getComplexProperty("Content").getComplexProperty("Content")
+            .getElementaryPropertyVariable("Id");
+        var responses = [{}, {}];
+        var response1 = responses[0], response2 = responses[1];
+        response1[idVar.substr(1)] = response2[idVar.substr(1)] = makeLiteral("1");
+        response1[cidVar.substr(1)] = response2[cidVar.substr(1)] = makeLiteral("2");
+        response2[ccidVar.substr(1)] = makeLiteral("3");
+        var results = evaluator.evaluate(responses, queryContext);
+        expect(results.length).toEqual(1);
+    });
 });
+function makeLiteral(value) {
+    return { token: "literal", value: value };
+}
 
 //# sourceMappingURL=../maps/spec/sparql_query_evaluation_spec.js.map

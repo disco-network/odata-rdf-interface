@@ -51,19 +51,19 @@ export class QueryResultEvaluator {
   private assignComplexProperty(entity, property: Schema.Property, result, context: QueryContext) {
     let oldValue = entity[property.getName()];
     if (property.isQuantityOne()) {
+      let subEntity;
       if (oldValue !== undefined)
-        throw new Error("found different values for a property of quantity one: " + property.getName());
-      else {
-        let subEntity = entity[property.getName()] = {};
-        let subContext = context.getSubContext(property.getName());
-        subContext.forEachElementaryPropertyOfResult(result, (subValue, subProperty) => {
-          this.assignElementaryProperty(subEntity, subProperty, subValue);
-        });
-        subContext.forEachComplexPropertyOfResult(result, (subResult, subProperty, hasValue) => {
-          if (hasValue)
-            this.assignComplexProperty(subEntity, subProperty, subResult, subContext);
-        });
-      }
+        subEntity = oldValue;
+      else
+        subEntity = entity[property.getName()] = {};
+      let subContext = context.getSubContext(property.getName());
+      subContext.forEachElementaryPropertyOfResult(result, (subValue, subProperty) => {
+        this.assignElementaryProperty(subEntity, subProperty, subValue);
+      });
+      subContext.forEachComplexPropertyOfResult(result, (subResult, subProperty, hasValue) => {
+        if (hasValue)
+          this.assignComplexProperty(subEntity, subProperty, subResult, subContext);
+      });
     }
   }
 }
