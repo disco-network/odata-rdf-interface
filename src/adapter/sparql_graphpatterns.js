@@ -4,40 +4,9 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-/** @module */
-var _ = require("../util");
-/**
- * Provides a SPARQL graph pattern whose triples are directly composible
- * and manipulatable.
- */
-var ComposibleGraphPattern = (function () {
-    function ComposibleGraphPattern(triples) {
-        this.triples = triples || [];
-        this.optionalPatterns = [];
-        this.unionPatterns = []; /** @todo consider unionPatterns */
-    }
-    ComposibleGraphPattern.prototype.getTriples = function () {
-        return this.triples;
-    };
-    ComposibleGraphPattern.prototype.getOptionalPatterns = function () {
-        return this.optionalPatterns;
-    };
-    ComposibleGraphPattern.prototype.getUnionPatterns = function () {
-        return this.unionPatterns;
-    };
-    ComposibleGraphPattern.prototype.integratePatterns = function (patterns) {
-        this.triples = _.mergeArrays([this.triples].concat(patterns.map(function (p) { return p.getTriples(); })));
-        for (var i = 0; i < patterns.length; ++i) {
-            this.integratePatternsAsOptional(patterns[i].getOptionalPatterns());
-        }
-        ;
-    };
-    ComposibleGraphPattern.prototype.integratePatternsAsOptional = function (patterns) {
-        this.optionalPatterns.push.apply(this.optionalPatterns, patterns);
-    };
-    return ComposibleGraphPattern;
-}());
-exports.ComposibleGraphPattern = ComposibleGraphPattern;
+/*export class BranchedGraphPattern implements GraphPattern {
+
+}*/
 /**
  * Provides a SPARQL graph pattern whose triples are generated from a
  * property tree
@@ -134,13 +103,13 @@ var TreeGraphPattern = (function () {
         return branches;
     };
     TreeGraphPattern.prototype.getOptionalPatterns = function () {
-        var self = this;
+        var _this = this;
         var patterns = [];
         var _loop_7 = function(property) {
             var branches = this_7.optionalBranches[property];
             branches.forEach(function (branch) {
-                var gp = new ComposibleGraphPattern([[self.name(), property, branch.name()]]);
-                gp.integratePatterns([branch]);
+                var gp = new TreeGraphPattern(_this.name());
+                gp.branch(property, branch);
                 patterns.push(gp);
             });
         };

@@ -3,33 +3,6 @@ var SchemaModule = require("../src/odata/schema");
 var schema = new SchemaModule.Schema();
 var gpatterns = require("../src/adapter/sparql_graphpatterns");
 var mhelper = require("./helpers/sparql_mappings");
-describe("composible sparql graph patterns", function () {
-    it("should give me its triples", function () {
-        var gp = new gpatterns.ComposibleGraphPattern();
-        expect(gp.getTriples()).toEqual([]);
-    });
-    it("should integrate other patterns", function () {
-        var gp = new gpatterns.ComposibleGraphPattern();
-        var innerGp = new gpatterns.ComposibleGraphPattern();
-        innerGp.triples = [["a", "b", "c"]];
-        gp.integratePatterns([innerGp]);
-        expect(gp.getTriples()).toEqual(innerGp.getTriples());
-    });
-    it("should integrate optional subpatterns of other patterns", function () {
-        var gp = new gpatterns.ComposibleGraphPattern();
-        var innerGp = new gpatterns.ComposibleGraphPattern();
-        innerGp.optionalPatterns = [new gpatterns.ComposibleGraphPattern([["a", "b", "c"]])];
-        gp.integratePatterns([innerGp]);
-        expect(gp.getOptionalPatterns()).toEqual(innerGp.getOptionalPatterns());
-    });
-    it("should integrate patterns as optional", function () {
-        var gp = new gpatterns.ComposibleGraphPattern();
-        var innerGp = new gpatterns.ComposibleGraphPattern();
-        innerGp.triples = [["a", "b", "c"]];
-        gp.integratePatternsAsOptional([innerGp]);
-        expect(gp.getOptionalPatterns()[0]).toEqual(innerGp);
-    });
-});
 describe("tree graph patterns", function () {
     it("should build a consistent tree", function () {
         var gp = new gpatterns.TreeGraphPattern("?root");

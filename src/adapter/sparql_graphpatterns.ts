@@ -3,60 +3,15 @@ import _ = require("../util");
 import Mappings = require("./sparql_mappings");
 import Schema = require("../odata/schema");
 
-/**
- * Provides a SPARQL graph pattern consisting of mandatory and optional triples.
- */
-export interface GraphPattern {
-  getTriples(): any[][];
-  getOptionalPatterns(): GraphPattern[];
-  getUnionPatterns(): GraphPattern[];
-}
+/*export class BranchedGraphPattern implements GraphPattern {
 
-/**
- * Provides a SPARQL graph pattern whose triples are directly composible
- * and manipulatable.
- */
-export class ComposibleGraphPattern implements GraphPattern {
-  public triples: any[][];
-  public optionalPatterns: GraphPattern[];
-  public unionPatterns: GraphPattern[];
-
-  constructor(triples?: any[][]) {
-    this.triples = triples || [];
-    this.optionalPatterns = [];
-    this.unionPatterns = []; /** @todo consider unionPatterns */
-  }
-
-  public getTriples(): any[][] {
-    return this.triples;
-  }
-
-  public getOptionalPatterns(): GraphPattern[] {
-    return this.optionalPatterns;
-  }
-
-  public getUnionPatterns(): GraphPattern[] {
-    return this.unionPatterns;
-  }
-
-  public integratePatterns(patterns: GraphPattern[]) {
-    this.triples = _.mergeArrays(
-      [this.triples].concat(patterns.map(p => p.getTriples()))
-    );
-
-    for (let i = 0; i < patterns.length; ++i) { this.integratePatternsAsOptional(patterns[i].getOptionalPatterns()); };
-  }
-
-  public integratePatternsAsOptional(patterns: GraphPattern[]) {
-    this.optionalPatterns.push.apply(this.optionalPatterns, patterns);
-  }
-}
+}*/
 
 /**
  * Provides a SPARQL graph pattern whose triples are generated from a
  * property tree
  */
-export class TreeGraphPattern implements GraphPattern {
+export class TreeGraphPattern {
   private rootName: string;
   private branches: { [id: string]: TreeGraphPattern[] } = { };
   private valueLeaves: { [id: string]: ValueLeaf[] } = { };
@@ -127,14 +82,13 @@ export class TreeGraphPattern implements GraphPattern {
     return branches;
   }
 
-  public getOptionalPatterns(): GraphPattern[] {
-    let self = this;
+  public getOptionalPatterns(): TreeGraphPattern[] {
     let patterns = [];
     for (let property in this.optionalBranches) {
       let branches = this.optionalBranches[property];
       branches.forEach(branch => {
-        let gp = new ComposibleGraphPattern([[ self.name(), property, branch.name() ]]);
-        gp.integratePatterns([ branch ]);
+        let gp = new TreeGraphPattern(this.name());
+        gp.branch(property, branch);
         patterns.push(gp);
       });
     }
