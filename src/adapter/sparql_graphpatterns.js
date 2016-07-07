@@ -4,119 +4,132 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-/*export class BranchedGraphPattern implements GraphPattern {
-
-}*/
+var GraphPatternWithBranches = (function () {
+    function GraphPatternWithBranches(createTriple) {
+        this.branches = {};
+        this.createTriple = createTriple;
+    }
+    GraphPatternWithBranches.prototype.branch = function (property, arg) {
+        switch (typeof arg) {
+            case "undefined":
+                return this.branches[property] || [];
+            case "object":
+                if (this.branches[property] !== undefined)
+                    this.branches[property].push(arg);
+                else
+                    this.branches[property] = [arg];
+                return arg;
+            default:
+                throw new Error("branch argument was specified but is no object");
+        }
+    };
+    GraphPatternWithBranches.prototype.getDirectTriples = function () {
+        var _this = this;
+        var triples = [];
+        this.enumerateBranches(function (property, branch) {
+            triples.push(_this.createTriple(property, branch));
+        });
+        return triples;
+    };
+    GraphPatternWithBranches.prototype.getBranchPatterns = function () {
+        var patterns = [];
+        this.enumerateBranches(function (property, branch) { return patterns.push(branch); });
+        return patterns;
+    };
+    GraphPatternWithBranches.prototype.enumerateBranches = function (fn) {
+        var _loop_1 = function(property) {
+            var branches = this_1.branches[property];
+            branches.forEach(function (branch) { return fn(property, branch); });
+        };
+        var this_1 = this;
+        for (var property in this.branches) {
+            _loop_1(property);
+        }
+    };
+    GraphPatternWithBranches.prototype.merge = function (other) {
+        var _this = this;
+        other.enumerateBranches(function (property, branch) {
+            _this.branch(property, branch);
+        });
+    };
+    return GraphPatternWithBranches;
+}());
+exports.GraphPatternWithBranches = GraphPatternWithBranches;
 /**
  * Provides a SPARQL graph pattern whose triples are generated from a
  * property tree
  */
 var TreeGraphPattern = (function () {
     function TreeGraphPattern(rootName) {
-        this.branches = {};
-        this.valueLeaves = {};
-        this.inverseBranches = {};
-        this.optionalBranches = {};
-        this.unionPatterns = [];
-        this.rootName = rootName;
-    }
-    TreeGraphPattern.prototype.getTriples = function () {
         var _this = this;
-        var triples = [];
-        var _loop_1 = function(property) {
-            var leaves = this_1.valueLeaves[property];
-            leaves.forEach(function (leaf) {
-                triples.push([_this.name(), property, "\"" + leaf.value + "\""]);
-            });
+        this.valueLeaves = {};
+        this.unionPatterns = [];
+        var createTriple = function (property, branch) {
+            return [_this.name(), property, branch.name()];
         };
-        var this_1 = this;
-        for (var property in this.valueLeaves) {
-            _loop_1(property);
-        }
-        var _loop_2 = function(property) {
-            var branches = this_2.branches[property];
-            branches.forEach(function (branch) {
-                triples.push([_this.name(), property, branch.name()]);
-                triples.push.apply(triples, branch.getTriples());
-            });
+        var createInverseTriple = function (property, branch) {
+            return [branch.name(), property, _this.name()];
         };
-        var this_2 = this;
-        for (var property in this.branches) {
-            _loop_2(property);
-        }
-        var _loop_3 = function(property) {
-            var branches = this_3.inverseBranches[property];
-            branches.forEach(function (branch) {
-                triples.push([branch.name(), property, _this.name()]);
-                triples.push.apply(triples, branch.getTriples());
-            });
-        };
-        var this_3 = this;
-        for (var property in this.inverseBranches) {
-            _loop_3(property);
-        }
-        return triples;
-    };
+        this.rootName = rootName;
+        this.branchPattern = new GraphPatternWithBranches(createTriple);
+        this.inverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
+        this.optionalBranchPattern = new GraphPatternWithBranches(createTriple);
+    }
+    /*public getTriples(): any[][] {
+      let triples: any[][] = [];
+      for (let property in this.valueLeaves) {
+        let leaves = this.valueLeaves[property];
+        leaves.forEach(leaf => {
+          triples.push([ this.name(), property, "\"" + leaf.value + "\"" ]);
+        });
+      }
+      for (let property in this.branches) {
+        let branches = this.branches[property];
+        branches.forEach(branch => {
+          triples.push([ this.name(), property, branch.name() ]);
+          triples.push.apply(triples, branch.getTriples());
+        });
+      }
+      for (let property in this.inverseBranches) {
+        let branches = this.inverseBranches[property];
+        branches.forEach(branch => {
+          triples.push([ branch.name(), property, this.name() ]);
+          triples.push.apply(triples, branch.getTriples());
+        });
+      }
+      return triples;
+    }*/
     TreeGraphPattern.prototype.getDirectTriples = function () {
         var _this = this;
         var triples = [];
-        var _loop_4 = function(property) {
-            var leaves = this_4.valueLeaves[property];
+        var _loop_2 = function(property) {
+            var leaves = this_2.valueLeaves[property];
             leaves.forEach(function (leaf) {
                 triples.push([_this.name(), property, "\"" + leaf.value + "\""]);
             });
         };
-        var this_4 = this;
+        var this_2 = this;
         for (var property in this.valueLeaves) {
-            _loop_4(property);
+            _loop_2(property);
         }
-        var _loop_5 = function(property) {
-            var branches = this_5.branches[property];
-            branches.forEach(function (branch) {
-                triples.push([_this.name(), property, branch.name()]);
-            });
-        };
-        var this_5 = this;
-        for (var property in this.branches) {
-            _loop_5(property);
-        }
-        var _loop_6 = function(property) {
-            var branches = this_6.inverseBranches[property];
-            branches.forEach(function (branch) {
-                triples.push([branch.name(), property, _this.name()]);
-            });
-        };
-        var this_6 = this;
-        for (var property in this.inverseBranches) {
-            _loop_6(property);
-        }
+        triples.push.apply(triples, this.branchPattern.getDirectTriples());
+        triples.push.apply(triples, this.inverseBranchPattern.getDirectTriples());
         return triples;
     };
     TreeGraphPattern.prototype.getBranchPatterns = function () {
         var branches = [];
-        for (var property in this.branches) {
-            branches.push.apply(branches, this.branches[property]);
-        }
-        for (var property in this.inverseBranches) {
-            branches.push.apply(branches, this.branches[property]);
-        }
+        branches.push.apply(branches, this.branchPattern.getBranchPatterns());
+        branches.push.apply(branches, this.inverseBranchPattern.getBranchPatterns());
         return branches;
     };
     TreeGraphPattern.prototype.getOptionalPatterns = function () {
         var _this = this;
         var patterns = [];
-        var _loop_7 = function(property) {
-            var branches = this_7.optionalBranches[property];
-            branches.forEach(function (branch) {
-                var gp = new TreeGraphPattern(_this.name());
-                gp.branch(property, branch);
-                patterns.push(gp);
-            });
-        };
-        var this_7 = this;
-        for (var property in this.optionalBranches) {
-            _loop_7(property);
-        }
+        this.optionalBranchPattern.enumerateBranches(function (property, branch) {
+            var gp = new TreeGraphPattern(_this.name());
+            gp.branch(property, branch);
+            patterns.push(gp);
+        });
         return patterns;
     };
     TreeGraphPattern.prototype.getUnionPatterns = function () {
@@ -127,57 +140,44 @@ var TreeGraphPattern = (function () {
     };
     TreeGraphPattern.prototype.branch = function (property, arg) {
         switch (typeof arg) {
-            case "undefined": return this.branches[property];
-            case "string":
-                var pat = new TreeGraphPattern(arg);
-                return this.branch(property, pat);
+            case "undefined":
             case "object":
-                if (arg instanceof TreeGraphPattern) {
-                    if (this.branches[property] !== undefined)
-                        this.branches[property].push(arg);
-                    else
-                        this.branches[property] = [arg];
-                    return arg;
-                }
-                else if (arg instanceof ValueLeaf) {
+                if (arg instanceof ValueLeaf) {
                     if (this.valueLeaves[property] !== undefined)
                         this.valueLeaves[property].push(arg);
                     else
                         this.valueLeaves[property] = [arg];
                     return;
                 }
+                else
+                    return this.branchPattern.branch(property, arg);
+            case "string":
+                var pat = new TreeGraphPattern(arg);
+                return this.branch(property, pat);
             default:
                 throw new Error("branch argument is neither string nor TreeGraphPattern respective ValueLeaf");
         }
     };
     TreeGraphPattern.prototype.inverseBranch = function (property, arg) {
         switch (typeof arg) {
-            case "undefined": return this.inverseBranches[property];
+            case "undefined":
+            case "object":
+                return this.inverseBranchPattern.branch(property, arg);
             case "string":
                 var pat = new TreeGraphPattern(arg);
-                return this.inverseBranch(property, pat);
-            case "object":
-                if (this.inverseBranches[property] !== undefined)
-                    this.inverseBranches[property].push(arg);
-                else
-                    this.inverseBranches[property] = [arg];
-                return arg;
+                return this.inverseBranchPattern.branch(property, pat);
             default:
                 throw new Error("branch argument is neither string nor object");
         }
     };
     TreeGraphPattern.prototype.optionalBranch = function (property, arg) {
         switch (typeof arg) {
-            case "undefined": return this.optionalBranches[property];
+            case "undefined":
+            case "object":
+                return this.optionalBranchPattern.branch(property, arg);
             case "string":
                 var pat = new TreeGraphPattern(arg);
-                return this.optionalBranch(property, pat);
-            case "object":
-                if (this.optionalBranches[property] !== undefined)
-                    this.optionalBranches[property].push(arg);
-                else
-                    this.optionalBranches[property] = [arg];
-                return arg;
+                return this.optionalBranchPattern.branch(property, pat);
             default:
                 throw new Error("branch argument is neither string nor object");
         }
@@ -188,28 +188,15 @@ var TreeGraphPattern = (function () {
         return pattern;
     };
     TreeGraphPattern.prototype.branchExists = function (property) {
-        return this.branches[property] !== undefined;
+        return this.branchPattern.branch(property).length > 0;
     };
     TreeGraphPattern.prototype.merge = function (other) {
-        var _this = this;
         if (this.rootName !== other.rootName)
             throw new Error("can\'t merge trees with different roots");
-        var _loop_8 = function(property) {
-            other.branches[property].forEach(function (branch) {
-                _this.branch(property, branch);
-            });
-        };
-        for (var property in other.branches) {
-            _loop_8(property);
-        }
-        var _loop_9 = function(property) {
-            other.optionalBranches[property].forEach(function (branch) {
-                _this.optionalBranch(property, branch);
-            });
-        };
-        for (var property in other.optionalBranches) {
-            _loop_9(property);
-        }
+        this.branchPattern.merge(other.branchPattern);
+        this.inverseBranchPattern.merge(other.inverseBranchPattern);
+        this.optionalBranchPattern.merge(other.optionalBranchPattern);
+        /* @todo unions */
     };
     return TreeGraphPattern;
 }());
