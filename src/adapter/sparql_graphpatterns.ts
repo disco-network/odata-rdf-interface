@@ -83,31 +83,6 @@ export class TreeGraphPattern {
     this.optionalBranchPattern = new GraphPatternWithBranches(createTriple);
   }
 
-  /*public getTriples(): any[][] {
-    let triples: any[][] = [];
-    for (let property in this.valueLeaves) {
-      let leaves = this.valueLeaves[property];
-      leaves.forEach(leaf => {
-        triples.push([ this.name(), property, "\"" + leaf.value + "\"" ]);
-      });
-    }
-    for (let property in this.branches) {
-      let branches = this.branches[property];
-      branches.forEach(branch => {
-        triples.push([ this.name(), property, branch.name() ]);
-        triples.push.apply(triples, branch.getTriples());
-      });
-    }
-    for (let property in this.inverseBranches) {
-      let branches = this.inverseBranches[property];
-      branches.forEach(branch => {
-        triples.push([ branch.name(), property, this.name() ]);
-        triples.push.apply(triples, branch.getTriples());
-      });
-    }
-    return triples;
-  }*/
-
   public getDirectTriples(): any[][] {
     let triples: any[][] = [];
 

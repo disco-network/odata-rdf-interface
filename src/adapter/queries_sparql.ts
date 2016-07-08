@@ -6,7 +6,6 @@ import ODataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
 
 /**
- * @class
  * Used to generate query objects which can be run to modify and/or retrieve data.
  */
 export class QueryFactory {
@@ -17,9 +16,7 @@ export class QueryFactory {
 }
 
 /**
- * @namespace
- * @name EntitySetQuery
- * @description Handles read-only OData queries.
+ * Handles read-only OData queries.
  */
 export class EntitySetQuery implements ODataQueries.Query {
   private result: { error?: any, result?: any };
@@ -38,8 +35,6 @@ export class EntitySetQuery implements ODataQueries.Query {
     let evaluator = new ODataQueries.QueryResultEvaluator();
 
     console.log("pattern", JSON.stringify(graphPattern, null, 2));
-
-    // let triplePatterns = graphPattern.getTriples();
 
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
     queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");

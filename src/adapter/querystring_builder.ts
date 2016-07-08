@@ -25,11 +25,6 @@ export class QueryStringBuilder {
   }
 
   public buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string {
-    /*let triples = graphPattern.getTriples().map(t => t.join(" "));
-    let unions = graphPattern.getUnionPatterns()
-      .map(p => this.buildGraphPatternString(p))
-      .join(" UNION ");
-    let parts = ( unions !== "" ) ? triples.concat(unions) : triples;*/
     return "{ " + this.buildGraphPatternContentString(graphPattern) + " }";
   }
   public buildPrefixString() {
