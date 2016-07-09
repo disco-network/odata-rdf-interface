@@ -8,18 +8,19 @@ export class QueryStringBuilder {
   }
 
   public buildGraphPatternContentString(graphPattern: gpatterns.TreeGraphPattern): string {
-    let triples = graphPattern.getDirectTriples().map(t => t.join(" ")).join(" . ");
-    let subPatterns = graphPattern.getBranchPatterns()
+    let triplesString = graphPattern.getDirectTriples().map(t => t.join(" ")).join(" . ");
+    let subPatternsString = graphPattern.getBranchPatterns()
       .map(p => this.buildGraphPatternContentString(p))
       .filter(str => str !== "")
       .join(" . ");
-    let unions = graphPattern.getUnionPatterns()
+    let unionsString = graphPattern.getUnionPatterns()
       .map(p => this.buildGraphPatternString(p))
       .join(" UNION ");
     let parts = [];
-    if (triples !== "") parts.push(triples);
-    if (subPatterns !== "") parts.push(subPatterns);
-    if (unions !== "") parts.push(unions);
+
+    if (triplesString !== "") parts.push(triplesString);
+    if (subPatternsString !== "") parts.push(subPatternsString);
+    if (unionsString !== "") parts.push(unionsString);
 
     return parts.join(" . ");
   }

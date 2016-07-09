@@ -5,7 +5,6 @@ var gpatterns = require("./sparql_graphpatterns");
 var qsBuilder = require("./querystring_builder");
 var ODataQueries = require("../odata/queries");
 /**
- * @class
  * Used to generate query objects which can be run to modify and/or retrieve data.
  */
 var QueryFactory = (function () {
@@ -20,9 +19,7 @@ var QueryFactory = (function () {
 }());
 exports.QueryFactory = QueryFactory;
 /**
- * @namespace
- * @name EntitySetQuery
- * @description Handles read-only OData queries.
+ * Handles read-only OData queries.
  */
 var EntitySetQuery = (function () {
     function EntitySetQuery(model, schema) {
@@ -40,7 +37,6 @@ var EntitySetQuery = (function () {
         var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
         var evaluator = new ODataQueries.QueryResultEvaluator();
         console.log("pattern", JSON.stringify(graphPattern, null, 2));
-        // let triplePatterns = graphPattern.getTriples();
         var queryStringBuilder = new qsBuilder.QueryStringBuilder();
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
