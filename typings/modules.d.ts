@@ -19,8 +19,19 @@ declare module "abnfjs/parser" {
 }
 
 declare module "abnfjs/interpreter" {
-    let x: any;
-    export = x;
+    export class Interpreter {
+        constructor(grammar: any);
+        public getPattern(name: string): Parser;
+        public getCompleteMatch(parser: Parser, str: string): Result;
+    }
+
+    export interface Parser {
+        parseNext(str: string, interator: any): any;
+    }
+
+    export interface Result {
+        evaluate(): any;
+    }
 }
 
 declare module "rdfstore" {

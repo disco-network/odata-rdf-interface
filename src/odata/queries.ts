@@ -2,8 +2,7 @@
 import Schema = require("./schema");
 
 export interface Query {
-  run(sparqlProvider, cb: () => void): void;
-  sendResults(res): void;
+  run(sparqlProvider, cb: (result) => void): void;
 }
 
 export interface QueryModel {

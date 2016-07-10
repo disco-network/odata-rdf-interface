@@ -36,12 +36,11 @@ var EntitySetQuery = (function () {
         var queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
         var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
         var evaluator = new ODataQueries.QueryResultEvaluator();
-        console.log("pattern", JSON.stringify(graphPattern, null, 2));
         var queryStringBuilder = new qsBuilder.QueryStringBuilder();
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
         var queryString = queryStringBuilder.fromGraphPattern(graphPattern);
-        console.log(queryString);
+        // console.log(queryString);
         sparqlProvider.querySelect(queryString, function (answer) {
             if (!answer.error) {
                 _this.result = { result: evaluator.evaluate(answer.result, queryContext) };
@@ -49,20 +48,8 @@ var EntitySetQuery = (function () {
             else {
                 _this.result = { error: answer.error };
             }
-            cb();
+            cb(_this.result);
         });
-    };
-    /** @method
-     * @description Pass the results of the query to the HTTP result object
-     */
-    EntitySetQuery.prototype.sendResults = function (res) {
-        if (!this.result.error) {
-            res.writeHeader(200, { "Content-type": "application/json" });
-            res.end(JSON.stringify(this.result.result, null, 2));
-        }
-        else {
-            handleErrors(this.result, res);
-        }
     };
     return EntitySetQuery;
 }());
@@ -118,20 +105,5 @@ var SparqlQueryContext = (function () {
     return SparqlQueryContext;
 }());
 exports.SparqlQueryContext = SparqlQueryContext;
-/** Stores the query results of a SPARQL query to satisfy an OData request.
- * To the data belongs an object with the properties of quantity one and @construction
- */
-function handleErrors(result, res) {
-    switch (result.error) {
-        case ODataQueries.ErrorTypes.DB:
-            res.statusCode = 500;
-            res.end("database error " + result.errorDetails);
-            break;
-        default:
-            res.statusCode = 500;
-            console.log(result.error.stack);
-            res.end("unknown error type " + result.error);
-    }
-}
 
 //# sourceMappingURL=../../maps/src/adapter/queries_sparql.js.map

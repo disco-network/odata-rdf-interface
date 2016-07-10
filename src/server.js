@@ -7,6 +7,7 @@ var abnfInterpreter = require("abnfjs/interpreter");
 var ast2query = require("./odata/ast2query");
 var schema = require("./odata/schema");
 var sparqlQueries = require("./adapter/queries_sparql");
+var queries = require("./odata/queries");
 var providerModule = require("./sparql/sparql_provider");
 var rdfstore = require("rdfstore");
 var config = {
@@ -28,10 +29,34 @@ app.use(config.path, function (req, res, next) {
     var ast = interpreter.getCompleteMatch(interpreter.getPattern("odataRelativeUri"), url);
     var queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), schm.raw);
     var query = (new sparqlQueries.QueryFactory(queryModel, schm)).create();
-    query.run(provider, function () {
-        query.sendResults(res);
+    query.run(provider, function (result) {
+        sendResults(res, result);
     });
 });
+/**
+ * Pass the results of the query to the HTTP result object
+ */
+function sendResults(res, result) {
+    if (!result.error) {
+        res.writeHeader(200, { "Content-type": "application/json" });
+        res.end(JSON.stringify(result.result, null, 2));
+    }
+    else {
+        handleErrors(this.result, res);
+    }
+}
+function handleErrors(result, res) {
+    switch (result.error) {
+        case queries.ErrorTypes.DB:
+            res.statusCode = 500;
+            res.end("database error " + result.errorDetails);
+            break;
+        default:
+            res.statusCode = 500;
+            console.log(result.error.stack);
+            res.end("unknown error type " + result.error);
+    }
+}
 rdfstore.create(function (error, st) {
     store = st;
     storeSeed(function (err) {
