@@ -85,12 +85,12 @@ describe("match evaluator", function() {
   it("should support expand trees of depth two", function() {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"),
-      { Content: { Content: {} } });
+      { Content: { Culture: {} } });
     let evaluator = new queries.QueryResultEvaluator();
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
     let cidVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
-    let ccidVar = mapping.getComplexProperty("Content").getComplexProperty("Content")
+    let ccidVar = mapping.getComplexProperty("Content").getComplexProperty("Culture")
       .getElementaryPropertyVariable("Id");
 
     let responses = [{}, {}];

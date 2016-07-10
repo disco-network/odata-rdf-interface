@@ -1,60 +1,37 @@
-import odataQueryEngine = require("../src/adapter/query_engine");
-import sparqlProviderModule = require("../src/sparql/sparql_provider");
 import rdfstore = require("rdfstore");
 
-describe("The query engine should evaluate", () => {
-
-  createQuerySpec("/Posts", answer => {
-    let result = answer.result;
-    expectSuccess(answer);
-    expect(result.length).toBe(2);
-    expect(result[0].Id).toBe("1");
-    expect(result[1].Id).toBe("2");
+describe("rdfstore should execute", function() {
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post }", answer => {
+    expect(answer.result.length).toBeGreaterThan(0);
   });
 
-  createQuerySpec("/Posts?$expand=Content", answer => {
-    let result = answer.result;
-    expectSuccess(answer);
-    expect(result).toEqual([
-      {
-        Id: "1",
-        ContentId: "1",
-        Content: {
-          Id: "1",
-          Title: "Post Nr. 1",
-        },
-      },
-      {
-        Id: "2",
-        ContentId: "2",
-        Content: {
-          Id: "2",
-          Title: "Post Nr. 2",
-        },
-      },
-    ]);
-  });
-
-  createQuerySpec("/Posts?$filter=Id eq '1'", answer => {
-    expectSuccess(answer);
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post FILTER EXISTS { ?s disco:id '1'  } }", answer => {
     expect(answer.result.length).toBe(1);
   });
 
-  createQuerySpec("/Posts?$filter=Id eq '0'", answer => {
-    expectSuccess(answer);
-    expect(answer.result.length).toBe(0);
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id FILTER(?id = '1') }", answer => {
+    expect(answer.result.length).toBe(1);
   });
 
-  function createQuerySpec(query: string, cb: (results: any) => void) {
-    it(query, (done) => {
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post FILTER(EXISTS { ?s disco:id '1' }) }", answer => {
+    expect(answer.result.length).toBe(1);
+  });
+
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id "
+    + "FILTER(?id = '1' && EXISTS { ?s disco:content ?cnt . ?cnt disco:id '1' ] }) }", answer => {
+    expect(answer.error).toBeUndefined();
+    expect(answer.result.length).toBe(1);
+  });
+
+  function createSpec(query: string, cb: (results: any) => void) {
+    let prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
+    prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";
+    it(query, done => {
       rdfstore.create((error, store) => {
-        let graphName = "http://example.org/";
+        let graphName = "http://example.org";
         storeSeed(store, graphName, () => {
-          let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-          let engine = new odataQueryEngine.QueryEngine();
-          engine.setSparqlProvider(sparqlProvider);
-          engine.query(query, results => {
-            cb(results);
+          store.executeWithEnvironment(prefixes + query, [graphName], [], (err, results) => {
+            cb({ error: err, result: results });
             done();
           });
         });
@@ -62,11 +39,6 @@ describe("The query engine should evaluate", () => {
     });
   }
 });
-
-function expectSuccess(answer) {
-  expect(answer.error).toBeUndefined();
-  expect(answer.result).toBeDefined();
-}
 
 function storeSeed(store, graphName, cb) {
   store.rdf.setPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");

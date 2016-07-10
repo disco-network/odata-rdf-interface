@@ -10,20 +10,37 @@ var raw = {
         Post: {
             properties: {
                 Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
-                ContentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Content", nullable: false },
+                ContentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Content" },
                 ParentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Parent" },
                 Parent: { type: "Post", optional: true, quantity: "one-to-many",
                     mirroredIndexProperty: "ParentId", foreignSet: "Posts", foreignProperty: "Children",
                     rdfName: "parent", nullable: true },
                 Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
-                Content: { type: "Post", quantity: "one-to-many", mirroredIndexProperty: "ContentId", rdfName: "content" },
+                Content: { type: "Content", quantity: "one-to-many", mirroredIndexProperty: "ContentId", rdfName: "content" },
             },
             rdfName: "Post",
+        },
+        Content: {
+            properties: {
+                Id: { type: "Edm.Int64", rdfName: "id" },
+                Title: { type: "Edm.String", rdfName: "title" },
+                Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture" },
+            },
+            rdfName: "Content",
+        },
+        Culture: {
+            properties: {
+                Id: { type: "Edm.Int64", rdfName: "id" },
+            },
+            rdfName: "Culture",
         },
     },
     entitySets: {
         Posts: {
             type: "Post",
+        },
+        Content: {
+            type: "Content",
         },
     },
     defaultNamespace: {

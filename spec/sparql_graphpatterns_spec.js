@@ -126,10 +126,10 @@ describe("expand tree graph patterns", function () {
         expect(gp.getDirectTriples()).toContain(["?post", "disco:id", mapping.getElementaryPropertyVariable("Id")]);
     });
     it("should expand the second depth level", function () {
-        var expandTree = { Content: { Content: {} } };
+        var expandTree = { Content: { Culture: {} } };
         var mapping = mhelper.createStructuredMapping("?post");
         new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
-        expect(mapping.getComplexProperty("Content").getComplexProperty("Content")
+        expect(mapping.getComplexProperty("Content").getComplexProperty("Culture")
             .elementaryPropertyExists("Id")).toEqual(true);
     });
     it("should expand the optional properties of the first depth level", function () {

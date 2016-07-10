@@ -1,55 +1,32 @@
 "use strict";
-var odataQueryEngine = require("../src/adapter/query_engine");
-var sparqlProviderModule = require("../src/sparql/sparql_provider");
 var rdfstore = require("rdfstore");
-describe("The query engine should evaluate", function () {
-    createQuerySpec("/Posts", function (answer) {
-        var result = answer.result;
-        expectSuccess(answer);
-        expect(result.length).toBe(2);
-        expect(result[0].Id).toBe("1");
-        expect(result[1].Id).toBe("2");
+describe("rdfstore should execute", function () {
+    createSpec("SELECT * WHERE { ?s rdf:type disco:Post }", function (answer) {
+        expect(answer.result.length).toBeGreaterThan(0);
     });
-    createQuerySpec("/Posts?$expand=Content", function (answer) {
-        var result = answer.result;
-        expectSuccess(answer);
-        expect(result).toEqual([
-            {
-                Id: "1",
-                ContentId: "1",
-                Content: {
-                    Id: "1",
-                    Title: "Post Nr. 1",
-                },
-            },
-            {
-                Id: "2",
-                ContentId: "2",
-                Content: {
-                    Id: "2",
-                    Title: "Post Nr. 2",
-                },
-            },
-        ]);
-    });
-    createQuerySpec("/Posts?$filter=Id eq '1'", function (answer) {
-        expectSuccess(answer);
+    createSpec("SELECT * WHERE { ?s rdf:type disco:Post FILTER EXISTS { ?s disco:id '1'  } }", function (answer) {
         expect(answer.result.length).toBe(1);
     });
-    createQuerySpec("/Posts?$filter=Id eq '0'", function (answer) {
-        expectSuccess(answer);
-        expect(answer.result.length).toBe(0);
+    createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id FILTER(?id = '1') }", function (answer) {
+        expect(answer.result.length).toBe(1);
     });
-    function createQuerySpec(query, cb) {
+    createSpec("SELECT * WHERE { ?s rdf:type disco:Post FILTER(EXISTS { ?s disco:id '1' }) }", function (answer) {
+        expect(answer.result.length).toBe(1);
+    });
+    createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id "
+        + "FILTER(?id = '1' && EXISTS { ?s disco:content ?cnt . ?cnt disco:id '1' ] }) }", function (answer) {
+        expect(answer.error).toBeUndefined();
+        expect(answer.result.length).toBe(1);
+    });
+    function createSpec(query, cb) {
+        var prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
+        prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";
         it(query, function (done) {
             rdfstore.create(function (error, store) {
-                var graphName = "http://example.org/";
+                var graphName = "http://example.org";
                 storeSeed(store, graphName, function () {
-                    var sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-                    var engine = new odataQueryEngine.QueryEngine();
-                    engine.setSparqlProvider(sparqlProvider);
-                    engine.query(query, function (results) {
-                        cb(results);
+                    store.executeWithEnvironment(prefixes + query, [graphName], [], function (err, results) {
+                        cb({ error: err, result: results });
                         done();
                     });
                 });
@@ -57,10 +34,6 @@ describe("The query engine should evaluate", function () {
         });
     }
 });
-function expectSuccess(answer) {
-    expect(answer.error).toBeUndefined();
-    expect(answer.result).toBeDefined();
-}
 function storeSeed(store, graphName, cb) {
     store.rdf.setPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     store.rdf.setPrefix("disco", "http://disco-network.org/resource/");
@@ -86,4 +59,4 @@ function createLiteral(str) {
     return this.rdf.createLiteral(str);
 }
 
-//# sourceMappingURL=../maps/spec/integrationtest_query_spec.js.map
+//# sourceMappingURL=../maps/spec/rdfstore_compatibility_spec.js.map
