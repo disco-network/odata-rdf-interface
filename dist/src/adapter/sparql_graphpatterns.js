@@ -258,4 +258,4 @@ var ExpandTreeGraphPattern = (function (_super) {
 }(TreeGraphPattern));
 exports.ExpandTreeGraphPattern = ExpandTreeGraphPattern;
 
-//# sourceMappingURL=../../maps/src/adapter/sparql_graphpatterns.js.map
+//# sourceMappingURL=../../../maps/src/adapter/sparql_graphpatterns.js.map

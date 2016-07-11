@@ -13,4 +13,4 @@ describe('OData properties with quantity "many"', function () {
     });
 });
 
-//# sourceMappingURL=../maps/spec/sparql_query_quantitymany_spec.js.map
+//# sourceMappingURL=../../maps/spec/sparql_query_quantitymany_spec.js.map

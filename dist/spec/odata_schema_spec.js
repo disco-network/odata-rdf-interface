@@ -10,4 +10,4 @@ describe('schema', function () {
     });
 });
 
-//# sourceMappingURL=../maps/spec/odata_schema_spec.js.map
+//# sourceMappingURL=../../maps/spec/odata_schema_spec.js.map

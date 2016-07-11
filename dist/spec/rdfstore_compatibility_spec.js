@@ -68,4 +68,4 @@ function createLiteral(str) {
     return this.rdf.createLiteral(str);
 }
 
-//# sourceMappingURL=../maps/spec/rdfstore_compatibility_spec.js.map
+//# sourceMappingURL=../../maps/spec/rdfstore_compatibility_spec.js.map

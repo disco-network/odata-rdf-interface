@@ -87,4 +87,4 @@ function makeLiteral(value) {
     return { token: "literal", value: value };
 }
 
-//# sourceMappingURL=../maps/spec/sparql_query_evaluation_spec.js.map
+//# sourceMappingURL=../../maps/spec/sparql_query_evaluation_spec.js.map

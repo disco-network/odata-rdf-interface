@@ -37,4 +37,4 @@ describe("the query string builder", function () {
     });
 });
 
-//# sourceMappingURL=../maps/spec/build_querystring_spec.js.map
+//# sourceMappingURL=../../maps/spec/build_querystring_spec.js.map

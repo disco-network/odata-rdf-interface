@@ -40,4 +40,4 @@ describe("odata parser", function () {
     }
 });
 
-//# sourceMappingURL=../maps/spec/odata_parser_general_spec.js.map
+//# sourceMappingURL=../../maps/spec/odata_parser_general_spec.js.map

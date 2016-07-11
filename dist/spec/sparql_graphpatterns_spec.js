@@ -142,4 +142,4 @@ describe("expand tree graph patterns", function () {
     });
 });
 
-//# sourceMappingURL=../maps/spec/sparql_graphpatterns_spec.js.map
+//# sourceMappingURL=../../maps/spec/sparql_graphpatterns_spec.js.map

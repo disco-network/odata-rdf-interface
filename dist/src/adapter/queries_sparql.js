@@ -105,4 +105,4 @@ var SparqlQueryContext = (function () {
 }());
 exports.SparqlQueryContext = SparqlQueryContext;
 
-//# sourceMappingURL=../../maps/src/adapter/queries_sparql.js.map
+//# sourceMappingURL=../../../maps/src/adapter/queries_sparql.js.map

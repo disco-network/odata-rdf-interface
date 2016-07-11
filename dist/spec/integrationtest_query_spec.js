@@ -111,4 +111,4 @@ function createLiteral(str) {
     return this.rdf.createLiteral(str);
 }
 
-//# sourceMappingURL=../maps/spec/integrationtest_query_spec.js.map
+//# sourceMappingURL=../../maps/spec/integrationtest_query_spec.js.map

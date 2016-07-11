@@ -57,4 +57,4 @@ describe('structured odata to sparql mappings', function () {
     });
 });
 
-//# sourceMappingURL=../maps/spec/sparql_mappings_spec.js.map
+//# sourceMappingURL=../../maps/spec/sparql_mappings_spec.js.map

@@ -96,4 +96,4 @@ var SparqlVariableGenerator = (function () {
 }());
 exports.SparqlVariableGenerator = SparqlVariableGenerator;
 
-//# sourceMappingURL=../../maps/src/adapter/sparql_mappings.js.map
+//# sourceMappingURL=../../../maps/src/adapter/sparql_mappings.js.map

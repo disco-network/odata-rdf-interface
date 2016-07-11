@@ -23,12 +23,12 @@ gulp.task('build', function() {
   .pipe(sourcemaps.init())
   .pipe(tsc(tsProject))
   .js
-  .pipe(sourcemaps.write('./maps'))
-  .pipe(gulp.dest('.'));
+  .pipe(sourcemaps.write('../maps'))
+  .pipe(gulp.dest('./dist'));
 })
 
 gulp.task('tests', ['build'], function() {
-  return gulp.src('./spec/*.js')
+  return gulp.src('./dist/spec/*.js')
     .pipe(jasmine({ includeStackTrace: true, verbose: true }));
 });
 
@@ -36,5 +36,5 @@ gulp.task('tests', ['build'], function() {
 gulp.task('specs', ['tests']);
 
 gulp.task('server', function() {
-  require('./src/server');
+  require('./dist/src/server');
 });

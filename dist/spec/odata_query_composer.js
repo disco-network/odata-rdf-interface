@@ -11,4 +11,4 @@ describe("query composer", function () {
     });
 });
 
-//# sourceMappingURL=../maps/spec/odata_query_composer.js.map
+//# sourceMappingURL=../../maps/spec/odata_query_composer.js.map

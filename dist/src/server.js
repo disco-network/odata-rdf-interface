@@ -86,4 +86,4 @@ function startServer() {
     console.log("server is listening on port " + config.port);
 }
 
-//# sourceMappingURL=../maps/src/server.js.map
+//# sourceMappingURL=../../maps/src/server.js.map

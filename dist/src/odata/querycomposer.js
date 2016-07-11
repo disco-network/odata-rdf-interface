@@ -49,4 +49,4 @@ var QueryComposer = (function () {
 }());
 exports.QueryComposer = QueryComposer;
 
-//# sourceMappingURL=../../maps/src/odata/querycomposer.js.map
+//# sourceMappingURL=../../../maps/src/odata/querycomposer.js.map
