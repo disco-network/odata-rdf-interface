@@ -1,1 +1,0 @@
-{"version":3,"sources":["src/sparql/sparql_provider_base.ts"],"names":[],"mappings":"AAAA,cAAc","file":"src/sparql/sparql_provider_base.js","sourcesContent":["/** @module */\n\nexport interface SparqlProviderBase {\n  querySelect(queryString: string, cb: (result: {error?, result?}) => void): void;\n}\n"],"sourceRoot":"/source/"}
