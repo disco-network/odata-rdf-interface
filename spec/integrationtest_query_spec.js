@@ -32,16 +32,40 @@ describe("The query engine should evaluate", function () {
             },
         ]);
     });
+    createQuerySpec("/Posts?$expand=Parent", function (answer) {
+        var result = answer.result;
+        expectSuccess(answer);
+        expect(result).toEqual([
+            {
+                Id: "1",
+                ContentId: "1",
+                ParentId: null,
+                Parent: null,
+            },
+            {
+                Id: "2",
+                ContentId: "2",
+                ParentId: "1",
+                Parent: {
+                    Id: "1",
+                    ContentId: "1",
+                    ParentId: null,
+                },
+            },
+        ]);
+    }, true);
     createQuerySpec("/Posts?$filter=Id eq '1'", function (answer) {
         expectSuccess(answer);
         expect(answer.result.length).toBe(1);
-    });
+    }, true);
     createQuerySpec("/Posts?$filter=Id eq '0'", function (answer) {
         expectSuccess(answer);
         expect(answer.result.length).toBe(0);
-    });
-    function createQuerySpec(query, cb) {
-        it(query, function (done) {
+    }, true);
+    function createQuerySpec(query, cb, pending) {
+        if (pending === void 0) { pending = false; }
+        var fn = pending ? xit : it;
+        fn(query, function (done) {
             rdfstore.create(function (error, store) {
                 var graphName = "http://example.org/";
                 storeSeed(store, graphName, function () {
@@ -73,6 +97,7 @@ function storeSeed(store, graphName, cb) {
     graph.add(store.rdf.createTriple(node("disco:post2"), node("rdf:type"), node("disco:Post")));
     graph.add(store.rdf.createTriple(node("disco:post2"), node("disco:id"), literal("2")));
     graph.add(store.rdf.createTriple(node("disco:post2"), node("disco:content"), node("disco:content2")));
+    graph.add(store.rdf.createTriple(node("disco:post2"), node("disco:parent"), node("disco:post1")));
     graph.add(store.rdf.createTriple(node("disco:content1"), node("disco:id"), literal("1")));
     graph.add(store.rdf.createTriple(node("disco:content1"), node("disco:title"), literal("Post Nr. 1")));
     graph.add(store.rdf.createTriple(node("disco:content2"), node("disco:id"), literal("2")));

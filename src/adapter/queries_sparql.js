@@ -40,7 +40,6 @@ var EntitySetQuery = (function () {
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
         var queryString = queryStringBuilder.fromGraphPattern(graphPattern);
-        // console.log(queryString);
         sparqlProvider.querySelect(queryString, function (answer) {
             if (!answer.error) {
                 _this.result = { result: evaluator.evaluate(answer.result, queryContext) };
