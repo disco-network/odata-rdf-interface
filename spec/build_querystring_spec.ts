@@ -50,4 +50,15 @@ describe("the query string builder", function() {
       "{ ?root disco:content ?cnt . { ?cnt disco:id ?id } }"
     );
   });
+  it("should build queries with OPTIONAL", function() {
+    let pattern = new gpatterns.TreeGraphPattern("?root");
+    pattern.optionalBranch("disco:parent", "?par").branch("disco:id", "?id");
+
+    let builder = new qbuilder.QueryStringBuilder();
+    let queryString = builder.buildGraphPatternString(pattern);
+
+    expect(queryString).toEqual(
+      "{ OPTIONAL { ?root disco:parent ?par . ?par disco:id ?id } }"
+    );
+  });
 });

@@ -19,6 +19,7 @@ describe("The query engine should evaluate", () => {
       {
         Id: "1",
         ContentId: "1",
+        ParentId: null,
         Content: {
           Id: "1",
           Title: "Post Nr. 1",
@@ -27,6 +28,7 @@ describe("The query engine should evaluate", () => {
       {
         Id: "2",
         ContentId: "2",
+        ParentId: "1",
         Content: {
           Id: "2",
           Title: "Post Nr. 2",
@@ -56,7 +58,7 @@ describe("The query engine should evaluate", () => {
         },
       },
     ]);
-  }, true);
+  });
 
   createQuerySpec("/Posts?$filter=Id eq '1'", answer => {
     expectSuccess(answer);
@@ -77,10 +79,15 @@ describe("The query engine should evaluate", () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
           let engine = new odataQueryEngine.QueryEngine();
           engine.setSparqlProvider(sparqlProvider);
-          engine.query(query, results => {
+          try { engine.query(query, results => {
             cb(results);
             done();
-          });
+          }); }
+          catch (e) {
+            console.log(e.stack);
+            expect("exception").toBe("no exception");
+            done();
+          }
         });
       });
     });

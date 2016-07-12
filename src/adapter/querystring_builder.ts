@@ -13,6 +13,10 @@ export class QueryStringBuilder {
       .map(p => this.buildGraphPatternContentString(p))
       .filter(str => str !== "")
       .join(" . ");
+    let optionalPatternsString = graphPattern.getOptionalPatterns()
+      .map(p => "OPTIONAL " + this.buildGraphPatternString(p))
+      .filter(str => str !== "")
+      .join(" . ");
     let unionsString = graphPattern.getUnionPatterns()
       .map(p => this.buildGraphPatternString(p))
       .join(" UNION ");
@@ -20,6 +24,7 @@ export class QueryStringBuilder {
 
     if (triplesString !== "") parts.push(triplesString);
     if (subPatternsString !== "") parts.push(subPatternsString);
+    if (optionalPatternsString !== "") parts.push(optionalPatternsString);
     if (unionsString !== "") parts.push(unionsString);
 
     return parts.join(" . ");

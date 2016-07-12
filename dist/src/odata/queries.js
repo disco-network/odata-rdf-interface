@@ -12,7 +12,7 @@ var QueryResultEvaluator = (function () {
         results.forEach(function (result) {
             var id = context.getUniqueIdOfResult(result);
             if (entities[id] === undefined) {
-                entities[id] = {};
+                entities[id] = _this.initializeProperties(context);
             }
             context.forEachElementaryPropertyOfResult(result, function (value, property) {
                 _this.assignElementaryProperty(entities[id], property, value);
@@ -24,10 +24,20 @@ var QueryResultEvaluator = (function () {
         });
         return Object.keys(entities).map(function (key) { return entities[key]; });
     };
+    QueryResultEvaluator.prototype.initializeProperties = function (context) {
+        var entity = {};
+        context.forEachElementaryPropertySchema(function (property) {
+            entity[property.getName()] = null;
+        });
+        context.forEachComplexPropertySchema(function (property) {
+            entity[property.getName()] = null;
+        });
+        return entity;
+    };
     QueryResultEvaluator.prototype.assignElementaryProperty = function (entity, property, value) {
         var oldValue = entity[property.getName()];
         if (property.isQuantityOne()) {
-            if (oldValue !== undefined && value !== undefined && oldValue !== value)
+            if (oldValue !== null && oldValue !== value)
                 throw new Error("found different values for a property of quantity one: " + property.getName());
             else
                 entity[property.getName()] = value;
@@ -38,11 +48,11 @@ var QueryResultEvaluator = (function () {
         var oldValue = entity[property.getName()];
         if (property.isQuantityOne()) {
             var subEntity_1;
-            if (oldValue !== undefined)
+            var subContext_1 = context.getSubContext(property.getName());
+            if (oldValue !== null)
                 subEntity_1 = oldValue;
             else
-                subEntity_1 = entity[property.getName()] = {};
-            var subContext_1 = context.getSubContext(property.getName());
+                subEntity_1 = entity[property.getName()] = this.initializeProperties(subContext_1);
             subContext_1.forEachElementaryPropertyOfResult(result, function (subValue, subProperty) {
                 _this.assignElementaryProperty(subEntity_1, subProperty, subValue);
             });

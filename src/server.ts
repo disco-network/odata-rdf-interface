@@ -81,32 +81,58 @@ rdfstore.create(function(error, st) {
 
 function storeSeed(cb) {
   store.rdf.setPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-  store.rdf.setPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
   store.rdf.setPrefix("disco", "http://disco-network.org/resource/");
 
   let graph = store.rdf.createGraph();
+  let node = createNamedNode.bind(store);
+  let literal = createLiteral.bind(store);
+
   graph.add(store.rdf.createTriple(
-    store.rdf.createNamedNode(store.rdf.resolve("disco:post1")),
-    store.rdf.createNamedNode(store.rdf.resolve("rdf:type")),
-    store.rdf.createNamedNode(store.rdf.resolve("disco:Post"))
+    node("disco:post1"), node("rdf:type"), node("disco:Post")
   ));
   graph.add(store.rdf.createTriple(
-    store.rdf.createNamedNode(store.rdf.resolve("disco:post1")),
-    store.rdf.createNamedNode(store.rdf.resolve("disco:id")),
-    store.rdf.createLiteral("1") // TODO: TYPE
+    node("disco:post1"), node("disco:id"), literal("1")
   ));
   graph.add(store.rdf.createTriple(
-    store.rdf.createNamedNode(store.rdf.resolve("disco:post1")),
-    store.rdf.createNamedNode(store.rdf.resolve("disco:content")),
-    store.rdf.createNamedNode(store.rdf.resolve("disco:post1")) // TODO: TYPE
+    node("disco:post1"), node("disco:content"), node("disco:content1")
+  ));
+
+  graph.add(store.rdf.createTriple(
+    node("disco:post2"), node("rdf:type"), node("disco:Post")
   ));
   graph.add(store.rdf.createTriple(
-    store.rdf.createNamedNode(store.rdf.resolve("disco:post1")),
-    store.rdf.createNamedNode(store.rdf.resolve("disco:parent")),
-    store.rdf.createLiteral("null") // TODO: MAKE OPTIONAL
+    node("disco:post2"), node("disco:id"), literal("2")
+  ));
+  graph.add(store.rdf.createTriple(
+    node("disco:post2"), node("disco:content"), node("disco:content2")
+  ));
+  graph.add(store.rdf.createTriple(
+    node("disco:post2"), node("disco:parent"), node("disco:post1")
+  ));
+
+  graph.add(store.rdf.createTriple(
+    node("disco:content1"), node("disco:id"), literal("1")
+  ));
+  graph.add(store.rdf.createTriple(
+    node("disco:content1"), node("disco:title"), literal("Post Nr. 1")
+  ));
+
+  graph.add(store.rdf.createTriple(
+    node("disco:content2"), node("disco:id"), literal("2")
+  ));
+  graph.add(store.rdf.createTriple(
+    node("disco:content2"), node("disco:title"), literal("Post Nr. 2")
   ));
 
   store.insert(graph, storeName, cb);
+}
+
+function createNamedNode(str) {
+  return this.rdf.createNamedNode(this.rdf.resolve(str));
+}
+
+function createLiteral(str) {
+  return this.rdf.createLiteral(str);
 }
 
 function startServer() {

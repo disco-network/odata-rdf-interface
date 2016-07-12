@@ -35,6 +35,13 @@ describe("the query string builder", function () {
         var queryString = builder.buildGraphPatternString(pattern);
         expect(queryString).toEqual("{ ?root disco:content ?cnt . { ?cnt disco:id ?id } }");
     });
+    it("should build queries with OPTIONAL", function () {
+        var pattern = new gpatterns.TreeGraphPattern("?root");
+        pattern.optionalBranch("disco:parent", "?par").branch("disco:id", "?id");
+        var builder = new qbuilder.QueryStringBuilder();
+        var queryString = builder.buildGraphPatternString(pattern);
+        expect(queryString).toEqual("{ OPTIONAL { ?root disco:parent ?par . ?par disco:id ?id } }");
+    });
 });
 
 //# sourceMappingURL=../../maps/spec/build_querystring_spec.js.map

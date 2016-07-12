@@ -82,6 +82,22 @@ describe("match evaluator", function () {
         var results = evaluator.evaluate(responses, queryContext);
         expect(results.length).toEqual(1);
     });
+    it("should set unbound elementary properties to null", function () {
+        /* @todo should this only apply to optional props? */
+        var mapping = mhelper.createStructuredMapping("?post");
+        var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"), {});
+        var evaluator = new queries.QueryResultEvaluator();
+        var idVar = mapping.getElementaryPropertyVariable("Id");
+        var cidVar = mapping.getElementaryPropertyVariable("ContentId");
+        var response = {};
+        response[idVar.substr(1)] = makeLiteral("1");
+        response[cidVar.substr(1)] = makeLiteral("2");
+        var results = evaluator.evaluate([response], queryContext);
+        expect(results.length).toBe(1);
+        expect(results[0]).toEqual({
+            Id: "1", ContentId: "2", ParentId: null,
+        });
+    });
 });
 function makeLiteral(value) {
     return { token: "literal", value: value };

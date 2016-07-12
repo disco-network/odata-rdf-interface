@@ -69,11 +69,14 @@ var SparqlQueryContext = (function () {
             return obj.value;
     };
     SparqlQueryContext.prototype.forEachElementaryPropertyOfResult = function (result, fn) {
-        var self = this;
-        this.mapping.forEachElementaryProperty(function (propertyName, variableName) {
-            var obj = result[variableName.substr(1)];
+        var _this = this;
+        this.rootTypeSchema.getPropertyNames().forEach(function (propertyName) {
+            var property = _this.rootTypeSchema.getProperty(propertyName);
+            if (property.isNavigationProperty())
+                return;
+            var obj = result[_this.mapping.getElementaryPropertyVariable(propertyName).substr(1)];
             if (obj)
-                fn(obj.value, self.rootTypeSchema.getProperty(propertyName));
+                fn(obj.value, property);
         });
     };
     SparqlQueryContext.prototype.forEachComplexPropertyOfResult = function (result, fn) {
@@ -84,8 +87,11 @@ var SparqlQueryContext = (function () {
         }
     };
     SparqlQueryContext.prototype.forEachElementaryPropertySchema = function (fn) {
-        this.mapping.forEachComplexProperty(function (propertyName, variableName) {
-            fn(this.rootTypeSchema.getProperty(propertyName));
+        var _this = this;
+        this.rootTypeSchema.getPropertyNames().forEach(function (propertyName) {
+            var property = _this.rootTypeSchema.getProperty(propertyName);
+            if (!property.isNavigationProperty())
+                fn(property);
         });
     };
     SparqlQueryContext.prototype.forEachComplexPropertySchema = function (fn) {

@@ -23,7 +23,7 @@ export class QueryResultEvaluator {
     results.forEach(result => {
       let id = context.getUniqueIdOfResult(result);
       if (entities[id] === undefined) {
-        entities[id] = {};
+        entities[id] = this.initializeProperties(context);
       }
       context.forEachElementaryPropertyOfResult(result, (value, property) => {
         this.assignElementaryProperty(entities[id], property, value);
@@ -37,10 +37,21 @@ export class QueryResultEvaluator {
     return Object.keys(entities).map(key => entities[key]);
   }
 
+  private initializeProperties(context: QueryContext) {
+    let entity = {};
+    context.forEachElementaryPropertySchema(property => {
+      entity[property.getName()] = null;
+    });
+    context.forEachComplexPropertySchema(property => {
+      entity[property.getName()] = null;
+    });
+    return entity;
+  }
+
   private assignElementaryProperty(entity, property: Schema.Property, value) {
     let oldValue = entity[property.getName()];
     if (property.isQuantityOne()) {
-      if (oldValue !== undefined && value !== undefined && oldValue !== value)
+      if (oldValue !== null && oldValue !== value)
         throw new Error("found different values for a property of quantity one: " + property.getName());
       else
         entity[property.getName()] = value;
@@ -51,11 +62,11 @@ export class QueryResultEvaluator {
     let oldValue = entity[property.getName()];
     if (property.isQuantityOne()) {
       let subEntity;
-      if (oldValue !== undefined)
+      let subContext = context.getSubContext(property.getName());
+      if (oldValue !== null)
         subEntity = oldValue;
       else
-        subEntity = entity[property.getName()] = {};
-      let subContext = context.getSubContext(property.getName());
+        subEntity = entity[property.getName()] = this.initializeProperties(subContext);
       subContext.forEachElementaryPropertyOfResult(result, (subValue, subProperty) => {
         this.assignElementaryProperty(subEntity, subProperty, subValue);
       });
@@ -72,6 +83,8 @@ export interface QueryContext {
   forEachElementaryPropertyOfResult(result, fn: (value, property: Schema.Property) => void): void;
   /** Iterate over all complex properties expected by the query. */
   forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property, hasValue: boolean) => void): void;
+  forEachElementaryPropertySchema(fn: (property: Schema.Property) => void): void;
+  forEachComplexPropertySchema(fn: (property: Schema.Property) => void): void;
   getUniqueIdOfResult(result): string;
   getSubContext(property: string): QueryContext;
 }
