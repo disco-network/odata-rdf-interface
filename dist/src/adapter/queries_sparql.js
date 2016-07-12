@@ -75,8 +75,8 @@ var SparqlQueryContext = (function () {
             if (property.isNavigationProperty())
                 return;
             var obj = result[_this.mapping.getElementaryPropertyVariable(propertyName).substr(1)];
-            if (obj)
-                fn(obj.value, property);
+            var hasValue = obj !== undefined && obj !== null;
+            fn(hasValue ? obj.value : undefined, property, hasValue);
         });
     };
     SparqlQueryContext.prototype.forEachComplexPropertyOfResult = function (result, fn) {

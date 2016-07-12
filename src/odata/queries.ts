@@ -16,71 +16,140 @@ export interface QueryModel {
  * The concrete database logic is handled by the result and context parameters.
  */
 export class QueryResultEvaluator {
-  // result type corresponds to what's needed by the context instance
   public evaluate(results: any[], context: QueryContext): any[] {
-    let entities = {};
+    let entityCollection = new EvaluatedEntityCollection(context, Schema.EntityKind.Complex);
 
     results.forEach(result => {
-      let id = context.getUniqueIdOfResult(result);
-      if (entities[id] === undefined) {
-        entities[id] = this.initializeProperties(context);
-      }
-      context.forEachElementaryPropertyOfResult(result, (value, property) => {
-        this.assignElementaryProperty(entities[id], property, value);
-      });
-      context.forEachComplexPropertyOfResult(result, (subResult, property, hasValue) => {
-        if (hasValue)
-          this.assignComplexProperty(entities[id], property, subResult, context);
-      });
+      entityCollection.assignResult(result);
     });
 
-    return Object.keys(entities).map(key => entities[key]);
+    return entityCollection.serializeToODataJson();
   }
+}
 
-  private initializeProperties(context: QueryContext) {
-    let entity = {};
-    context.forEachElementaryPropertySchema(property => {
-      entity[property.getName()] = null;
-    });
-    context.forEachComplexPropertySchema(property => {
-      entity[property.getName()] = null;
-    });
-    return entity;
-  }
+export interface EvaluatedEntity {
+  assignResult(result: any): void;
+  serializeToODataJson(): any;
+}
 
-  private assignElementaryProperty(entity, property: Schema.Property, value) {
-    let oldValue = entity[property.getName()];
-    if (property.isQuantityOne()) {
-      if (oldValue !== null && oldValue !== value)
-        throw new Error("found different values for a property of quantity one: " + property.getName());
-      else
-        entity[property.getName()] = value;
+export class EvaluatedElementaryEntity implements EvaluatedEntity {
+  private value: any = undefined;
+
+  public assignResult(value: any): void {
+    if (this.value === undefined) {
+      this.value = value;
+    }
+    else if (this.value !== value) {
+      throw new Error("found different values for a property of quantity one");
     }
   }
 
-  private assignComplexProperty(entity, property: Schema.Property, result, context: QueryContext) {
-    let oldValue = entity[property.getName()];
-    if (property.isQuantityOne()) {
-      let subEntity;
-      let subContext = context.getSubContext(property.getName());
-      if (oldValue !== null)
-        subEntity = oldValue;
+  public serializeToODataJson(): any {
+    return this.value === undefined ? null : this.value;
+  }
+}
+
+export class EvaluatedComplexEntity implements EvaluatedEntity {
+  private context: QueryContext;
+  private value: { [id: string]: EvaluatedEntity } = undefined;
+  private id: any;
+
+  constructor(context: QueryContext) {
+    this.context = context;
+  }
+
+  public assignResult(result: any): void {
+    let id = this.context.getUniqueIdOfResult(result);
+    if (id === undefined) return;
+    if (this.id === undefined || id === this.id) {
+      if (this.value === undefined) {
+        this.id = id;
+        this.value = {};
+      }
+      this.context.forEachElementaryPropertyOfResult(result, (value, property, hasValue) => {
+        this.assignResultToProperty(property, value);
+      });
+      this.context.forEachComplexPropertyOfResult(result, (value, property, hasValue) => {
+        this.assignResultToProperty(property, value);
+      });
+    }
+    else {
+      throw new Error("found different values for a property of quantity one");
+    }
+  }
+
+  public serializeToODataJson(): any {
+    if (this.id === undefined) return null;
+    let serialized = {};
+
+    let serializeProperty = property => {
+      let propertyName = property.getName();
+      let entity = this.value[propertyName];
+      serialized[propertyName] = entity !== undefined ? entity.serializeToODataJson() : null;
+    };
+
+    this.context.forEachElementaryPropertySchema(serializeProperty);
+    this.context.forEachComplexPropertySchema(serializeProperty);
+
+    return serialized;
+  }
+
+  private assignResultToProperty(property: Schema.Property, result: any) {
+    if (this.value[property.getName()] === undefined)
+      this.value[property.getName()] = EvaluatedEntityFactory.fromPropertyWithContext(property, this.context);
+
+    if (result !== undefined) this.value[property.getName()].assignResult(result);
+  }
+}
+
+export class EvaluatedEntityCollection implements EvaluatedEntity {
+  private context: QueryContext;
+  private kind: Schema.EntityKind;
+  private entities: { [id: string]: EvaluatedEntity } = {};
+
+  constructor(context: QueryContext, kind: Schema.EntityKind) {
+    this.context = context;
+    this.kind = kind;
+  }
+
+  public assignResult(result: any): void {
+    let id = this.context.getUniqueIdOfResult(result);
+    if (id === undefined) return;
+    if (this.entities[id] === undefined) {
+      if (this.kind === Schema.EntityKind.Elementary)
+        this.entities[id] = new EvaluatedElementaryEntity();
       else
-        subEntity = entity[property.getName()] = this.initializeProperties(subContext);
-      subContext.forEachElementaryPropertyOfResult(result, (subValue, subProperty) => {
-        this.assignElementaryProperty(subEntity, subProperty, subValue);
-      });
-      subContext.forEachComplexPropertyOfResult(result, (subResult, subProperty, hasValue) => {
-        if (hasValue)
-          this.assignComplexProperty(subEntity, subProperty, subResult, subContext);
-      });
+        this.entities[id] = new EvaluatedComplexEntity(this.context);
+    }
+    this.entities[id].assignResult(result);
+  }
+
+  public serializeToODataJson() {
+    return Object.keys(this.entities).map(id => this.entities[id].serializeToODataJson());
+  }
+}
+
+export class EvaluatedEntityFactory {
+  public static fromPropertyWithContext(property: Schema.Property, context: QueryContext): EvaluatedEntity {
+    if (property.isQuantityOne()) {
+      if (property.getEntityKind() === Schema.EntityKind.Complex) {
+        let subContext = context.getSubContext(property.getName());
+        return new EvaluatedComplexEntity(subContext);
+      }
+      else
+        return new EvaluatedElementaryEntity();
+    }
+    else {
+      let subContext = context.getSubContext(property.getName());
+      let kind = property.getEntityKind();
+      return new EvaluatedEntityCollection(subContext, kind);
     }
   }
 }
 
 export interface QueryContext {
   /** Iterate over all elementary properties expected by the query and pass their value. */
-  forEachElementaryPropertyOfResult(result, fn: (value, property: Schema.Property) => void): void;
+  forEachElementaryPropertyOfResult(result, fn: (value, property: Schema.Property, hasValue: boolean) => void): void;
   /** Iterate over all complex properties expected by the query. */
   forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property, hasValue: boolean) => void): void;
   forEachElementaryPropertySchema(fn: (property: Schema.Property) => void): void;

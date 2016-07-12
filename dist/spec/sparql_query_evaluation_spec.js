@@ -45,8 +45,10 @@ describe("match evaluator", function () {
         var mapping = mhelper.createStructuredMapping("?post");
         var queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"), {});
         var evaluator = new queries.QueryResultEvaluator();
+        var idVar = mapping.getElementaryPropertyVariable("Id");
         var parentIdVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
         var responses = [{}];
+        responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
         responses[0][parentIdVar.substr(1)] = { token: "literal", value: "5" };
         var results = evaluator.evaluate(responses, queryContext);
         expect(results[0].Parent).toBeUndefined();

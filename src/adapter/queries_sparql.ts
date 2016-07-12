@@ -72,13 +72,15 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
     if (obj) return obj.value;
   }
 
-  public forEachElementaryPropertyOfResult(result, fn: (property: string, variable: Schema.Property) => void): void {
+  public forEachElementaryPropertyOfResult(result, fn: (property: string, variable: Schema.Property,
+          hasValue: boolean) => void): void {
     this.rootTypeSchema.getPropertyNames().forEach(propertyName => {
       let property = this.rootTypeSchema.getProperty(propertyName);
       if (property.isNavigationProperty()) return;
 
       let obj = result[this.mapping.getElementaryPropertyVariable(propertyName).substr(1)];
-      if (obj) fn(obj.value, property);
+      let hasValue = obj !== undefined && obj !== null;
+      fn(hasValue ? obj.value : undefined, property, hasValue);
     });
   }
 

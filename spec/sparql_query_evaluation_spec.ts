@@ -56,9 +56,11 @@ describe("match evaluator", function() {
     let queryContext = new squeries.SparqlQueryContext(mapping, schema.getEntityType("Post"), {});
     let evaluator = new queries.QueryResultEvaluator();
 
+    let idVar = mapping.getElementaryPropertyVariable("Id");
     let parentIdVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
 
     let responses = [{}];
+    responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
     responses[0][parentIdVar.substr(1)] = { token: "literal", value: "5" };
     let results = evaluator.evaluate(responses, queryContext);
 

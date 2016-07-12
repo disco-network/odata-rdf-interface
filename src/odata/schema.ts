@@ -147,6 +147,10 @@ export class Property extends RdfBasedSchemaResource {
     return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
   }
 
+  public getEntityKind(): EntityKind {
+    return this.isNavigationProperty() ? EntityKind.Complex : EntityKind.Elementary;
+  }
+
   public isOptional(): boolean {
     return this.getRaw().optional === true;
   }
@@ -166,3 +170,5 @@ export class Property extends RdfBasedSchemaResource {
     return name && new Property(this.completeSchema, this.parentType, this.getRaw().mirroredFromNavigationProperty);
   }
 }
+
+export enum EntityKind { Elementary, Complex };

@@ -146,6 +146,9 @@ var Property = (function (_super) {
     Property.prototype.isQuantityOne = function () {
         return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
     };
+    Property.prototype.getEntityKind = function () {
+        return this.isNavigationProperty() ? EntityKind.Complex : EntityKind.Elementary;
+    };
     Property.prototype.isOptional = function () {
         return this.getRaw().optional === true;
     };
@@ -164,5 +167,11 @@ var Property = (function (_super) {
     return Property;
 }(RdfBasedSchemaResource));
 exports.Property = Property;
+(function (EntityKind) {
+    EntityKind[EntityKind["Elementary"] = 0] = "Elementary";
+    EntityKind[EntityKind["Complex"] = 1] = "Complex";
+})(exports.EntityKind || (exports.EntityKind = {}));
+var EntityKind = exports.EntityKind;
+;
 
 //# sourceMappingURL=../../../maps/src/odata/schema.js.map

@@ -60,6 +60,31 @@ describe("The query engine should evaluate", () => {
     ]);
   });
 
+  createQuerySpec("/Posts?$expand=Children", answer => {
+    let result = answer.result;
+    expectSuccess(answer);
+    expect(result).toEqual([
+      {
+        Id: "1",
+        ContentId: "1",
+        ParentId: null,
+        Children: [
+          {
+            Id: "2",
+            ContentId: "2",
+            ParentId: "1",
+          },
+        ],
+      },
+      {
+        Id: "2",
+        ContentId: "2",
+        ParentId: "1",
+        Children: [],
+      },
+    ]);
+  });
+
   createQuerySpec("/Posts?$filter=Id eq '1'", answer => {
     expectSuccess(answer);
     expect(answer.result.length).toBe(1);

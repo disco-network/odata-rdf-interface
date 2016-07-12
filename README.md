@@ -26,6 +26,9 @@ Possible queries are at the moment:
 
  * /Posts
  * /Posts?$expand=Content
+ * /Posts?$expand=Parent   //Parent is an optional navigation property
+ * /Posts?$expand=Children  //Children is the inverse property of Parent and is an array
+ * /Posts?$expand=Children/Parent
 
 # development
 To develop this project, please use NPM to install further development dependencies, especially gulp.
@@ -41,7 +44,5 @@ To compile all and run the tests (based on jasmine), run:
 # what's missing?
 
  * $filter queries
- * querying of optional properties
- * navigation properties with many values
  * $batch queries
  * POST, UPDATE etc.
