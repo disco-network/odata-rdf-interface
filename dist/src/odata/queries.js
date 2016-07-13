@@ -4,25 +4,27 @@ var Schema = require("./schema");
 /** This class can be used to generate odata output from different sources.
  * The concrete database logic is handled by the result and context parameters.
  */
-var QueryResultEvaluator = (function () {
-    function QueryResultEvaluator() {
+var JsonResultBuilder = (function () {
+    function JsonResultBuilder() {
     }
-    QueryResultEvaluator.prototype.evaluate = function (results, context) {
+    JsonResultBuilder.prototype.run = function (results, context) {
         var entityCollection = new EntityCollection(context, Schema.EntityKind.Complex);
+        /* @smell */
         results.forEach(function (result) {
             entityCollection.applyResult(result);
         });
         return entityCollection.serializeToODataJson();
     };
-    return QueryResultEvaluator;
+    return JsonResultBuilder;
 }());
-exports.QueryResultEvaluator = QueryResultEvaluator;
+exports.JsonResultBuilder = JsonResultBuilder;
 var EntityCollection = (function () {
     function EntityCollection(context, kind) {
         this.entities = {};
         this.context = context;
         this.kind = kind;
     }
+    ///
     EntityCollection.prototype.applyResult = function (result) {
         var id = this.context.getUniqueIdOfResult(result);
         if (this.entities[id] === undefined) {
@@ -139,12 +141,5 @@ var EntityFactory = (function () {
     return EntityFactory;
 }());
 exports.EntityFactory = EntityFactory;
-(function (ErrorTypes) {
-    ErrorTypes[ErrorTypes["NONE"] = 0] = "NONE";
-    ErrorTypes[ErrorTypes["DB"] = 1] = "DB";
-    ErrorTypes[ErrorTypes["ENTITYSET_NOTFOUND"] = 2] = "ENTITYSET_NOTFOUND";
-    ErrorTypes[ErrorTypes["PROPERTY_NOTFOUND"] = 3] = "PROPERTY_NOTFOUND";
-})(exports.ErrorTypes || (exports.ErrorTypes = {}));
-var ErrorTypes = exports.ErrorTypes;
 
 //# sourceMappingURL=../../../maps/src/odata/queries.js.map

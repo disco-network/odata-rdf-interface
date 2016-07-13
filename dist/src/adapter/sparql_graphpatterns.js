@@ -203,7 +203,7 @@ var DirectPropertiesGraphPattern = (function (_super) {
                 continue;
             if (property.isNavigationProperty() === false) {
                 if (!property.mirroredFromProperty()) {
-                    // TODO: optional
+                    /* @todo optional */
                     this.branch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
                 }
                 else {

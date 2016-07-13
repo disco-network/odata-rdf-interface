@@ -25,36 +25,57 @@ var EntitySetQuery = (function () {
     function EntitySetQuery(model, schema) {
         this.model = model;
         this.schema = schema;
+        this.prepareSparqlQuery();
     }
     EntitySetQuery.prototype.run = function (sparqlProvider, cb) {
         var _this = this;
-        var setSchema = this.schema.getEntitySet(this.model.entitySetName);
-        var entityType = setSchema.getEntityType();
+        sparqlProvider.querySelect(this.queryString, function (response) {
+            cb(_this.translateResponseToOData(response));
+        });
+    };
+    EntitySetQuery.prototype.prepareSparqlQuery = function () {
+        this.initializeVariableMapping();
+        this.initializeQueryString();
+    };
+    EntitySetQuery.prototype.translateResponseToOData = function (response) {
+        if (!response.error) {
+            var queryContext = new SparqlQueryContext(this.mapping, this.getTypeOfEntitySet(), this.getExpandTree());
+            var resultBuilder = new ODataQueries.JsonResultBuilder();
+            return { result: resultBuilder.run(response.result, queryContext) };
+        }
+        else {
+            return { error: response.error };
+        }
+    };
+    EntitySetQuery.prototype.getTypeOfEntitySet = function () {
+        var entitySetSchema = this.schema.getEntitySet(this.model.entitySetName);
+        return entitySetSchema.getEntityType();
+    };
+    EntitySetQuery.prototype.getExpandTree = function () {
+        return this.model.expandTree;
+    };
+    EntitySetQuery.prototype.initializeVariableMapping = function () {
         var vargen = new mappings.SparqlVariableGenerator();
-        var chosenEntityVar = vargen.next();
-        var mapping = new mappings.StructuredSparqlVariableMapping(chosenEntityVar, vargen);
-        var queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
-        var graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
-        var evaluator = new ODataQueries.QueryResultEvaluator();
+        this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+    };
+    EntitySetQuery.prototype.initializeQueryString = function () {
+        var graphPattern = this.createGraphPatternUponMapping();
+        var queryStringBuilder = this.createQueryStringBuilder();
+        this.queryString = queryStringBuilder.fromGraphPattern(graphPattern);
+    };
+    EntitySetQuery.prototype.createGraphPatternUponMapping = function () {
+        return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
+    };
+    EntitySetQuery.prototype.createQueryStringBuilder = function () {
         var queryStringBuilder = new qsBuilder.QueryStringBuilder();
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
-        var queryString = queryStringBuilder.fromGraphPattern(graphPattern);
-        console.log(queryString);
-        sparqlProvider.querySelect(queryString, function (answer) {
-            if (!answer.error) {
-                _this.result = { result: evaluator.evaluate(answer.result, queryContext) };
-            }
-            else {
-                _this.result = { error: answer.error };
-            }
-            cb(_this.result);
-        });
+        return queryStringBuilder;
     };
     return EntitySetQuery;
 }());
 exports.EntitySetQuery = EntitySetQuery;
-/** @class
+/**
  * This class provides methods to interpret a SPARQL query result as OData.
  */
 var SparqlQueryContext = (function () {

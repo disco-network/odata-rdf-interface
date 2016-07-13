@@ -19,39 +19,68 @@ export class QueryFactory {
  * Handles read-only OData queries.
  */
 export class EntitySetQuery implements ODataQueries.Query {
-  private result: { error?: any, result?: any };
-  constructor(private model: ODataQueries.QueryModel, private schema) { }
+  private mapping: mappings.StructuredSparqlVariableMapping;
+  private queryString: string;
 
-  public run(sparqlProvider, cb: (result) => void): void {
-    let setSchema = this.schema.getEntitySet(this.model.entitySetName);
-    let entityType = setSchema.getEntityType();
+  constructor(private model: ODataQueries.QueryModel, private schema: Schema.Schema) {
+    this.prepareSparqlQuery();
+  }
 
+  public run(sparqlProvider, cb: (result: { error?: any, result?: any }) => void): void {
+    sparqlProvider.querySelect(this.queryString, response => {
+      cb(this.translateResponseToOData(response));
+    });
+  }
+
+  private prepareSparqlQuery() {
+    this.initializeVariableMapping();
+    this.initializeQueryString();
+  }
+
+  private translateResponseToOData(response: { error?: any, result?: any }): { error?: any, result?: any } {
+    if (!response.error) {
+      let queryContext = new SparqlQueryContext(this.mapping, this.getTypeOfEntitySet(), this.getExpandTree());
+      let resultBuilder = new ODataQueries.JsonResultBuilder();
+      return { result: resultBuilder.run(response.result, queryContext) };
+    }
+    else {
+      return { error: response.error };
+    }
+  }
+
+  private getTypeOfEntitySet(): Schema.EntityType {
+    let entitySetSchema = this.schema.getEntitySet(this.model.entitySetName);
+    return entitySetSchema.getEntityType();
+  }
+
+  private getExpandTree(): any {
+    return this.model.expandTree;
+  }
+
+  private initializeVariableMapping() {
     let vargen = new mappings.SparqlVariableGenerator();
-    let chosenEntityVar = vargen.next();
+    this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+  }
 
-    let mapping = new mappings.StructuredSparqlVariableMapping(chosenEntityVar, vargen);
-    let queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
-    let graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
-    let resultBuilder = new ODataQueries.JsonResultBuilder();
+  private initializeQueryString() {
+    let graphPattern = this.createGraphPatternUponMapping();
+    let queryStringBuilder = this.createQueryStringBuilder();
+    this.queryString = queryStringBuilder.fromGraphPattern(graphPattern);
+  }
 
+  private createGraphPatternUponMapping(): gpatterns.ExpandTreeGraphPattern {
+    return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
+  }
+
+  private createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
     queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
-    let queryString = queryStringBuilder.fromGraphPattern(graphPattern);
-
-    sparqlProvider.querySelect(queryString, answer => {
-      if (!answer.error) {
-        this.result = { result: resultBuilder.run(answer.result, queryContext) };
-      }
-      else {
-        this.result = { error: answer.error };
-      }
-      cb(this.result);
-    });
+    return queryStringBuilder;
   }
 }
 
-/** @class
+/**
  * This class provides methods to interpret a SPARQL query result as OData.
  */
 export class SparqlQueryContext implements ODataQueries.QueryContext {

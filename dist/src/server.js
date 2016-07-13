@@ -7,7 +7,6 @@ var abnfInterpreter = require("abnfjs/interpreter");
 var ast2query = require("./odata/ast2query");
 var schema = require("./odata/schema");
 var sparqlQueries = require("./adapter/queries_sparql");
-var queries = require("./odata/queries");
 var providerModule = require("./sparql/sparql_provider");
 var rdfstore = require("rdfstore");
 var config = {
@@ -46,16 +45,7 @@ function sendResults(res, result) {
     }
 }
 function handleErrors(result, res) {
-    switch (result.error) {
-        case queries.ErrorTypes.DB:
-            res.statusCode = 500;
-            res.end("database error " + result.errorDetails);
-            break;
-        default:
-            res.statusCode = 500;
-            console.log(result.error.stack);
-            res.end("unknown error type " + result.error);
-    }
+    res.end("error: " + result.error.stack || result.error);
 }
 rdfstore.create(function (error, st) {
     store = st;

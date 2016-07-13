@@ -59,16 +59,7 @@ function sendResults(res, result): void {
   }
 }
 function handleErrors(result, res) {
-  switch (result.error) {
-    case queries.ErrorTypes.DB:
-      res.statusCode = 500;
-      res.end("database error " + result.errorDetails);
-      break;
-    default:
-      res.statusCode = 500;
-      console.log(result.error.stack);
-      res.end("unknown error type " + result.error);
-  }
+  res.end("error: " + result.error.stack || result.error);
 }
 
 rdfstore.create(function(error, st) {

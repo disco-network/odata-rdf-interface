@@ -80,14 +80,43 @@ describe("The query engine should evaluate", function () {
             },
         ]);
     });
+    createQuerySpec("/Posts?$expand=Children/Parent", function (answer) {
+        var result = answer.result;
+        expectSuccess(answer);
+        expect(result).toEqual([
+            {
+                Id: "1",
+                ContentId: "1",
+                ParentId: null,
+                Children: [
+                    {
+                        Id: "2",
+                        ContentId: "2",
+                        ParentId: "1",
+                        Parent: {
+                            Id: "1",
+                            ContentId: "1",
+                            ParentId: null,
+                        },
+                    },
+                ],
+            },
+            {
+                Id: "2",
+                ContentId: "2",
+                ParentId: "1",
+                Children: [],
+            },
+        ]);
+    });
     createQuerySpec("/Posts?$filter=Id eq '1'", function (answer) {
         expectSuccess(answer);
         expect(answer.result.length).toBe(1);
-    }, true);
+    });
     createQuerySpec("/Posts?$filter=Id eq '0'", function (answer) {
         expectSuccess(answer);
         expect(answer.result.length).toBe(0);
-    }, true);
+    });
     function createQuerySpec(query, cb, pending) {
         if (pending === void 0) { pending = false; }
         var fn = pending ? xit : it;
