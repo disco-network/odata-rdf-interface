@@ -25,8 +25,6 @@ var EvaluatedEntityCollection = (function () {
     }
     EvaluatedEntityCollection.prototype.applyResult = function (result) {
         var id = this.context.getUniqueIdOfResult(result);
-        if (id === undefined)
-            return;
         if (this.entities[id] === undefined) {
             this.entities[id] = EvaluatedEntityFactory.fromEntityKind(this.kind, this.context);
         }
@@ -46,16 +44,14 @@ var EvaluatedComplexEntity = (function () {
     }
     EvaluatedComplexEntity.prototype.applyResult = function (result) {
         var _this = this;
-        var id = this.context.getUniqueIdOfResult(result);
-        if (id === undefined)
-            return;
-        if (this.id === undefined || id === this.id) {
+        var resultId = this.context.getUniqueIdOfResult(result);
+        var firstResultOrSameId = this.id === undefined || resultId === this.id;
+        if (firstResultOrSameId) {
             if (this.value === undefined) {
-                this.id = id;
-                this.value = {};
+                this.initializeWithId(resultId);
             }
-            this.context.forEachPropertyOfResult(result, function (value, property, hasValue) {
-                _this.applyResultToProperty(property, value);
+            this.context.forEachPropertyOfResult(result, function (resultOfProperty, property, hasValueInResult) {
+                _this.applyResultToProperty(resultOfProperty, property, hasValueInResult);
             });
         }
         else {
@@ -69,17 +65,32 @@ var EvaluatedComplexEntity = (function () {
         var serialized = {};
         var serializeProperty = function (property) {
             var propertyName = property.getName();
-            var entity = _this.value[propertyName];
-            serialized[propertyName] = entity !== undefined ? entity.serializeToODataJson() : null;
+            var entity = _this.getPropertyEntity(property);
+            var entityExists = _this.hasPropertyEntity(property);
+            serialized[propertyName] = entityExists ? entity.serializeToODataJson() : null;
         };
         this.context.forEachPropertySchema(serializeProperty);
         return serialized;
     };
-    EvaluatedComplexEntity.prototype.applyResultToProperty = function (property, result) {
-        if (this.value[property.getName()] === undefined)
-            this.value[property.getName()] = EvaluatedEntityFactory.fromPropertyWithContext(property, this.context);
-        if (result !== undefined)
+    EvaluatedComplexEntity.prototype.initializeWithId = function (id) {
+        this.id = id;
+        this.value = {};
+    };
+    EvaluatedComplexEntity.prototype.applyResultToProperty = function (result, property, hasValueInResult) {
+        if (!this.hasPropertyEntity(property)) {
+            this.setPropertyEntity(property, EvaluatedEntityFactory.fromPropertyWithContext(property, this.context));
+        }
+        if (hasValueInResult)
             this.value[property.getName()].applyResult(result);
+    };
+    EvaluatedComplexEntity.prototype.hasPropertyEntity = function (property) {
+        return this.getPropertyEntity(property) !== undefined;
+    };
+    EvaluatedComplexEntity.prototype.getPropertyEntity = function (property) {
+        return this.value[property.getName()];
+    };
+    EvaluatedComplexEntity.prototype.setPropertyEntity = function (property, value) {
+        this.value[property.getName()] = value;
     };
     return EvaluatedComplexEntity;
 }());

@@ -68,7 +68,7 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
 
   public getUniqueIdOfResult(result): string {
     let variableName = this.mapping.getElementaryPropertyVariable("Id");
-    let obj = result[variableName.substr(1)];
+    let obj = result && result[variableName.substr(1)];
     if (obj) return obj.value;
   }
 

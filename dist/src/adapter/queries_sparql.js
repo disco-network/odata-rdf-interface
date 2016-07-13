@@ -64,7 +64,7 @@ var SparqlQueryContext = (function () {
     }
     SparqlQueryContext.prototype.getUniqueIdOfResult = function (result) {
         var variableName = this.mapping.getElementaryPropertyVariable("Id");
-        var obj = result[variableName.substr(1)];
+        var obj = result && result[variableName.substr(1)];
         if (obj)
             return obj.value;
     };
