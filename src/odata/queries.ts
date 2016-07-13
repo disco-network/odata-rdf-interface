@@ -15,10 +15,11 @@ export interface QueryModel {
 /** This class can be used to generate odata output from different sources.
  * The concrete database logic is handled by the result and context parameters.
  */
-export class QueryResultEvaluator {
-  public evaluate(results: any[], context: QueryContext): any[] {
+export class JsonResultBuilder {
+  public run(results: any[], context: QueryContext): any[] {
     let entityCollection = new EntityCollection(context, Schema.EntityKind.Complex);
 
+    /* @smell */
     results.forEach(result => {
       entityCollection.applyResult(result);
     });
@@ -44,11 +45,15 @@ export class EntityCollection implements EntityValue {
     this.kind = kind;
   }
 
+  ///
   public applyResult(result: any): void {
+
     let id = this.context.getUniqueIdOfResult(result);
     if (this.entities[id] === undefined) {
+
       this.entities[id] = EntityFactory.fromEntityKind(this.kind, this.context);
     }
+
     this.entities[id].applyResult(result);
   }
 
@@ -174,16 +179,11 @@ export interface QueryContext {
   forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property, hasValue: boolean) => void): void;
   /** Iterate over all properties and pass their value respective subResult. */
   forEachPropertyOfResult(result, fn: (value, property: Schema.Property, hasValue: boolean) => void): void;
+
   forEachPropertySchema(fn: (property: Schema.Property) => void): void;
   forEachElementaryPropertySchema(fn: (property: Schema.Property) => void): void;
   forEachComplexPropertySchema(fn: (property: Schema.Property) => void): void;
+
   getUniqueIdOfResult(result): string;
   getSubContext(property: string): QueryContext;
-}
-
-export enum ErrorTypes {
-  NONE,
-  DB,
-  ENTITYSET_NOTFOUND,
-  PROPERTY_NOTFOUND,
 }

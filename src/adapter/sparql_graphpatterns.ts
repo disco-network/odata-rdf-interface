@@ -227,7 +227,7 @@ export class DirectPropertiesGraphPattern extends TreeGraphPattern {
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.isNavigationProperty() === false) {
         if (!property.mirroredFromProperty()) {
-          // TODO: optional
+          /* @todo optional */
           this.branch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
         }
         else {
@@ -268,12 +268,15 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
       // Next recursion level
       let gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName],
         mapping.getComplexProperty(propertyName));
+
       if (!property.hasDirectRdfRepresentation()) {
+
         let inverseProperty = property.getInverseProperty();
         let unionPattern = this.newUnionPattern();
         unionPattern.inverseBranch(inverseProperty.getNamespacedUri(), gp);
-      }
-      else {
+
+      } else {
+
         this.newUnionPattern().branch(property.getNamespacedUri(), gp);
       }
     });

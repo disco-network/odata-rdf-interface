@@ -32,7 +32,7 @@ export class EntitySetQuery implements ODataQueries.Query {
     let mapping = new mappings.StructuredSparqlVariableMapping(chosenEntityVar, vargen);
     let queryContext = new SparqlQueryContext(mapping, entityType, this.model.expandTree);
     let graphPattern = new gpatterns.ExpandTreeGraphPattern(entityType, this.model.expandTree, mapping);
-    let evaluator = new ODataQueries.QueryResultEvaluator();
+    let resultBuilder = new ODataQueries.JsonResultBuilder();
 
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
     queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
@@ -41,7 +41,7 @@ export class EntitySetQuery implements ODataQueries.Query {
 
     sparqlProvider.querySelect(queryString, answer => {
       if (!answer.error) {
-        this.result = { result: evaluator.evaluate(answer.result, queryContext) };
+        this.result = { result: resultBuilder.run(answer.result, queryContext) };
       }
       else {
         this.result = { error: answer.error };
