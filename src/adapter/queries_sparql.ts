@@ -34,7 +34,7 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private prepareSparqlQuery() {
     this.initializeVariableMapping();
-    this.initializeQueryString();
+    this.initializeQueryStringAfterMapping();
   }
 
   private translateResponseToOData(response: { error?: any, result?: any }): { error?: any, result?: any } {
@@ -57,15 +57,16 @@ export class EntitySetQuery implements ODataQueries.Query {
     return this.model.expandTree;
   }
 
+  /** this.mapping has to be initialized before. */
+  private initializeQueryStringAfterMapping() {
+    let expandGraphPattern = this.createGraphPatternUponMapping();
+    let queryStringBuilder = this.createQueryStringBuilder();
+    this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern);
+  }
+
   private initializeVariableMapping() {
     let vargen = new mappings.SparqlVariableGenerator();
     this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
-  }
-
-  private initializeQueryString() {
-    let graphPattern = this.createGraphPatternUponMapping();
-    let queryStringBuilder = this.createQueryStringBuilder();
-    this.queryString = queryStringBuilder.fromGraphPattern(graphPattern);
   }
 
   private createGraphPatternUponMapping(): gpatterns.ExpandTreeGraphPattern {

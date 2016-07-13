@@ -1,12 +1,3 @@
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
-};
-
-var notImplemented = function() { throw new Error('not implemented') }
-
 export interface Factory {
   create(): any;
 }
@@ -26,12 +17,11 @@ export function values(dict) {
 }
 
 export function multiSwitch(values, cases) {
-  for(var i in cases) {
-    var c = cases[i];
-    var match = true;
-    for(var j in values) {
-      if(values[j] !== cases.conditions[j]) match = false;
+  for (let i in cases) {
+    let match = true;
+    for (let j in values) {
+      if (values[j] !== cases.conditions[j]) match = false;
     }
-    if(match) cases.do();
+    if (match) cases.do();
   }
 }

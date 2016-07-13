@@ -26,16 +26,14 @@ describe("odata parser", function() {
     expect(result.queryOptions.expand[0].path[1]).toEqual("ReferredFrom");
   });
 
-  /*it("should parse a string", () => {
-    let tokens = abnfTokenizer.tokenize("\"'\" (*( SQUOTE-in-string / pchar-no-SQUOTE )):value \"'\"");
-  });*/
-
   it("should parse a simple filter expression", () => {
     let parser = initODataParser();
     let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
       "Posts?$filter='2' eq '1'").evaluate();
 
     let filterOption = result.queryOptions.filter;
+    expect(filterOption.type).toBe("operator");
+    expect(filterOption.op).toBe("eq");
     expect(filterOption.rhs.type).toBe("string");
     expect(filterOption.rhs.value).toBe("1");
   });

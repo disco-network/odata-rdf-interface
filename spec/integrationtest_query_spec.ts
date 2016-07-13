@@ -115,6 +115,11 @@ describe("The query engine should evaluate", () => {
     ]);
   });
 
+  createQuerySpec("/Posts?$filter='0' eq '1'", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(0);
+  });
+
   createQuerySpec("/Posts?$filter=Id eq '1'", answer => {
     expectSuccess(answer);
     expect(answer.result.length).toBe(1);

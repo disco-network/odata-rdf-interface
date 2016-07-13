@@ -35,7 +35,7 @@ var EntitySetQuery = (function () {
     };
     EntitySetQuery.prototype.prepareSparqlQuery = function () {
         this.initializeVariableMapping();
-        this.initializeQueryString();
+        this.initializeQueryStringAfterMapping();
     };
     EntitySetQuery.prototype.translateResponseToOData = function (response) {
         if (!response.error) {
@@ -54,14 +54,15 @@ var EntitySetQuery = (function () {
     EntitySetQuery.prototype.getExpandTree = function () {
         return this.model.expandTree;
     };
+    /** this.mapping has to be initialized before. */
+    EntitySetQuery.prototype.initializeQueryStringAfterMapping = function () {
+        var expandGraphPattern = this.createGraphPatternUponMapping();
+        var queryStringBuilder = this.createQueryStringBuilder();
+        this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern);
+    };
     EntitySetQuery.prototype.initializeVariableMapping = function () {
         var vargen = new mappings.SparqlVariableGenerator();
         this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
-    };
-    EntitySetQuery.prototype.initializeQueryString = function () {
-        var graphPattern = this.createGraphPatternUponMapping();
-        var queryStringBuilder = this.createQueryStringBuilder();
-        this.queryString = queryStringBuilder.fromGraphPattern(graphPattern);
     };
     EntitySetQuery.prototype.createGraphPatternUponMapping = function () {
         return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
