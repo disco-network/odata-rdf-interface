@@ -10,37 +10,44 @@ var QueryResultEvaluator = (function () {
     QueryResultEvaluator.prototype.evaluate = function (results, context) {
         var entityCollection = new EvaluatedEntityCollection(context, Schema.EntityKind.Complex);
         results.forEach(function (result) {
-            entityCollection.assignResult(result);
+            entityCollection.applyResult(result);
         });
         return entityCollection.serializeToODataJson();
     };
     return QueryResultEvaluator;
 }());
 exports.QueryResultEvaluator = QueryResultEvaluator;
-var EvaluatedElementaryEntity = (function () {
-    function EvaluatedElementaryEntity() {
-        this.value = undefined;
+var EvaluatedEntityCollection = (function () {
+    function EvaluatedEntityCollection(context, kind) {
+        this.entities = {};
+        this.context = context;
+        this.kind = kind;
     }
-    EvaluatedElementaryEntity.prototype.assignResult = function (value) {
-        if (this.value === undefined) {
-            this.value = value;
+    EvaluatedEntityCollection.prototype.applyResult = function (result) {
+        var id = this.context.getUniqueIdOfResult(result);
+        if (id === undefined)
+            return;
+        if (this.entities[id] === undefined) {
+            if (this.kind === Schema.EntityKind.Elementary)
+                this.entities[id] = new EvaluatedElementaryEntity();
+            else
+                this.entities[id] = new EvaluatedComplexEntity(this.context);
         }
-        else if (this.value !== value) {
-            throw new Error("found different values for a property of quantity one");
-        }
+        this.entities[id].applyResult(result);
     };
-    EvaluatedElementaryEntity.prototype.serializeToODataJson = function () {
-        return this.value === undefined ? null : this.value;
+    EvaluatedEntityCollection.prototype.serializeToODataJson = function () {
+        var _this = this;
+        return Object.keys(this.entities).map(function (id) { return _this.entities[id].serializeToODataJson(); });
     };
-    return EvaluatedElementaryEntity;
+    return EvaluatedEntityCollection;
 }());
-exports.EvaluatedElementaryEntity = EvaluatedElementaryEntity;
+exports.EvaluatedEntityCollection = EvaluatedEntityCollection;
 var EvaluatedComplexEntity = (function () {
     function EvaluatedComplexEntity(context) {
         this.value = undefined;
         this.context = context;
     }
-    EvaluatedComplexEntity.prototype.assignResult = function (result) {
+    EvaluatedComplexEntity.prototype.applyResult = function (result) {
         var _this = this;
         var id = this.context.getUniqueIdOfResult(result);
         if (id === undefined)
@@ -51,10 +58,10 @@ var EvaluatedComplexEntity = (function () {
                 this.value = {};
             }
             this.context.forEachElementaryPropertyOfResult(result, function (value, property, hasValue) {
-                _this.assignResultToProperty(property, value);
+                _this.applyResultToProperty(property, value);
             });
             this.context.forEachComplexPropertyOfResult(result, function (value, property, hasValue) {
-                _this.assignResultToProperty(property, value);
+                _this.applyResultToProperty(property, value);
             });
         }
         else {
@@ -75,56 +82,54 @@ var EvaluatedComplexEntity = (function () {
         this.context.forEachComplexPropertySchema(serializeProperty);
         return serialized;
     };
-    EvaluatedComplexEntity.prototype.assignResultToProperty = function (property, result) {
+    EvaluatedComplexEntity.prototype.applyResultToProperty = function (property, result) {
         if (this.value[property.getName()] === undefined)
             this.value[property.getName()] = EvaluatedEntityFactory.fromPropertyWithContext(property, this.context);
         if (result !== undefined)
-            this.value[property.getName()].assignResult(result);
+            this.value[property.getName()].applyResult(result);
     };
     return EvaluatedComplexEntity;
 }());
 exports.EvaluatedComplexEntity = EvaluatedComplexEntity;
-var EvaluatedEntityCollection = (function () {
-    function EvaluatedEntityCollection(context, kind) {
-        this.entities = {};
-        this.context = context;
-        this.kind = kind;
+var EvaluatedElementaryEntity = (function () {
+    function EvaluatedElementaryEntity() {
+        this.value = undefined;
     }
-    EvaluatedEntityCollection.prototype.assignResult = function (result) {
-        var id = this.context.getUniqueIdOfResult(result);
-        if (id === undefined)
-            return;
-        if (this.entities[id] === undefined) {
-            if (this.kind === Schema.EntityKind.Elementary)
-                this.entities[id] = new EvaluatedElementaryEntity();
-            else
-                this.entities[id] = new EvaluatedComplexEntity(this.context);
+    EvaluatedElementaryEntity.prototype.applyResult = function (value) {
+        if (this.value === undefined) {
+            this.value = value;
         }
-        this.entities[id].assignResult(result);
+        else if (this.value !== value) {
+            throw new Error("found different values for a property of quantity one");
+        }
     };
-    EvaluatedEntityCollection.prototype.serializeToODataJson = function () {
-        var _this = this;
-        return Object.keys(this.entities).map(function (id) { return _this.entities[id].serializeToODataJson(); });
+    EvaluatedElementaryEntity.prototype.serializeToODataJson = function () {
+        return this.value === undefined ? null : this.value;
     };
-    return EvaluatedEntityCollection;
+    return EvaluatedElementaryEntity;
 }());
-exports.EvaluatedEntityCollection = EvaluatedEntityCollection;
+exports.EvaluatedElementaryEntity = EvaluatedElementaryEntity;
 var EvaluatedEntityFactory = (function () {
     function EvaluatedEntityFactory() {
     }
     EvaluatedEntityFactory.fromPropertyWithContext = function (property, context) {
+        var kind = property.getEntityKind();
+        var subContext = context.getSubContext(property.getName());
         if (property.isQuantityOne()) {
-            if (property.getEntityKind() === Schema.EntityKind.Complex) {
-                var subContext = context.getSubContext(property.getName());
-                return new EvaluatedComplexEntity(subContext);
-            }
-            else
-                return new EvaluatedElementaryEntity();
+            return EvaluatedEntityFactory.fromEntityKind(kind, subContext);
         }
         else {
-            var subContext = context.getSubContext(property.getName());
-            var kind = property.getEntityKind();
             return new EvaluatedEntityCollection(subContext, kind);
+        }
+    };
+    EvaluatedEntityFactory.fromEntityKind = function (kind, context) {
+        switch (kind) {
+            case Schema.EntityKind.Elementary:
+                return new EvaluatedElementaryEntity();
+            case Schema.EntityKind.Complex:
+                return new EvaluatedComplexEntity(context);
+            default:
+                throw new Error("invalid EntityKind " + kind);
         }
     };
     return EvaluatedEntityFactory;

@@ -20,7 +20,7 @@ export class QueryResultEvaluator {
     let entityCollection = new EvaluatedEntityCollection(context, Schema.EntityKind.Complex);
 
     results.forEach(result => {
-      entityCollection.assignResult(result);
+      entityCollection.applyResult(result);
     });
 
     return entityCollection.serializeToODataJson();
@@ -28,24 +28,33 @@ export class QueryResultEvaluator {
 }
 
 export interface EvaluatedEntity {
-  assignResult(result: any): void;
+  /** Apply the values of variables in this result object. */
+  applyResult(result: any): void;
+  /** Create a JS data object conforming to the OData output format. */
   serializeToODataJson(): any;
 }
 
-export class EvaluatedElementaryEntity implements EvaluatedEntity {
-  private value: any = undefined;
+export class EvaluatedEntityCollection implements EvaluatedEntity {
+  private context: QueryContext;
+  private kind: Schema.EntityKind;
+  private entities: { [id: string]: EvaluatedEntity } = {};
 
-  public assignResult(value: any): void {
-    if (this.value === undefined) {
-      this.value = value;
-    }
-    else if (this.value !== value) {
-      throw new Error("found different values for a property of quantity one");
-    }
+  constructor(context: QueryContext, kind: Schema.EntityKind) {
+    this.context = context;
+    this.kind = kind;
   }
 
-  public serializeToODataJson(): any {
-    return this.value === undefined ? null : this.value;
+  public applyResult(result: any): void {
+    let id = this.context.getUniqueIdOfResult(result);
+    if (id === undefined) return;
+    if (this.entities[id] === undefined) {
+      this.entities[id] = EvaluatedEntityFactory.fromEntityKind(this.kind, this.context);
+    }
+    this.entities[id].applyResult(result);
+  }
+
+  public serializeToODataJson() {
+    return Object.keys(this.entities).map(id => this.entities[id].serializeToODataJson());
   }
 }
 
@@ -58,7 +67,7 @@ export class EvaluatedComplexEntity implements EvaluatedEntity {
     this.context = context;
   }
 
-  public assignResult(result: any): void {
+  public applyResult(result: any): void {
     let id = this.context.getUniqueIdOfResult(result);
     if (id === undefined) return;
     if (this.id === undefined || id === this.id) {
@@ -67,10 +76,10 @@ export class EvaluatedComplexEntity implements EvaluatedEntity {
         this.value = {};
       }
       this.context.forEachElementaryPropertyOfResult(result, (value, property, hasValue) => {
-        this.assignResultToProperty(property, value);
+        this.applyResultToProperty(property, value);
       });
       this.context.forEachComplexPropertyOfResult(result, (value, property, hasValue) => {
-        this.assignResultToProperty(property, value);
+        this.applyResultToProperty(property, value);
       });
     }
     else {
@@ -94,55 +103,51 @@ export class EvaluatedComplexEntity implements EvaluatedEntity {
     return serialized;
   }
 
-  private assignResultToProperty(property: Schema.Property, result: any) {
+  private applyResultToProperty(property: Schema.Property, result: any) {
     if (this.value[property.getName()] === undefined)
       this.value[property.getName()] = EvaluatedEntityFactory.fromPropertyWithContext(property, this.context);
 
-    if (result !== undefined) this.value[property.getName()].assignResult(result);
+    if (result !== undefined) this.value[property.getName()].applyResult(result);
   }
 }
 
-export class EvaluatedEntityCollection implements EvaluatedEntity {
-  private context: QueryContext;
-  private kind: Schema.EntityKind;
-  private entities: { [id: string]: EvaluatedEntity } = {};
+export class EvaluatedElementaryEntity implements EvaluatedEntity {
+  private value: any = undefined;
 
-  constructor(context: QueryContext, kind: Schema.EntityKind) {
-    this.context = context;
-    this.kind = kind;
-  }
-
-  public assignResult(result: any): void {
-    let id = this.context.getUniqueIdOfResult(result);
-    if (id === undefined) return;
-    if (this.entities[id] === undefined) {
-      if (this.kind === Schema.EntityKind.Elementary)
-        this.entities[id] = new EvaluatedElementaryEntity();
-      else
-        this.entities[id] = new EvaluatedComplexEntity(this.context);
+  public applyResult(value: any): void {
+    if (this.value === undefined) {
+      this.value = value;
     }
-    this.entities[id].assignResult(result);
+    else if (this.value !== value) {
+      throw new Error("found different values for a property of quantity one");
+    }
   }
 
-  public serializeToODataJson() {
-    return Object.keys(this.entities).map(id => this.entities[id].serializeToODataJson());
+  public serializeToODataJson(): any {
+    return this.value === undefined ? null : this.value;
   }
 }
 
 export class EvaluatedEntityFactory {
   public static fromPropertyWithContext(property: Schema.Property, context: QueryContext): EvaluatedEntity {
+    let kind = property.getEntityKind();
+    let subContext = context.getSubContext(property.getName());
     if (property.isQuantityOne()) {
-      if (property.getEntityKind() === Schema.EntityKind.Complex) {
-        let subContext = context.getSubContext(property.getName());
-        return new EvaluatedComplexEntity(subContext);
-      }
-      else
-        return new EvaluatedElementaryEntity();
+      return EvaluatedEntityFactory.fromEntityKind(kind, subContext);
     }
     else {
-      let subContext = context.getSubContext(property.getName());
-      let kind = property.getEntityKind();
       return new EvaluatedEntityCollection(subContext, kind);
+    }
+  }
+
+  public static fromEntityKind(kind: Schema.EntityKind, context: QueryContext): EvaluatedEntity {
+    switch (kind) {
+      case Schema.EntityKind.Elementary:
+        return new EvaluatedElementaryEntity();
+      case Schema.EntityKind.Complex:
+        return new EvaluatedComplexEntity(context);
+      default:
+        throw new Error("invalid EntityKind " + kind);
     }
   }
 }
