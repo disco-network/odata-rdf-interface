@@ -1,10 +1,31 @@
 import gpatterns = require("./sparql_graphpatterns");
+import filters = require("./filters");
 
 export class QueryStringBuilder {
   private prefixes: { [id: string]: string } = { };
 
   public insertPrefix(prefix: string, uri: string) {
     this.prefixes[prefix] = uri;
+  }
+
+  public fromGraphPattern(graphPattern: gpatterns.TreeGraphPattern,
+                          options?: QueryStringBuilderOptions): string {
+    let filterExpression = options.filterExpression || undefined;
+    return this.buildPrefixString() +
+      " SELECT * WHERE " + this.buildGraphPatternStringWithFilters(graphPattern, filterExpression);
+  }
+
+  public buildGraphPatternStringWithFilters(graphPattern, filter?: filters.FilterExpression): string {
+    let ret = "{ " + this.buildGraphPatternContentString(graphPattern);
+    if (filter !== undefined) {
+      ret += " . FILTER(" + filter.toSparql() + ")";
+    }
+    ret += " }";
+    return ret;
+  }
+
+  public buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string {
+    return "{ " + this.buildGraphPatternContentString(graphPattern) + " }";
   }
 
   public buildGraphPatternContentString(graphPattern: gpatterns.TreeGraphPattern): string {
@@ -30,9 +51,6 @@ export class QueryStringBuilder {
     return parts.join(" . ");
   }
 
-  public buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string {
-    return "{ " + this.buildGraphPatternContentString(graphPattern) + " }";
-  }
   public buildPrefixString() {
     let parts: string[] = [ ];
     for (let prefix in this.prefixes) {
@@ -40,8 +58,8 @@ export class QueryStringBuilder {
     }
     return parts.join(" ");
   }
-  public fromGraphPattern(graphPattern: gpatterns.TreeGraphPattern): string {
-    return this.buildPrefixString() +
-      " SELECT * WHERE " + this.buildGraphPatternString(graphPattern);
-  }
+}
+
+export interface QueryStringBuilderOptions {
+  filterExpression?: filters.FilterExpression;
 }

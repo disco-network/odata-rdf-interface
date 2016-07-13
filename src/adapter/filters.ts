@@ -11,12 +11,14 @@ export class FilterExpressionFactory {
       let SelectedFilterExpression = this.registeredFilterExpressions[i];
       if (SelectedFilterExpression.doesApplyToRaw(raw)) return SelectedFilterExpression.create(raw, this);
     }
+    throw new Error("filter expression is not supported: " + JSON.stringify(raw));
   }
 
   public registerDefaultFilterExpressions() {
     this.registerFilterExpressions([
       StringLiteralExpression, EqExpression,
     ]);
+    return this;
   }
 
   public registerFilterExpressions(types: FilterExpressionClass[]) {
@@ -93,7 +95,7 @@ export class EqExpression implements FilterExpression {
   }
 
   public toSparql(): string {
-    return this.lhs.toSparql() + " = " + this.rhs.toSparql();
+    return "(" + this.lhs.toSparql() + " = " + this.rhs.toSparql() + ")";
   }
 }
 

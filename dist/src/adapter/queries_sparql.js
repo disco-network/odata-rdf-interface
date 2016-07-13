@@ -2,6 +2,7 @@
 /** @module */
 var mappings = require("./sparql_mappings");
 var gpatterns = require("./sparql_graphpatterns");
+var filters = require("./filters");
 var qsBuilder = require("./querystring_builder");
 var ODataQueries = require("../odata/queries");
 /**
@@ -25,6 +26,8 @@ var EntitySetQuery = (function () {
     function EntitySetQuery(model, schema) {
         this.model = model;
         this.schema = schema;
+        this.filterExpressionFactory = new filters.FilterExpressionFactory()
+            .registerDefaultFilterExpressions();
         this.prepareSparqlQuery();
     }
     EntitySetQuery.prototype.run = function (sparqlProvider, cb) {
@@ -51,14 +54,14 @@ var EntitySetQuery = (function () {
         var entitySetSchema = this.schema.getEntitySet(this.model.entitySetName);
         return entitySetSchema.getEntityType();
     };
-    EntitySetQuery.prototype.getExpandTree = function () {
-        return this.model.expandTree;
-    };
     /** this.mapping has to be initialized before. */
     EntitySetQuery.prototype.initializeQueryStringAfterMapping = function () {
         var expandGraphPattern = this.createGraphPatternUponMapping();
+        var filterExpression = this.createFilterExpression();
         var queryStringBuilder = this.createQueryStringBuilder();
-        this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern);
+        this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
+            filterExpression: filterExpression,
+        });
     };
     EntitySetQuery.prototype.initializeVariableMapping = function () {
         var vargen = new mappings.SparqlVariableGenerator();
@@ -67,11 +70,21 @@ var EntitySetQuery = (function () {
     EntitySetQuery.prototype.createGraphPatternUponMapping = function () {
         return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
     };
+    EntitySetQuery.prototype.createFilterExpression = function () {
+        if (this.getRawFilter())
+            return this.filterExpressionFactory.fromRaw(this.getRawFilter());
+    };
     EntitySetQuery.prototype.createQueryStringBuilder = function () {
         var queryStringBuilder = new qsBuilder.QueryStringBuilder();
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
         return queryStringBuilder;
+    };
+    EntitySetQuery.prototype.getExpandTree = function () {
+        return this.model.expandTree;
+    };
+    EntitySetQuery.prototype.getRawFilter = function () {
+        return this.model.filterOption;
     };
     return EntitySetQuery;
 }());

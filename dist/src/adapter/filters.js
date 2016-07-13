@@ -9,11 +9,13 @@ var FilterExpressionFactory = (function () {
             if (SelectedFilterExpression.doesApplyToRaw(raw))
                 return SelectedFilterExpression.create(raw, this);
         }
+        throw new Error("filter expression is not supported: " + JSON.stringify(raw));
     };
     FilterExpressionFactory.prototype.registerDefaultFilterExpressions = function () {
         this.registerFilterExpressions([
             StringLiteralExpression, EqExpression,
         ]);
+        return this;
     };
     FilterExpressionFactory.prototype.registerFilterExpressions = function (types) {
         for (var i = 0; i < types.length; ++i) {
@@ -69,7 +71,7 @@ var EqExpression = (function () {
         return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
     };
     EqExpression.prototype.toSparql = function () {
-        return this.lhs.toSparql() + " = " + this.rhs.toSparql();
+        return "(" + this.lhs.toSparql() + " = " + this.rhs.toSparql() + ")";
     };
     return EqExpression;
 }());

@@ -1,4 +1,3 @@
-import mhelper = require("./helpers/sparql_mappings");
 import filters = require("../src/adapter/filters");
 
 describe("A filter factory", () => {
@@ -18,6 +17,12 @@ describe("A filter factory", () => {
     expect((filter as filters.EqExpression).lhs instanceof filters.StringLiteralExpression).toBe(true);
     expect((filter as filters.EqExpression).rhs instanceof filters.StringLiteralExpression).toBe(true);
   });
+  it("should throw if there's no matching expression", () => {
+    let raw = { type: "is-42", value: "4*2" };
+    let factory = new filters.FilterExpressionFactory();
+
+    expect(() => factory.fromRaw(raw)).toThrow();
+  });
 });
 
 describe("A StringLiteralExpression", () => {
@@ -29,7 +34,7 @@ describe("A StringLiteralExpression", () => {
   xit("should escape special characters", () => undefined);
 });
 
-describe("A EqExpression", () => {
+describe("An EqExpression", () => {
   it("should render to a SPARQL string", () => {
     let factory = new filters.FilterExpressionFactory();
     factory.registerDefaultFilterExpressions();
@@ -39,7 +44,7 @@ describe("A EqExpression", () => {
       rhs: { type: "test", value: "(rhs)" },
     });
 
-    expect(expr.toSparql()).toBe("(lhs) = (rhs)");
+    expect(expr.toSparql()).toBe("((lhs) = (rhs))");
   });
 });
 

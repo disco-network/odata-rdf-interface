@@ -1,6 +1,7 @@
 /** @module */
 import mappings = require("./sparql_mappings");
 import gpatterns = require("./sparql_graphpatterns");
+import filters = require("./filters");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
@@ -21,6 +22,8 @@ export class QueryFactory {
 export class EntitySetQuery implements ODataQueries.Query {
   private mapping: mappings.StructuredSparqlVariableMapping;
   private queryString: string;
+  private filterExpressionFactory = new filters.FilterExpressionFactory()
+    .registerDefaultFilterExpressions();
 
   constructor(private model: ODataQueries.QueryModel, private schema: Schema.Schema) {
     this.prepareSparqlQuery();
@@ -53,15 +56,14 @@ export class EntitySetQuery implements ODataQueries.Query {
     return entitySetSchema.getEntityType();
   }
 
-  private getExpandTree(): any {
-    return this.model.expandTree;
-  }
-
   /** this.mapping has to be initialized before. */
   private initializeQueryStringAfterMapping() {
     let expandGraphPattern = this.createGraphPatternUponMapping();
+    let filterExpression = this.createFilterExpression();
     let queryStringBuilder = this.createQueryStringBuilder();
-    this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern);
+    this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
+      filterExpression: filterExpression,
+    });
   }
 
   private initializeVariableMapping() {
@@ -73,11 +75,23 @@ export class EntitySetQuery implements ODataQueries.Query {
     return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
   }
 
+  private createFilterExpression(): filters.FilterExpression {
+    if(this.getRawFilter()) return this.filterExpressionFactory.fromRaw(this.getRawFilter());
+  }
+
   private createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
     queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
     return queryStringBuilder;
+  }
+
+  private getExpandTree() {
+    return this.model.expandTree;
+  }
+
+  private getRawFilter() {
+    return this.model.filterOption;
   }
 }
 

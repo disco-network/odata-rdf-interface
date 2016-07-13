@@ -15,6 +15,11 @@ describe("A filter factory", function () {
         expect(filter.lhs instanceof filters.StringLiteralExpression).toBe(true);
         expect(filter.rhs instanceof filters.StringLiteralExpression).toBe(true);
     });
+    it("should throw if there's no matching expression", function () {
+        var raw = { type: "is-42", value: "4*2" };
+        var factory = new filters.FilterExpressionFactory();
+        expect(function () { return factory.fromRaw(raw); }).toThrow();
+    });
 });
 describe("A StringLiteralExpression", function () {
     it("should render to a SPARQL string", function () {
@@ -23,7 +28,7 @@ describe("A StringLiteralExpression", function () {
     });
     xit("should escape special characters", function () { return undefined; });
 });
-describe("A EqExpression", function () {
+describe("An EqExpression", function () {
     it("should render to a SPARQL string", function () {
         var factory = new filters.FilterExpressionFactory();
         factory.registerDefaultFilterExpressions();
@@ -32,7 +37,7 @@ describe("A EqExpression", function () {
             lhs: { type: "test", value: "(lhs)" },
             rhs: { type: "test", value: "(rhs)" },
         });
-        expect(expr.toSparql()).toBe("(lhs) = (rhs)");
+        expect(expr.toSparql()).toBe("((lhs) = (rhs))");
     });
 });
 var TestFilterExpression = (function () {

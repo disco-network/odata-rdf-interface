@@ -138,8 +138,7 @@ describe("The query engine should evaluate", function () {
                         });
                     }
                     catch (e) {
-                        console.log(e.stack);
-                        expect("exception").toBe("no exception");
+                        expect(e).toBe("no exception");
                         done();
                     }
                 });

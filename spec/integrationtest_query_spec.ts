@@ -144,8 +144,7 @@ describe("The query engine should evaluate", () => {
             done();
           }); }
           catch (e) {
-            console.log(e.stack);
-            expect("exception").toBe("no exception");
+            expect(e).toBe("no exception");
             done();
           }
         });
