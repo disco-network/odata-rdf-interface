@@ -68,6 +68,10 @@ var SparqlQueryContext = (function () {
         if (obj)
             return obj.value;
     };
+    SparqlQueryContext.prototype.forEachPropertyOfResult = function (result, fn) {
+        this.forEachElementaryPropertyOfResult(result, fn);
+        this.forEachComplexPropertyOfResult(result, fn);
+    };
     SparqlQueryContext.prototype.forEachElementaryPropertyOfResult = function (result, fn) {
         var _this = this;
         this.rootTypeSchema.getPropertyNames().forEach(function (propertyName) {
@@ -85,6 +89,10 @@ var SparqlQueryContext = (function () {
             var hasValue = result[propertyIdVar.substr(1)] !== undefined;
             fn(result, this.rootTypeSchema.getProperty(propertyName), hasValue);
         }
+    };
+    SparqlQueryContext.prototype.forEachPropertySchema = function (fn) {
+        this.forEachElementaryPropertySchema(fn);
+        this.forEachComplexPropertySchema(fn);
     };
     SparqlQueryContext.prototype.forEachElementaryPropertySchema = function (fn) {
         var _this = this;

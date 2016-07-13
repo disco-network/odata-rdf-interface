@@ -75,10 +75,7 @@ export class EvaluatedComplexEntity implements EvaluatedEntity {
         this.id = id;
         this.value = {};
       }
-      this.context.forEachElementaryPropertyOfResult(result, (value, property, hasValue) => {
-        this.applyResultToProperty(property, value);
-      });
-      this.context.forEachComplexPropertyOfResult(result, (value, property, hasValue) => {
+      this.context.forEachPropertyOfResult(result, (value, property, hasValue) => {
         this.applyResultToProperty(property, value);
       });
     }
@@ -97,8 +94,7 @@ export class EvaluatedComplexEntity implements EvaluatedEntity {
       serialized[propertyName] = entity !== undefined ? entity.serializeToODataJson() : null;
     };
 
-    this.context.forEachElementaryPropertySchema(serializeProperty);
-    this.context.forEachComplexPropertySchema(serializeProperty);
+    this.context.forEachPropertySchema(serializeProperty);
 
     return serialized;
   }
@@ -157,6 +153,9 @@ export interface QueryContext {
   forEachElementaryPropertyOfResult(result, fn: (value, property: Schema.Property, hasValue: boolean) => void): void;
   /** Iterate over all complex properties expected by the query. */
   forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property, hasValue: boolean) => void): void;
+  /** Iterate over all properties and pass their value respective subResult. */
+  forEachPropertyOfResult(result, fn: (value, property: Schema.Property, hasValue: boolean) => void): void;
+  forEachPropertySchema(fn: (property: Schema.Property) => void): void;
   forEachElementaryPropertySchema(fn: (property: Schema.Property) => void): void;
   forEachComplexPropertySchema(fn: (property: Schema.Property) => void): void;
   getUniqueIdOfResult(result): string;

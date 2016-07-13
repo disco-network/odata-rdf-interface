@@ -28,10 +28,7 @@ var EvaluatedEntityCollection = (function () {
         if (id === undefined)
             return;
         if (this.entities[id] === undefined) {
-            if (this.kind === Schema.EntityKind.Elementary)
-                this.entities[id] = new EvaluatedElementaryEntity();
-            else
-                this.entities[id] = new EvaluatedComplexEntity(this.context);
+            this.entities[id] = EvaluatedEntityFactory.fromEntityKind(this.kind, this.context);
         }
         this.entities[id].applyResult(result);
     };
@@ -57,10 +54,7 @@ var EvaluatedComplexEntity = (function () {
                 this.id = id;
                 this.value = {};
             }
-            this.context.forEachElementaryPropertyOfResult(result, function (value, property, hasValue) {
-                _this.applyResultToProperty(property, value);
-            });
-            this.context.forEachComplexPropertyOfResult(result, function (value, property, hasValue) {
+            this.context.forEachPropertyOfResult(result, function (value, property, hasValue) {
                 _this.applyResultToProperty(property, value);
             });
         }
@@ -78,8 +72,7 @@ var EvaluatedComplexEntity = (function () {
             var entity = _this.value[propertyName];
             serialized[propertyName] = entity !== undefined ? entity.serializeToODataJson() : null;
         };
-        this.context.forEachElementaryPropertySchema(serializeProperty);
-        this.context.forEachComplexPropertySchema(serializeProperty);
+        this.context.forEachPropertySchema(serializeProperty);
         return serialized;
     };
     EvaluatedComplexEntity.prototype.applyResultToProperty = function (property, result) {

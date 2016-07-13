@@ -72,7 +72,13 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
     if (obj) return obj.value;
   }
 
-  public forEachElementaryPropertyOfResult(result, fn: (property: string, variable: Schema.Property,
+  public forEachPropertyOfResult(result, fn: (value, property: Schema.Property,
+          hasValue: boolean) => void): void {
+    this.forEachElementaryPropertyOfResult(result, fn);
+    this.forEachComplexPropertyOfResult(result, fn);
+  }
+
+  public forEachElementaryPropertyOfResult(result, fn: (value, variable: Schema.Property,
           hasValue: boolean) => void): void {
     this.rootTypeSchema.getPropertyNames().forEach(propertyName => {
       let property = this.rootTypeSchema.getProperty(propertyName);
@@ -91,6 +97,11 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
       let hasValue = result[propertyIdVar.substr(1)] !== undefined;
       fn(result, this.rootTypeSchema.getProperty(propertyName), hasValue);
     }
+  }
+
+  public forEachPropertySchema(fn: (property: Schema.Property) => void): void {
+    this.forEachElementaryPropertySchema(fn);
+    this.forEachComplexPropertySchema(fn);
   }
 
   public forEachElementaryPropertySchema(fn: (property) => void): void {
