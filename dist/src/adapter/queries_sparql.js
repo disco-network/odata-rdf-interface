@@ -26,8 +26,6 @@ var EntitySetQuery = (function () {
     function EntitySetQuery(model, schema) {
         this.model = model;
         this.schema = schema;
-        this.filterExpressionFactory = new filters.FilterExpressionFactory()
-            .registerDefaultFilterExpressions();
         this.prepareSparqlQuery();
     }
     EntitySetQuery.prototype.run = function (sparqlProvider, cb) {
@@ -38,6 +36,7 @@ var EntitySetQuery = (function () {
     };
     EntitySetQuery.prototype.prepareSparqlQuery = function () {
         this.initializeVariableMapping();
+        this.initializeFilterExpressionFactory();
         this.initializeQueryStringAfterMapping();
     };
     EntitySetQuery.prototype.translateResponseToOData = function (response) {
@@ -54,21 +53,32 @@ var EntitySetQuery = (function () {
         var entitySetSchema = this.schema.getEntitySet(this.model.entitySetName);
         return entitySetSchema.getEntityType();
     };
-    /** this.mapping has to be initialized before. */
-    EntitySetQuery.prototype.initializeQueryStringAfterMapping = function () {
-        var expandGraphPattern = this.createGraphPatternUponMapping();
-        var filterExpression = this.createFilterExpression();
-        var queryStringBuilder = this.createQueryStringBuilder();
-        this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
-            filterExpression: filterExpression,
-        });
-    };
     EntitySetQuery.prototype.initializeVariableMapping = function () {
         var vargen = new mappings.SparqlVariableGenerator();
         this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
     };
-    EntitySetQuery.prototype.createGraphPatternUponMapping = function () {
+    EntitySetQuery.prototype.initializeFilterExpressionFactory = function () {
+        this.filterExpressionFactory = new filters.FilterExpressionFactory()
+            .registerDefaultFilterExpressions()
+            .setSparqlVariableMapping(this.mapping);
+    };
+    /** this.mapping has to be initialized before. */
+    EntitySetQuery.prototype.initializeQueryStringAfterMapping = function () {
+        var expandGraphPattern = this.createGraphPattern();
+        var filterExpression = this.createFilterExpression();
+        var filterGraphPattern = this.createFilterGraphPattern(filterExpression);
+        var queryStringBuilder = this.createQueryStringBuilder();
+        this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
+            filterExpression: filterExpression,
+            filterPattern: filterGraphPattern,
+        });
+    };
+    EntitySetQuery.prototype.createGraphPattern = function () {
         return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
+    };
+    EntitySetQuery.prototype.createFilterGraphPattern = function (filterExpression) {
+        if (filterExpression !== undefined)
+            return new gpatterns.FilterGraphPattern(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(), this.mapping);
     };
     EntitySetQuery.prototype.createFilterExpression = function () {
         if (this.getRawFilter())

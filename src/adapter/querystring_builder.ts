@@ -10,15 +10,17 @@ export class QueryStringBuilder {
 
   public fromGraphPattern(graphPattern: gpatterns.TreeGraphPattern,
                           options?: QueryStringBuilderOptions): string {
-    let filterExpression = options.filterExpression || undefined;
     return this.buildPrefixString() +
-      " SELECT * WHERE " + this.buildGraphPatternStringWithFilters(graphPattern, filterExpression);
+      " SELECT * WHERE " + this.buildGraphPatternStringWithOptions(graphPattern, options);
   }
 
-  public buildGraphPatternStringWithFilters(graphPattern, filter?: filters.FilterExpression): string {
-    let ret = "{ " + this.buildGraphPatternContentString(graphPattern);
-    if (filter !== undefined) {
-      ret += " . FILTER(" + filter.toSparql() + ")";
+  public buildGraphPatternStringWithOptions(graphPattern, options?: QueryStringBuilderOptions): string {
+    let ret = "{ " + this.buildGraphPatternString(graphPattern);
+    if (options && options.filterExpression) {
+      if (options && options.filterPattern) {
+        ret += " . " + this.buildGraphPatternString(options.filterPattern);
+      }
+      ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
     }
     ret += " }";
     return ret;
@@ -62,4 +64,5 @@ export class QueryStringBuilder {
 
 export interface QueryStringBuilderOptions {
   filterExpression?: filters.FilterExpression;
+  filterPattern?: gpatterns.FilterGraphPattern;
 }

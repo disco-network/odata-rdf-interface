@@ -38,6 +38,16 @@ describe("odata parser", function() {
     expect(filterOption.rhs.value).toBe("1");
   });
 
+  it("should parse a simple member expression", () => {
+    let parser = initODataParser();
+    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
+      "Posts?$filter=Id eq '1'").evaluate();
+
+    let filterOption = result.queryOptions.filter;
+    expect(filterOption.lhs.type).toBe("member-expression");
+    expect(filterOption.lhs.path.propertyName).toBe("Id");
+  });
+
   function initODataParser() {
     let abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
     let tok = abnfTokenizer.tokenize(abnf);

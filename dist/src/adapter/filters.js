@@ -7,13 +7,17 @@ var FilterExpressionFactory = (function () {
         for (var i = 0; i < this.registeredFilterExpressions.length; ++i) {
             var SelectedFilterExpression = this.registeredFilterExpressions[i];
             if (SelectedFilterExpression.doesApplyToRaw(raw))
-                return SelectedFilterExpression.create(raw, this);
+                return SelectedFilterExpression.create(raw, this.mapping, this);
         }
         throw new Error("filter expression is not supported: " + JSON.stringify(raw));
     };
+    FilterExpressionFactory.prototype.setSparqlVariableMapping = function (mapping) {
+        this.mapping = mapping;
+        return this;
+    };
     FilterExpressionFactory.prototype.registerDefaultFilterExpressions = function () {
         this.registerFilterExpressions([
-            StringLiteralExpression, EqExpression,
+            StringLiteralExpression, EqExpression, PropertyExpression,
         ]);
         return this;
     };
@@ -35,7 +39,7 @@ var StringLiteralExpression = (function () {
     StringLiteralExpression.doesApplyToRaw = function (raw) {
         return raw.type === "string";
     };
-    StringLiteralExpression.create = function (raw, factory) {
+    StringLiteralExpression.create = function (raw, mapping, factory) {
         var ret = new StringLiteralExpression();
         ret.value = raw.value;
         return ret;
@@ -58,7 +62,7 @@ var EqExpression = (function () {
     EqExpression.doesApplyToRaw = function (raw) {
         return raw.type === "operator" && raw.op === "eq";
     };
-    EqExpression.create = function (raw, factory) {
+    EqExpression.create = function (raw, mapping, factory) {
         var ret = new EqExpression();
         ret.lhs = factory.fromRaw(raw.lhs);
         ret.rhs = factory.fromRaw(raw.rhs);
@@ -76,6 +80,32 @@ var EqExpression = (function () {
     return EqExpression;
 }());
 exports.EqExpression = EqExpression;
+var PropertyExpression = (function () {
+    function PropertyExpression() {
+    }
+    PropertyExpression.doesApplyToRaw = function (raw) {
+        return raw.type === "member-expression";
+    };
+    PropertyExpression.create = function (raw, mapping, factory) {
+        var ret = new PropertyExpression();
+        ret.propertyName = raw.path.propertyName;
+        ret.mapping = mapping;
+        return ret;
+    };
+    PropertyExpression.prototype.getSubExpressions = function () {
+        return [];
+    };
+    PropertyExpression.prototype.getPropertyTree = function () {
+        var tree = {};
+        tree[this.propertyName] = {};
+        return tree;
+    };
+    PropertyExpression.prototype.toSparql = function () {
+        return this.mapping.getElementaryPropertyVariable(this.propertyName);
+    };
+    return PropertyExpression;
+}());
+exports.PropertyExpression = PropertyExpression;
 var PropertyTreeBuilder = (function () {
     function PropertyTreeBuilder() {
         this.tree = {};

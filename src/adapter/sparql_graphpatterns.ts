@@ -64,6 +64,7 @@ export class TreeGraphPattern {
   private branchPattern: GraphPatternWithBranches;
   private inverseBranchPattern: GraphPatternWithBranches;
   private optionalBranchPattern: GraphPatternWithBranches;
+  private optionalInverseBranchPattern: GraphPatternWithBranches;
 
   private valueLeaves: { [id: string]: ValueLeaf[] } = { };
   private unionPatterns: TreeGraphPattern[] = [ ];
@@ -81,6 +82,7 @@ export class TreeGraphPattern {
     this.branchPattern = new GraphPatternWithBranches(createTriple);
     this.inverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
     this.optionalBranchPattern = new GraphPatternWithBranches(createTriple);
+    this.optionalInverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
   }
 
   public getDirectTriples(): any[][] {
@@ -108,11 +110,18 @@ export class TreeGraphPattern {
 
   public getOptionalPatterns(): TreeGraphPattern[] {
     let patterns = [];
-    this.optionalBranchPattern.enumerateBranches((property, branch) => {
+    let addBranch = (property, branch) => {
       let gp = new TreeGraphPattern(this.name());
       gp.branch(property, branch);
       patterns.push(gp);
-    });
+    };
+    let addInverseBranch = (property, branch) => {
+      let gp = new TreeGraphPattern(this.name());
+      gp.inverseBranch(property, branch);
+      patterns.push(gp);
+    };
+    this.optionalBranchPattern.enumerateBranches(addBranch);
+    this.optionalInverseBranchPattern.enumerateBranches(addInverseBranch);
     return patterns;
   }
 
@@ -176,6 +185,22 @@ export class TreeGraphPattern {
       case "string":
         let pat = new TreeGraphPattern(arg);
         return this.optionalBranchPattern.branch(property, pat);
+      default:
+        throw new Error("branch argument is neither string nor object");
+    }
+  }
+
+  public optionalInverseBranch(property: string): TreeGraphPattern[];
+  public optionalInverseBranch(property: string, arg: string): TreeGraphPattern;
+  public optionalInverseBranch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
+  public optionalInverseBranch(property, arg?): any {
+    switch (typeof arg) {
+      case "undefined":
+      case "object":
+        return this.optionalInverseBranchPattern.branch(property, arg);
+      case "string":
+        let pat = new TreeGraphPattern(arg);
+        return this.optionalInverseBranchPattern.branch(property, pat);
       default:
         throw new Error("branch argument is neither string nor object");
     }
@@ -250,9 +275,9 @@ export class DirectPropertiesGraphPattern extends TreeGraphPattern {
 }
 
 /**
- * Provides a SPARQL graph pattern according to an entity type schema,
- * an expand tree and a StructuredSparqlVariableMapping so that it contains
- * all the data necessary for an OData $expand query.
+ * Provides a SPARQL graph pattern according to an entity type schema, an expand tree
+ * (only considering complex properties) and a StructuredSparqlVariableMapping
+ * so that it contains all data necessary for an OData $expand query.
  */
 export class ExpandTreeGraphPattern extends TreeGraphPattern {
   constructor(entityType: Schema.EntityType, expandTree, mapping: Mappings.StructuredSparqlVariableMapping) {
@@ -278,6 +303,45 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
       } else {
 
         this.newUnionPattern().branch(property.getNamespacedUri(), gp);
+      }
+    });
+  }
+}
+
+export class FilterGraphPattern extends TreeGraphPattern {
+  constructor(entityType: Schema.EntityType, propertyTree: any, mapping: Mappings.StructuredSparqlVariableMapping) {
+    super(mapping.getVariable());
+
+    Object.keys(propertyTree).forEach(propertyName => {
+      let property = entityType.getProperty(propertyName);
+      switch (property.getEntityKind()) {
+        case Schema.EntityKind.Elementary:
+          if (property.mirroredFromProperty()) {
+            let mirroringProperty = property.mirroredFromProperty();
+            let mirroringPropertyVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+            this
+              .optionalBranch(mirroringProperty.getNamespacedUri(), mirroringPropertyVar)
+              /* @smell "disco:id" */
+              .branch("disco:id", mapping.getElementaryPropertyVariable(propertyName));
+          }
+          else {
+            this.optionalBranch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
+          }
+          break;
+        case Schema.EntityKind.Complex:
+          if (!property.isQuantityOne()) throw new Error("properties of higher cardinality are not allowed");
+
+          let branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName],
+            mapping.getComplexProperty("propertyName"));
+          if (property.hasDirectRdfRepresentation()) {
+            this.optionalBranch(property.getNamespacedUri(), branchedPattern);
+          }
+          else {
+            let inverseProperty = property.getInverseProperty();
+            this.optionalInverseBranch(inverseProperty.getNamespacedUri(), branchedPattern);
+          }
+        default:
+          throw new Error("invalid entity kind " + property.getEntityKind());
       }
     });
   }

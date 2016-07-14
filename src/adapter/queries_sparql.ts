@@ -22,8 +22,7 @@ export class QueryFactory {
 export class EntitySetQuery implements ODataQueries.Query {
   private mapping: mappings.StructuredSparqlVariableMapping;
   private queryString: string;
-  private filterExpressionFactory = new filters.FilterExpressionFactory()
-    .registerDefaultFilterExpressions();
+  private filterExpressionFactory: filters.FilterExpressionFactory;
 
   constructor(private model: ODataQueries.QueryModel, private schema: Schema.Schema) {
     this.prepareSparqlQuery();
@@ -37,6 +36,7 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private prepareSparqlQuery() {
     this.initializeVariableMapping();
+    this.initializeFilterExpressionFactory();
     this.initializeQueryStringAfterMapping();
   }
 
@@ -56,27 +56,41 @@ export class EntitySetQuery implements ODataQueries.Query {
     return entitySetSchema.getEntityType();
   }
 
-  /** this.mapping has to be initialized before. */
-  private initializeQueryStringAfterMapping() {
-    let expandGraphPattern = this.createGraphPatternUponMapping();
-    let filterExpression = this.createFilterExpression();
-    let queryStringBuilder = this.createQueryStringBuilder();
-    this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
-      filterExpression: filterExpression,
-    });
-  }
-
   private initializeVariableMapping() {
     let vargen = new mappings.SparqlVariableGenerator();
     this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
   }
 
-  private createGraphPatternUponMapping(): gpatterns.ExpandTreeGraphPattern {
+  private initializeFilterExpressionFactory() {
+    this.filterExpressionFactory = new filters.FilterExpressionFactory()
+      .registerDefaultFilterExpressions()
+      .setSparqlVariableMapping(this.mapping);
+  }
+
+  /** this.mapping has to be initialized before. */
+  private initializeQueryStringAfterMapping() {
+    let expandGraphPattern = this.createGraphPattern();
+    let filterExpression = this.createFilterExpression();
+    let filterGraphPattern = this.createFilterGraphPattern(filterExpression);
+    let queryStringBuilder = this.createQueryStringBuilder();
+    this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
+      filterExpression: filterExpression,
+      filterPattern: filterGraphPattern,
+    });
+  }
+
+  private createGraphPattern(): gpatterns.ExpandTreeGraphPattern {
     return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
   }
 
+  private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.FilterGraphPattern {
+    if (filterExpression !== undefined)
+      return new gpatterns.FilterGraphPattern(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(),
+        this.mapping);
+  }
+
   private createFilterExpression(): filters.FilterExpression {
-    if(this.getRawFilter()) return this.filterExpressionFactory.fromRaw(this.getRawFilter());
+    if (this.getRawFilter()) return this.filterExpressionFactory.fromRaw(this.getRawFilter());
   }
 
   private createQueryStringBuilder(): qsBuilder.QueryStringBuilder {

@@ -7,14 +7,16 @@ var QueryStringBuilder = (function () {
         this.prefixes[prefix] = uri;
     };
     QueryStringBuilder.prototype.fromGraphPattern = function (graphPattern, options) {
-        var filterExpression = options.filterExpression || undefined;
         return this.buildPrefixString() +
-            " SELECT * WHERE " + this.buildGraphPatternStringWithFilters(graphPattern, filterExpression);
+            " SELECT * WHERE " + this.buildGraphPatternStringWithOptions(graphPattern, options);
     };
-    QueryStringBuilder.prototype.buildGraphPatternStringWithFilters = function (graphPattern, filter) {
-        var ret = "{ " + this.buildGraphPatternContentString(graphPattern);
-        if (filter !== undefined) {
-            ret += " . FILTER(" + filter.toSparql() + ")";
+    QueryStringBuilder.prototype.buildGraphPatternStringWithOptions = function (graphPattern, options) {
+        var ret = "{ " + this.buildGraphPatternString(graphPattern);
+        if (options && options.filterExpression) {
+            if (options && options.filterPattern) {
+                ret += " . " + this.buildGraphPatternString(options.filterPattern);
+            }
+            ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
         }
         ret += " }";
         return ret;

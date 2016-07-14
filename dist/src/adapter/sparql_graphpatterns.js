@@ -4,6 +4,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var Schema = require("../odata/schema");
 var GraphPatternWithBranches = (function () {
     function GraphPatternWithBranches(createTriple) {
         this.branches = {};
@@ -74,6 +75,7 @@ var TreeGraphPattern = (function () {
         this.branchPattern = new GraphPatternWithBranches(createTriple);
         this.inverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
         this.optionalBranchPattern = new GraphPatternWithBranches(createTriple);
+        this.optionalInverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
     }
     TreeGraphPattern.prototype.getDirectTriples = function () {
         var _this = this;
@@ -101,11 +103,18 @@ var TreeGraphPattern = (function () {
     TreeGraphPattern.prototype.getOptionalPatterns = function () {
         var _this = this;
         var patterns = [];
-        this.optionalBranchPattern.enumerateBranches(function (property, branch) {
+        var addBranch = function (property, branch) {
             var gp = new TreeGraphPattern(_this.name());
             gp.branch(property, branch);
             patterns.push(gp);
-        });
+        };
+        var addInverseBranch = function (property, branch) {
+            var gp = new TreeGraphPattern(_this.name());
+            gp.inverseBranch(property, branch);
+            patterns.push(gp);
+        };
+        this.optionalBranchPattern.enumerateBranches(addBranch);
+        this.optionalInverseBranchPattern.enumerateBranches(addInverseBranch);
         return patterns;
     };
     TreeGraphPattern.prototype.getUnionPatterns = function () {
@@ -154,6 +163,18 @@ var TreeGraphPattern = (function () {
             case "string":
                 var pat = new TreeGraphPattern(arg);
                 return this.optionalBranchPattern.branch(property, pat);
+            default:
+                throw new Error("branch argument is neither string nor object");
+        }
+    };
+    TreeGraphPattern.prototype.optionalInverseBranch = function (property, arg) {
+        switch (typeof arg) {
+            case "undefined":
+            case "object":
+                return this.optionalInverseBranchPattern.branch(property, arg);
+            case "string":
+                var pat = new TreeGraphPattern(arg);
+                return this.optionalInverseBranchPattern.branch(property, pat);
             default:
                 throw new Error("branch argument is neither string nor object");
         }
@@ -227,9 +248,9 @@ var DirectPropertiesGraphPattern = (function (_super) {
 }(TreeGraphPattern));
 exports.DirectPropertiesGraphPattern = DirectPropertiesGraphPattern;
 /**
- * Provides a SPARQL graph pattern according to an entity type schema,
- * an expand tree and a StructuredSparqlVariableMapping so that it contains
- * all the data necessary for an OData $expand query.
+ * Provides a SPARQL graph pattern according to an entity type schema, an expand tree
+ * (only considering complex properties) and a StructuredSparqlVariableMapping
+ * so that it contains all data necessary for an OData $expand query.
  */
 var ExpandTreeGraphPattern = (function (_super) {
     __extends(ExpandTreeGraphPattern, _super);
@@ -257,5 +278,44 @@ var ExpandTreeGraphPattern = (function (_super) {
     return ExpandTreeGraphPattern;
 }(TreeGraphPattern));
 exports.ExpandTreeGraphPattern = ExpandTreeGraphPattern;
+var FilterGraphPattern = (function (_super) {
+    __extends(FilterGraphPattern, _super);
+    function FilterGraphPattern(entityType, propertyTree, mapping) {
+        var _this = this;
+        _super.call(this, mapping.getVariable());
+        Object.keys(propertyTree).forEach(function (propertyName) {
+            var property = entityType.getProperty(propertyName);
+            switch (property.getEntityKind()) {
+                case Schema.EntityKind.Elementary:
+                    if (property.mirroredFromProperty()) {
+                        var mirroringProperty = property.mirroredFromProperty();
+                        var mirroringPropertyVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+                        _this
+                            .optionalBranch(mirroringProperty.getNamespacedUri(), mirroringPropertyVar)
+                            .branch("disco:id", mapping.getElementaryPropertyVariable(propertyName));
+                    }
+                    else {
+                        _this.optionalBranch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
+                    }
+                    break;
+                case Schema.EntityKind.Complex:
+                    if (!property.isQuantityOne())
+                        throw new Error("properties of higher cardinality are not allowed");
+                    var branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty("propertyName"));
+                    if (property.hasDirectRdfRepresentation()) {
+                        _this.optionalBranch(property.getNamespacedUri(), branchedPattern);
+                    }
+                    else {
+                        var inverseProperty = property.getInverseProperty();
+                        _this.optionalInverseBranch(inverseProperty.getNamespacedUri(), branchedPattern);
+                    }
+                default:
+                    throw new Error("invalid entity kind " + property.getEntityKind());
+            }
+        });
+    }
+    return FilterGraphPattern;
+}(TreeGraphPattern));
+exports.FilterGraphPattern = FilterGraphPattern;
 
 //# sourceMappingURL=../../../maps/src/adapter/sparql_graphpatterns.js.map

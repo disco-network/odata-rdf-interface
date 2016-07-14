@@ -27,7 +27,7 @@ describe("A filter factory", () => {
 
 describe("A StringLiteralExpression", () => {
   it("should render to a SPARQL string", () => {
-    let expr = filters.StringLiteralExpression.create({ type: "string", value: "cat" }, null);
+    let expr = filters.StringLiteralExpression.create({ type: "string", value: "cat" }, null, null);
     expect(expr.toSparql()).toBe("'cat'");
   });
 

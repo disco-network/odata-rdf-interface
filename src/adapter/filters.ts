@@ -1,22 +1,36 @@
+import mappings = require("./sparql_mappings");
+
+export interface FilterExpression {
+  getSubExpressions(): FilterExpression[];
+  getPropertyTree(): PropertyTree;
+  toSparql(): string;
+}
+
 export interface FilterExpressionClass {
-  create(raw, factory: FilterExpressionFactory): FilterExpression;
+  create(raw, mapping: mappings.StructuredSparqlVariableMapping, factory: FilterExpressionFactory): FilterExpression;
   doesApplyToRaw(raw): boolean;
 }
 
 export class FilterExpressionFactory {
   private registeredFilterExpressions: FilterExpressionClass[] = [];
+  private mapping: mappings.StructuredSparqlVariableMapping;
 
   public fromRaw(raw: any): FilterExpression {
     for (let i = 0; i < this.registeredFilterExpressions.length; ++i) {
       let SelectedFilterExpression = this.registeredFilterExpressions[i];
-      if (SelectedFilterExpression.doesApplyToRaw(raw)) return SelectedFilterExpression.create(raw, this);
+      if (SelectedFilterExpression.doesApplyToRaw(raw)) return SelectedFilterExpression.create(raw, this.mapping, this);
     }
     throw new Error("filter expression is not supported: " + JSON.stringify(raw));
   }
 
+  public setSparqlVariableMapping(mapping: mappings.StructuredSparqlVariableMapping) {
+    this.mapping = mapping;
+    return this;
+  }
+
   public registerDefaultFilterExpressions() {
     this.registerFilterExpressions([
-      StringLiteralExpression, EqExpression,
+      StringLiteralExpression, EqExpression, PropertyExpression,
     ]);
     return this;
   }
@@ -33,19 +47,14 @@ export class FilterExpressionFactory {
   }
 }
 
-export interface FilterExpression {
-  getSubExpressions(): FilterExpression[];
-  getPropertyTree(): PropertyTree;
-  toSparql(): string;
-}
-
 export class StringLiteralExpression implements FilterExpression {
 
   public static doesApplyToRaw(raw): boolean {
     return raw.type === "string";
   }
 
-  public static create(raw, factory: FilterExpressionFactory): StringLiteralExpression {
+  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
+                       factory: FilterExpressionFactory): StringLiteralExpression {
     let ret = new StringLiteralExpression();
     ret.value = raw.value;
     return ret;
@@ -74,7 +83,8 @@ export class EqExpression implements FilterExpression {
     return raw.type === "operator" && raw.op === "eq";
   }
 
-  public static create(raw, factory: FilterExpressionFactory): EqExpression {
+  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
+                       factory: FilterExpressionFactory): EqExpression {
     let ret = new EqExpression();
     ret.lhs = factory.fromRaw(raw.lhs);
     ret.rhs = factory.fromRaw(raw.rhs);
@@ -96,6 +106,40 @@ export class EqExpression implements FilterExpression {
 
   public toSparql(): string {
     return "(" + this.lhs.toSparql() + " = " + this.rhs.toSparql() + ")";
+  }
+}
+
+export class PropertyExpression implements FilterExpression {
+
+  public static doesApplyToRaw(raw) {
+    return raw.type === "member-expression";
+  }
+
+  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
+                       factory: FilterExpressionFactory): PropertyExpression {
+    let ret = new PropertyExpression();
+    ret.propertyName = raw.path.propertyName;
+    ret.mapping = mapping;
+    return ret;
+  }
+
+  // ===
+
+  private propertyName: string;
+  private mapping: mappings.StructuredSparqlVariableMapping;
+
+  public getSubExpressions(): FilterExpression[] {
+    return [];
+  }
+
+  public getPropertyTree(): PropertyTree {
+    let tree: PropertyTree = {};
+    tree[this.propertyName] = {};
+    return tree;
+  }
+
+  public toSparql(): string {
+    return this.mapping.getElementaryPropertyVariable(this.propertyName);
   }
 }
 

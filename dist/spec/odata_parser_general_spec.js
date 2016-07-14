@@ -30,6 +30,13 @@ describe("odata parser", function () {
         expect(filterOption.rhs.type).toBe("string");
         expect(filterOption.rhs.value).toBe("1");
     });
+    it("should parse a simple member expression", function () {
+        var parser = initODataParser();
+        var result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"), "Posts?$filter=Id eq '1'").evaluate();
+        var filterOption = result.queryOptions.filter;
+        expect(filterOption.lhs.type).toBe("member-expression");
+        expect(filterOption.lhs.path.propertyName).toBe("Id");
+    });
     function initODataParser() {
         var abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
         var tok = abnfTokenizer.tokenize(abnf);
