@@ -51,7 +51,7 @@ app.use(config.path, function(req, res, next) {
  */
 function sendResults(res, result): void {
   if (!result.error) {
-    res.writeHeader(200, { "Content-type": "application/json" });
+    res.writeHeader(200, { "Content-type": "application/json", "Access-Control-Allow-Origin": "*" });
     res.end(JSON.stringify(result.result, null, 2));
   }
   else {

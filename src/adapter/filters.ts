@@ -30,7 +30,9 @@ export class FilterExpressionFactory {
 
   public registerDefaultFilterExpressions() {
     this.registerFilterExpressions([
-      StringLiteralExpression, EqExpression, PropertyExpression,
+      StringLiteralExpression, NumberLiteralExpression,
+      EqExpression,
+      PropertyExpression,
     ]);
     return this;
   }
@@ -74,6 +76,37 @@ export class StringLiteralExpression implements FilterExpression {
 
   public toSparql(): string {
     return "'" + this.value + "'";
+  }
+}
+
+export class NumberLiteralExpression implements FilterExpression {
+
+  public static doesApplyToRaw(raw): boolean {
+    return raw.type === "decimalValue";
+  }
+
+  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
+                       factory: FilterExpressionFactory): NumberLiteralExpression {
+    let ret = new NumberLiteralExpression();
+    ret.value = parseInt(raw.value, 10);
+    if (isNaN(ret.value)) throw new Error("error parsing number " + raw.value);
+    return ret;
+  }
+
+  // ===
+
+  public value: number;
+
+  public getSubExpressions(): FilterExpression[] {
+    return [];
+  }
+
+  public getPropertyTree(): PropertyTree {
+    return {};
+  }
+
+  public toSparql(): string {
+    return this.value.toString();
   }
 }
 

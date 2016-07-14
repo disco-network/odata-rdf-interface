@@ -23,10 +23,26 @@ describe("A filter factory", function () {
 });
 describe("A StringLiteralExpression", function () {
     it("should render to a SPARQL string", function () {
-        var expr = filters.StringLiteralExpression.create({ type: "string", value: "cat" }, null);
+        var expr = filters.StringLiteralExpression.create({ type: "string", value: "cat" }, null, null);
         expect(expr.toSparql()).toBe("'cat'");
     });
     xit("should escape special characters", function () { return undefined; });
+});
+describe("A NumberLiteralExpression", function () {
+    it("should apply to numbers", function () {
+        expect(filters.NumberLiteralExpression.doesApplyToRaw({ type: "decimalValue", value: "1" })).toBe(true);
+    });
+    it("should render to a SPARQL string", function () {
+        var expr = filters.NumberLiteralExpression.create({ type: "decimalValue", value: "1" }, null, null);
+        expect(expr.toSparql()).toBe("1");
+    });
+    it("should disallow non-number values", function () {
+        expect(function () {
+            var expr = filters.NumberLiteralExpression.create({
+                type: "decimalValue", value: "cat",
+            }, null, null);
+        }).toThrow();
+    });
 });
 describe("An EqExpression", function () {
     it("should render to a SPARQL string", function () {

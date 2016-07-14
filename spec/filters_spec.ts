@@ -34,6 +34,27 @@ describe("A StringLiteralExpression", () => {
   xit("should escape special characters", () => undefined);
 });
 
+describe("A NumberLiteralExpression", () => {
+  it("should apply to numbers", () => {
+    expect(filters.NumberLiteralExpression.doesApplyToRaw(
+      { type: "decimalValue", value: "1" }
+    )).toBe(true);
+  });
+
+  it("should render to a SPARQL string", () => {
+    let expr = filters.NumberLiteralExpression.create({ type: "decimalValue", value: "1" }, null, null);
+    expect(expr.toSparql()).toBe("1");
+  });
+
+  it("should disallow non-number values", () => {
+    expect(() => {
+      let expr = filters.NumberLiteralExpression.create({
+        type: "decimalValue", value: "cat",
+      }, null, null);
+    }).toThrow();
+  });
+});
+
 describe("An EqExpression", () => {
   it("should render to a SPARQL string", () => {
     let factory = new filters.FilterExpressionFactory();

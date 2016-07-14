@@ -17,7 +17,9 @@ var FilterExpressionFactory = (function () {
     };
     FilterExpressionFactory.prototype.registerDefaultFilterExpressions = function () {
         this.registerFilterExpressions([
-            StringLiteralExpression, EqExpression, PropertyExpression,
+            StringLiteralExpression, NumberLiteralExpression,
+            EqExpression,
+            PropertyExpression,
         ]);
         return this;
     };
@@ -56,6 +58,31 @@ var StringLiteralExpression = (function () {
     return StringLiteralExpression;
 }());
 exports.StringLiteralExpression = StringLiteralExpression;
+var NumberLiteralExpression = (function () {
+    function NumberLiteralExpression() {
+    }
+    NumberLiteralExpression.doesApplyToRaw = function (raw) {
+        return raw.type === "decimalValue";
+    };
+    NumberLiteralExpression.create = function (raw, mapping, factory) {
+        var ret = new NumberLiteralExpression();
+        ret.value = parseInt(raw.value, 10);
+        if (isNaN(ret.value))
+            throw new Error("error parsing number " + raw.value);
+        return ret;
+    };
+    NumberLiteralExpression.prototype.getSubExpressions = function () {
+        return [];
+    };
+    NumberLiteralExpression.prototype.getPropertyTree = function () {
+        return {};
+    };
+    NumberLiteralExpression.prototype.toSparql = function () {
+        return this.value.toString();
+    };
+    return NumberLiteralExpression;
+}());
+exports.NumberLiteralExpression = NumberLiteralExpression;
 var EqExpression = (function () {
     function EqExpression() {
     }
