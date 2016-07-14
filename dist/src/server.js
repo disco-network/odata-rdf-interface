@@ -23,21 +23,27 @@ var provider;
 var storeName = "http://datokrat.sirius.uberspace.de/disco-test";
 var app = connect();
 app.use(config.path, function (req, res, next) {
-    // TODO: check if something important changes when config.path != '/'
-    var url = req.url.substr(1);
-    var ast = interpreter.getCompleteMatch(interpreter.getPattern("odataRelativeUri"), url);
-    var queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), schm.raw);
-    var query = (new sparqlQueries.QueryFactory(queryModel, schm)).create();
-    query.run(provider, function (result) {
-        sendResults(res, result);
-    });
+    if (req.method === "GET") {
+        // @todo check if something important changes when config.path != '/'
+        var url = req.url.substr(1);
+        var ast = interpreter.getCompleteMatch(interpreter.getPattern("odataRelativeUri"), url);
+        var queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), schm.raw);
+        var query = (new sparqlQueries.QueryFactory(queryModel, schm)).create();
+        query.run(provider, function (result) {
+            sendResults(res, result);
+        });
+    }
+    else if (req.method === "OPTIONS") {
+        res.writeHeader(200, { "Access-Control-Allow-Origin": "*" });
+        res.end();
+    }
 });
 /**
  * Pass the results of the query to the HTTP result object
  */
 function sendResults(res, result) {
     if (!result.error) {
-        res.writeHeader(200, { "Content-type": "application/json", "Access-Control-Allow-Origin": "*" });
+        res.writeHeader(200, { "Content-type": "application/json" });
         res.end(JSON.stringify(result.result, null, 2));
     }
     else {
