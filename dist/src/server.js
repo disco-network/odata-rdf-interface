@@ -1,6 +1,7 @@
 "use strict";
 var connect = require("connect");
 var fs = require("fs");
+var config = require("./config");
 var abnfTokenizer = require("abnfjs/tokenizer");
 var abnfParser = require("abnfjs/parser");
 var abnfInterpreter = require("abnfjs/interpreter");
@@ -9,12 +10,8 @@ var schema = require("./odata/schema");
 var sparqlQueries = require("./adapter/queries_sparql");
 var providerModule = require("./sparql/sparql_provider");
 var rdfstore = require("rdfstore");
-var config = {
-    port: 52999,
-    path: "/",
-};
 var schm = new schema.Schema();
-var abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
+var abnf = fs.readFileSync(config.localRootDirectory + "src/odata/odata4-mod.abnf", "utf8");
 var tokens = abnfTokenizer.tokenize(abnf);
 var grammar = abnfParser.parse(tokens);
 var interpreter = new abnfInterpreter.Interpreter(grammar);
@@ -22,9 +19,9 @@ var store = null;
 var provider;
 var storeName = "http://datokrat.sirius.uberspace.de/disco-test";
 var app = connect();
-app.use(config.path, function (req, res, next) {
+app.use(config.publicRelativeServiceDirectory + "/", function (req, res, next) {
     if (req.method === "GET") {
-        // @todo check if something important changes when config.path != '/'
+        // @todo check if something important changes when rootDirectory !== '/'
         var url = req.url.substr(1);
         var ast = interpreter.getCompleteMatch(interpreter.getPattern("odataRelativeUri"), url);
         var queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), schm.raw);
@@ -34,7 +31,10 @@ app.use(config.path, function (req, res, next) {
         });
     }
     else if (req.method === "OPTIONS") {
-        res.writeHeader(200, { "Access-Control-Allow-Origin": "*" });
+        res.writeHeader(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization",
+        });
         res.end();
     }
 });
@@ -43,8 +43,17 @@ app.use(config.path, function (req, res, next) {
  */
 function sendResults(res, result) {
     if (!result.error) {
-        res.writeHeader(200, { "Content-type": "application/json" });
-        res.end(JSON.stringify(result.result, null, 2));
+        var content = JSON.stringify({
+            "odata.metadata": config.publicRootDirectory + config.publicRelativeServiceDirectory + "/",
+            "value": result.result,
+        }, null, 2);
+        res.writeHeader(200, {
+            "Content-Type": "application/json;charset=utf-8",
+            "Content-Length": content.length.toString(),
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "MaxDataServiceVersion, DataServiceVersion",
+        });
+        res.end(content);
     }
     else {
         handleErrors(this.result, res);
