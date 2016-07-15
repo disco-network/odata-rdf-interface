@@ -17,7 +17,7 @@ import rdfstore = require("rdfstore");
 
 let schm = new schema.Schema();
 
-let abnf = fs.readFileSync(config.localRootDirectory + "src/odata/odata4-mod.abnf", "utf8");
+let abnf = fs.readFileSync(config.localRootDirectory + "/src/odata/odata4-mod.abnf", "utf8");
 let tokens = abnfTokenizer.tokenize(abnf);
 let grammar = abnfParser.parse(tokens);
 let interpreter = new abnfInterpreter.Interpreter(grammar);

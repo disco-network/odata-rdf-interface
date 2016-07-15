@@ -9,7 +9,7 @@ let config: {
   "port": 52999,
   "publicRootDirectory": "http://localhost:52999",
   "publicRelativeServiceDirectory": "",
-  "localRootDirectory": __dirname.substr(0, -3),
+  "localRootDirectory": __dirname.substr(0, __dirname.length - 9),
 };
 
 export = config;
