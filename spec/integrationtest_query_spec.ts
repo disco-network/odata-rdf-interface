@@ -140,6 +140,21 @@ describe("The query engine should evaluate", () => {
     expect(answer.result.length).toBe(1);
   });
 
+  createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2)", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(2);
+  });
+
+  createQuerySpec("/Posts?$filter=(Id eq 1) and ((Id eq 2) or (Id eq 1))", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(1);
+  });
+
+  createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2) and (Id eq 2)", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(2);
+  });
+
   function createQuerySpec(query: string, cb: (results: any) => void, pending: boolean = false) {
     let fn = pending ? xit : it;
     fn(query, (done) => {

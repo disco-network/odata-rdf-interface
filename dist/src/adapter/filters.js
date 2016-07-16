@@ -17,9 +17,10 @@ var FilterExpressionFactory = (function () {
     };
     FilterExpressionFactory.prototype.registerDefaultFilterExpressions = function () {
         this.registerFilterExpressions([
-            StringLiteralExpression, NumberLiteralExpression,
+            exports.StringLiteralExpression, exports.NumberLiteralExpression,
             ParenthesesExpressionFactory,
-            EqExpression,
+            exports.AndExpression, exports.OrExpression,
+            exports.EqExpression,
             PropertyExpression,
         ]);
         return this;
@@ -36,78 +37,25 @@ var FilterExpressionFactory = (function () {
     return FilterExpressionFactory;
 }());
 exports.FilterExpressionFactory = FilterExpressionFactory;
-var StringLiteralExpression = (function () {
-    function StringLiteralExpression() {
-    }
-    StringLiteralExpression.doesApplyToRaw = function (raw) {
-        return raw.type === "string";
-    };
-    StringLiteralExpression.create = function (raw, mapping, factory) {
-        var ret = new StringLiteralExpression();
-        ret.value = raw.value;
-        return ret;
-    };
-    StringLiteralExpression.prototype.getSubExpressions = function () {
-        return [];
-    };
-    StringLiteralExpression.prototype.getPropertyTree = function () {
-        return {};
-    };
-    StringLiteralExpression.prototype.toSparql = function () {
-        return "'" + this.value + "'";
-    };
-    return StringLiteralExpression;
-}());
-exports.StringLiteralExpression = StringLiteralExpression;
-var NumberLiteralExpression = (function () {
-    function NumberLiteralExpression() {
-    }
-    NumberLiteralExpression.doesApplyToRaw = function (raw) {
-        return raw.type === "decimalValue";
-    };
-    NumberLiteralExpression.create = function (raw, mapping, factory) {
-        var ret = new NumberLiteralExpression();
-        ret.value = parseInt(raw.value, 10);
-        if (isNaN(ret.value))
-            throw new Error("error parsing number " + raw.value);
-        return ret;
-    };
-    NumberLiteralExpression.prototype.getSubExpressions = function () {
-        return [];
-    };
-    NumberLiteralExpression.prototype.getPropertyTree = function () {
-        return {};
-    };
-    NumberLiteralExpression.prototype.toSparql = function () {
-        return "'" + this.value.toString() + "'";
-    };
-    return NumberLiteralExpression;
-}());
-exports.NumberLiteralExpression = NumberLiteralExpression;
-var EqExpression = (function () {
-    function EqExpression() {
-    }
-    EqExpression.doesApplyToRaw = function (raw) {
-        return raw.type === "operator" && raw.op === "eq";
-    };
-    EqExpression.create = function (raw, mapping, factory) {
-        var ret = new EqExpression();
-        ret.lhs = factory.fromRaw(raw.lhs);
-        ret.rhs = factory.fromRaw(raw.rhs);
-        return ret;
-    };
-    EqExpression.prototype.getSubExpressions = function () {
-        return [this.lhs, this.rhs];
-    };
-    EqExpression.prototype.getPropertyTree = function () {
-        return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
-    };
-    EqExpression.prototype.toSparql = function () {
-        return "(" + this.lhs.toSparql() + " = " + this.rhs.toSparql() + ")";
-    };
-    return EqExpression;
-}());
-exports.EqExpression = EqExpression;
+exports.StringLiteralExpression = literalExpression({
+    typeName: "string",
+    parse: function (raw) { return raw.value; },
+    toSparql: function (value) { return "'" + value + "'"; },
+});
+exports.NumberLiteralExpression = literalExpression({
+    typeName: "decimalValue",
+    parse: function (raw) {
+        var ret = parseInt(raw.value, 10);
+        if (isNaN(ret))
+            throw new Error("error parsing number literal " + raw.value);
+        else
+            return ret;
+    },
+    toSparql: function (value) { return "'" + value + "'"; },
+});
+exports.OrExpression = binaryOperator({ opName: "or", sparql: "||" });
+exports.AndExpression = binaryOperator({ opName: "and", sparql: "&&" });
+exports.EqExpression = binaryOperator({ opName: "eq", sparql: "=" });
 var PropertyExpression = (function () {
     function PropertyExpression() {
     }
@@ -147,6 +95,57 @@ var ParenthesesExpressionFactory = (function () {
     return ParenthesesExpressionFactory;
 }());
 exports.ParenthesesExpressionFactory = ParenthesesExpressionFactory;
+function literalExpression(args) {
+    var GeneratedClass = (function () {
+        function class_1() {
+        }
+        class_1.doesApplyToRaw = function (raw) {
+            return raw.type === args.typeName;
+        };
+        class_1.create = function (raw, mapping, factory) {
+            var ret = new GeneratedClass();
+            ret.value = args.parse(raw);
+            return ret;
+        };
+        class_1.prototype.getSubExpressions = function () {
+            return [];
+        };
+        class_1.prototype.getPropertyTree = function () {
+            return {};
+        };
+        class_1.prototype.toSparql = function () {
+            return args.toSparql(this.value);
+        };
+        return class_1;
+    }());
+    return GeneratedClass;
+}
+function binaryOperator(args) {
+    var GeneratedClass = (function () {
+        function class_2() {
+        }
+        class_2.doesApplyToRaw = function (raw) {
+            return raw.type === "operator" && raw.op === args.opName;
+        };
+        class_2.create = function (raw, mapping, factory) {
+            var ret = new GeneratedClass();
+            ret.lhs = factory.fromRaw(raw.lhs);
+            ret.rhs = factory.fromRaw(raw.rhs);
+            return ret;
+        };
+        class_2.prototype.getSubExpressions = function () {
+            return [this.lhs, this.rhs];
+        };
+        class_2.prototype.getPropertyTree = function () {
+            return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
+        };
+        class_2.prototype.toSparql = function () {
+            return "(" + this.lhs.toSparql() + " " + args.sparql + " " + this.rhs.toSparql() + ")";
+        };
+        return class_2;
+    }());
+    return GeneratedClass;
+}
 var PropertyTreeBuilder = (function () {
     function PropertyTreeBuilder() {
         this.tree = {};

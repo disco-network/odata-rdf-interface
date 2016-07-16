@@ -12,8 +12,8 @@ describe("A filter factory", function () {
         factory.registerDefaultFilterExpressions();
         var filter = factory.fromRaw(raw);
         expect(filter instanceof filters.EqExpression).toBe(true);
-        expect(filter.lhs instanceof filters.StringLiteralExpression).toBe(true);
-        expect(filter.rhs instanceof filters.StringLiteralExpression).toBe(true);
+        expect(filter["lhs"] instanceof filters.StringLiteralExpression).toBe(true);
+        expect(filter["rhs"] instanceof filters.StringLiteralExpression).toBe(true);
     });
     it("should throw if there's no matching expression", function () {
         var raw = { type: "is-42", value: "4*2" };
@@ -38,7 +38,7 @@ describe("A NumberLiteralExpression", function () {
     });
     it("should disallow non-number values", function () {
         expect(function () {
-            var expr = filters.NumberLiteralExpression.create({
+            filters.NumberLiteralExpression.create({
                 type: "decimalValue", value: "cat",
             }, null, null);
         }).toThrow();
@@ -54,6 +54,18 @@ describe("An EqExpression", function () {
             rhs: { type: "test", value: "(rhs)" },
         });
         expect(expr.toSparql()).toBe("((lhs) = (rhs))");
+    });
+});
+describe("An OrExpression", function () {
+    it("should render to SPARQL", function () {
+        var factory = new filters.FilterExpressionFactory();
+        factory.registerDefaultFilterExpressions();
+        factory.registerFilterExpression(TestFilterExpression);
+        var expr = factory.fromRaw({ type: "operator", op: "or",
+            lhs: { type: "test", value: "(lhs)" },
+            rhs: { type: "test", value: "(rhs)" },
+        });
+        expect(expr.toSparql()).toBe("((lhs) || (rhs))");
     });
 });
 var TestFilterExpression = (function () {

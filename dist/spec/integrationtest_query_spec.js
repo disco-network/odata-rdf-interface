@@ -129,6 +129,18 @@ describe("The query engine should evaluate", function () {
         expectSuccess(answer);
         expect(answer.result.length).toBe(1);
     });
+    createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2)", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(2);
+    });
+    createQuerySpec("/Posts?$filter=(Id eq 1) and ((Id eq 2) or (Id eq 1))", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(1);
+    });
+    createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2) and (Id eq 2)", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(2);
+    });
     function createQuerySpec(query, cb, pending) {
         if (pending === void 0) { pending = false; }
         var fn = pending ? xit : it;

@@ -32,6 +32,7 @@ export class FilterExpressionFactory {
     this.registerFilterExpressions([
       StringLiteralExpression, NumberLiteralExpression,
       ParenthesesExpressionFactory,
+      AndExpression, OrExpression,
       EqExpression,
       PropertyExpression,
     ]);
@@ -50,98 +51,32 @@ export class FilterExpressionFactory {
   }
 }
 
-export class StringLiteralExpression implements FilterExpression {
+export let StringLiteralExpression = literalExpression<string>({
+  typeName: "string",
+  parse: raw => raw.value,
+  toSparql: value => "'" + value + "'",
+});
+export type StringLiteralExpression = FilterExpression;
 
-  public static doesApplyToRaw(raw): boolean {
-    return raw.type === "string";
-  }
+export let NumberLiteralExpression = literalExpression<number>({
+  typeName: "decimalValue",
+  parse: raw => {
+    let ret = parseInt(raw.value, 10);
+    if (isNaN(ret)) throw new Error("error parsing number literal " + raw.value);
+    else return ret;
+  },
+  toSparql: value => "'" + value + "'",
+});
+export type NumberLiteralExpression = FilterExpression;
 
-  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
-                       factory: FilterExpressionFactory): StringLiteralExpression {
-    let ret = new StringLiteralExpression();
-    ret.value = raw.value;
-    return ret;
-  }
+export let OrExpression = binaryOperator({ opName: "or", sparql: "||" });
+export type OrExpression = FilterExpression;
 
-  // ===
+export let AndExpression = binaryOperator({ opName: "and", sparql: "&&" });
+export type AndExpression = FilterExpression;
 
-  public value: string;
-
-  public getSubExpressions(): FilterExpression[] {
-    return [];
-  }
-
-  public getPropertyTree(): PropertyTree {
-    return {};
-  }
-
-  public toSparql(): string {
-    return "'" + this.value + "'";
-  }
-}
-
-export class NumberLiteralExpression implements FilterExpression {
-
-  public static doesApplyToRaw(raw): boolean {
-    return raw.type === "decimalValue";
-  }
-
-  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
-                       factory: FilterExpressionFactory): NumberLiteralExpression {
-    let ret = new NumberLiteralExpression();
-    ret.value = parseInt(raw.value, 10);
-    if (isNaN(ret.value)) throw new Error("error parsing number " + raw.value);
-    return ret;
-  }
-
-  // ===
-
-  public value: number;
-
-  public getSubExpressions(): FilterExpression[] {
-    return [];
-  }
-
-  public getPropertyTree(): PropertyTree {
-    return {};
-  }
-
-  public toSparql(): string {
-    return "'" + this.value.toString() + "'";
-  }
-}
-
-export class EqExpression implements FilterExpression {
-
-  public static doesApplyToRaw(raw): boolean {
-    return raw.type === "operator" && raw.op === "eq";
-  }
-
-  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
-                       factory: FilterExpressionFactory): EqExpression {
-    let ret = new EqExpression();
-    ret.lhs = factory.fromRaw(raw.lhs);
-    ret.rhs = factory.fromRaw(raw.rhs);
-    return ret;
-  }
-
-  // ===
-
-  public lhs: FilterExpression;
-  public rhs: FilterExpression;
-
-  public getSubExpressions(): FilterExpression[] {
-    return [ this.lhs, this.rhs ];
-  }
-
-  public getPropertyTree(): PropertyTree {
-    return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
-  }
-
-  public toSparql(): string {
-    return "(" + this.lhs.toSparql() + " = " + this.rhs.toSparql() + ")";
-  }
-}
+export let EqExpression = binaryOperator({ opName: "eq", sparql: "=" });
+export type EqExpression = FilterExpression;
 
 export class PropertyExpression implements FilterExpression {
 
@@ -187,6 +122,81 @@ export class ParenthesesExpressionFactory {
     // We don't have to return a ParenthesesExpression, let's choose the simpler way
     return factory.fromRaw(raw.inner);
   }
+}
+
+function literalExpression<ValueType>(
+args: {
+  typeName: string;
+  parse: (raw) => ValueType;
+  toSparql: (value: ValueType) => string }
+) {
+
+  let GeneratedClass = class {
+
+    public static doesApplyToRaw(raw): boolean {
+      return raw.type === args.typeName;
+    }
+
+    public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
+                         factory: FilterExpressionFactory) {
+      let ret = new GeneratedClass();
+      ret.value = args.parse(raw);
+      return ret;
+    }
+
+    // ===
+
+    private value: ValueType;
+
+    public getSubExpressions(): FilterExpression[] {
+      return [];
+    }
+
+    public getPropertyTree(): PropertyTree {
+      return {};
+    }
+
+    public toSparql(): string {
+      return args.toSparql(this.value);
+    }
+  };
+  return GeneratedClass;
+}
+
+function binaryOperator(args: { opName: string; sparql: string }) {
+
+  let GeneratedClass = class {
+
+    public static doesApplyToRaw(raw): boolean {
+      return raw.type === "operator" && raw.op === args.opName;
+    }
+
+    public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
+                         factory: FilterExpressionFactory) {
+      let ret = new GeneratedClass();
+      ret.lhs = factory.fromRaw(raw.lhs);
+      ret.rhs = factory.fromRaw(raw.rhs);
+      return ret;
+    }
+
+    // ===
+
+    private lhs: FilterExpression;
+    private rhs: FilterExpression;
+
+    public getSubExpressions(): FilterExpression[] {
+      return [ this.lhs, this.rhs ];
+    }
+
+    public getPropertyTree(): PropertyTree {
+      return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
+    }
+
+    public toSparql(): string {
+      return "(" + this.lhs.toSparql() + " " + args.sparql + " " + this.rhs.toSparql() + ")";
+    }
+  };
+  return GeneratedClass;
 }
 
 export interface PropertyTree {
