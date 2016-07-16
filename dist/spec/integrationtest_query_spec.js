@@ -141,6 +141,11 @@ describe("The query engine should evaluate", function () {
         expectSuccess(answer);
         expect(answer.result.length).toBe(2);
     });
+    createQuerySpec("/Posts?$filter=Content/Id eq 1", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(1);
+        expect(answer.result[0].ContentId).toBe("1");
+    });
     function createQuerySpec(query, cb, pending) {
         if (pending === void 0) { pending = false; }
         var fn = pending ? xit : it;
@@ -158,7 +163,7 @@ describe("The query engine should evaluate", function () {
                         });
                     }
                     catch (e) {
-                        expect(e).toBe("no exception");
+                        expect(e.stack || e).toBe("no exception");
                         done();
                     }
                 });

@@ -494,10 +494,10 @@ boolCommonExpr = ( ;isofExpr
 rootExpr = '$root/' ( entitySetName keyPredicate / singletonEntity ) [ singleNavigationExpr ]
 
 firstMemberExpr = memberExpr:member
-                / inscopeVariableExpr:inscopeVar [ "/" memberExpr:member ]
+                ;/ inscopeVariableExpr:inscopeVar [ "/" memberExpr:member ]
   = {
     var d = this.getSubordinateDescriptors();
-    return { type: 'member-expression', variable: d.inscopeVar && d.inscopeVar.getString(), path: d.member && d.member.evaluate() }
+    return { type: 'member-expression', path: d.member && d.member.evaluate() }
   }
 
 memberExpr = ; TODO: qualified entity set name
@@ -510,16 +510,14 @@ propertyPathExpr = odataIdentifier:propertyIdentifier
   [
     ;collectionNavigationExpr:collectionNavigation /
     singleNavigationExpr:singleNavigation
-    / collectionPathExpr:collectionPath
+    ;/ collectionPathExpr:collectionPath
     ;/ complexPathExpr:
     ;/ singlePathExpr 
   ] 
   = {
     var d = this.getSubordinateDescriptors();
-    var ret = { propertyName: d.propertyIdentifier.evaluate() };
-    if(d.singleNavigation) ret.singleNavigation = d.singleNavigation.evaluate();
-    //else if(d.collectionNavigation) ret.collectionNavigation = d.collectionNavigation.evaluate();
-    else if(d.collectionPath) ret.collectionPath = d.collectionPath.evaluate();
+    var ret = d.singleNavigation ? d.singleNavigation.evaluate() : [];
+    ret.splice(0,0,d.propertyIdentifier.evaluate());
     return ret;
   }
                    

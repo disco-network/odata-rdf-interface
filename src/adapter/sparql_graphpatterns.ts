@@ -332,7 +332,7 @@ export class FilterGraphPattern extends TreeGraphPattern {
           if (!property.isQuantityOne()) throw new Error("properties of higher cardinality are not allowed");
 
           let branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName],
-            mapping.getComplexProperty("propertyName"));
+            mapping.getComplexProperty(propertyName));
           if (property.hasDirectRdfRepresentation()) {
             this.optionalBranch(property.getNamespacedUri(), branchedPattern);
           }
@@ -340,6 +340,7 @@ export class FilterGraphPattern extends TreeGraphPattern {
             let inverseProperty = property.getInverseProperty();
             this.optionalInverseBranch(inverseProperty.getNamespacedUri(), branchedPattern);
           }
+          break;
         default:
           throw new Error("invalid entity kind " + property.getEntityKind());
       }

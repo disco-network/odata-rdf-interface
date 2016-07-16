@@ -87,14 +87,14 @@ export class PropertyExpression implements FilterExpression {
   public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
                        factory: FilterExpressionFactory): PropertyExpression {
     let ret = new PropertyExpression();
-    ret.propertyName = raw.path.propertyName;
+    ret.properties = raw.path;
     ret.mapping = mapping;
     return ret;
   }
 
   // ===
 
-  private propertyName: string;
+  private properties: string[];
   private mapping: mappings.StructuredSparqlVariableMapping;
 
   public getSubExpressions(): FilterExpression[] {
@@ -103,12 +103,19 @@ export class PropertyExpression implements FilterExpression {
 
   public getPropertyTree(): PropertyTree {
     let tree: PropertyTree = {};
-    tree[this.propertyName] = {};
+    let branch = tree;
+    for (let i = 0; i < this.properties.length; ++i) {
+      branch = branch[this.properties[i]] = branch[this.properties[i]] || {};
+    }
     return tree;
   }
 
   public toSparql(): string {
-    return this.mapping.getElementaryPropertyVariable(this.propertyName);
+    let currentMapping = this.mapping;
+    for (let i = 0; i < (this.properties.length - 1); ++i) {
+        currentMapping = currentMapping.getComplexProperty(this.properties[i]);
+    }
+    return currentMapping.getElementaryPropertyVariable(this.properties[this.properties.length - 1]);
   }
 }
 

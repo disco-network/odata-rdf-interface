@@ -6,7 +6,7 @@ import fs = require("fs");
 describe("odata parser", function() {
   it("should parse an OData filter expression", function() {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"), "Posts?$filter=$it/a/b/c eq 1");
+    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"), "Posts?$filter=a/b/c eq 1");
     let evaluated = result.evaluate();
 
     expect(evaluated.queryOptions).toBeDefined();
@@ -45,7 +45,8 @@ describe("odata parser", function() {
 
     let filterOption = result.queryOptions.filter;
     expect(filterOption.lhs.type).toBe("member-expression");
-    expect(filterOption.lhs.path.propertyName).toBe("Id");
+    expect(filterOption.lhs.path.length).toBe(1);
+    expect(filterOption.lhs.path[0]).toBe("Id");
   });
 
   it("should accept parentheses in a filter expression", () => {

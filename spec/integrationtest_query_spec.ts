@@ -155,6 +155,12 @@ describe("The query engine should evaluate", () => {
     expect(answer.result.length).toBe(2);
   });
 
+  createQuerySpec("/Posts?$filter=Content/Id eq 1", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(1);
+    expect(answer.result[0].ContentId).toBe("1");
+  });
+
   function createQuerySpec(query: string, cb: (results: any) => void, pending: boolean = false) {
     let fn = pending ? xit : it;
     fn(query, (done) => {
@@ -169,7 +175,7 @@ describe("The query engine should evaluate", () => {
             done();
           }); }
           catch (e) {
-            expect(e).toBe("no exception");
+            expect(e.stack || e).toBe("no exception");
             done();
           }
         });

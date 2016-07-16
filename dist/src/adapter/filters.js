@@ -64,7 +64,7 @@ var PropertyExpression = (function () {
     };
     PropertyExpression.create = function (raw, mapping, factory) {
         var ret = new PropertyExpression();
-        ret.propertyName = raw.path.propertyName;
+        ret.properties = raw.path;
         ret.mapping = mapping;
         return ret;
     };
@@ -73,11 +73,18 @@ var PropertyExpression = (function () {
     };
     PropertyExpression.prototype.getPropertyTree = function () {
         var tree = {};
-        tree[this.propertyName] = {};
+        var branch = tree;
+        for (var i = 0; i < this.properties.length; ++i) {
+            branch = branch[this.properties[i]] = branch[this.properties[i]] || {};
+        }
         return tree;
     };
     PropertyExpression.prototype.toSparql = function () {
-        return this.mapping.getElementaryPropertyVariable(this.propertyName);
+        var currentMapping = this.mapping;
+        for (var i = 0; i < (this.properties.length - 1); ++i) {
+            currentMapping = currentMapping.getComplexProperty(this.properties[i]);
+        }
+        return currentMapping.getElementaryPropertyVariable(this.properties[this.properties.length - 1]);
     };
     return PropertyExpression;
 }());

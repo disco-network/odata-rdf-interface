@@ -301,7 +301,7 @@ var FilterGraphPattern = (function (_super) {
                 case Schema.EntityKind.Complex:
                     if (!property.isQuantityOne())
                         throw new Error("properties of higher cardinality are not allowed");
-                    var branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty("propertyName"));
+                    var branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty(propertyName));
                     if (property.hasDirectRdfRepresentation()) {
                         _this.optionalBranch(property.getNamespacedUri(), branchedPattern);
                     }
@@ -309,6 +309,7 @@ var FilterGraphPattern = (function (_super) {
                         var inverseProperty = property.getInverseProperty();
                         _this.optionalInverseBranch(inverseProperty.getNamespacedUri(), branchedPattern);
                     }
+                    break;
                 default:
                     throw new Error("invalid entity kind " + property.getEntityKind());
             }
