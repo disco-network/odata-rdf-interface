@@ -33,6 +33,16 @@ describe("rdfstore should execute", function() {
     expect(answer.result.length).toBe(2);
   });
 
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id . FILTER (?id = 1) }", answer => {
+    expect(answer.error).toBe(null);
+    expect(answer.result.length).toBe(0);
+  });
+
+  createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id . FILTER (?id = '1') }", answer => {
+    expect(answer.error).toBe(null);
+    expect(answer.result.length).toBe(1);
+  });
+
   function createSpec(query: string, cb: (results: any) => void) {
     let prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
     prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";

@@ -43,7 +43,7 @@ describe("A NumberLiteralExpression", () => {
 
   it("should render to a SPARQL string", () => {
     let expr = filters.NumberLiteralExpression.create({ type: "decimalValue", value: "1" }, null, null);
-    expect(expr.toSparql()).toBe("1");
+    expect(expr.toSparql()).toBe("'1'");
   });
 
   it("should disallow non-number values", () => {

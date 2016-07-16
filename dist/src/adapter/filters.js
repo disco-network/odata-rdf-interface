@@ -79,7 +79,7 @@ var NumberLiteralExpression = (function () {
         return {};
     };
     NumberLiteralExpression.prototype.toSparql = function () {
-        return this.value.toString();
+        return "'" + this.value.toString() + "'";
     };
     return NumberLiteralExpression;
 }());

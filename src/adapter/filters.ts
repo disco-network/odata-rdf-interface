@@ -107,7 +107,7 @@ export class NumberLiteralExpression implements FilterExpression {
   }
 
   public toSparql(): string {
-    return this.value.toString();
+    return "'" + this.value.toString() + "'";
   }
 }
 
