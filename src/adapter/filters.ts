@@ -31,6 +31,7 @@ export class FilterExpressionFactory {
   public registerDefaultFilterExpressions() {
     this.registerFilterExpressions([
       StringLiteralExpression, NumberLiteralExpression,
+      ParenthesesExpressionFactory,
       EqExpression,
       PropertyExpression,
     ]);
@@ -173,6 +174,18 @@ export class PropertyExpression implements FilterExpression {
 
   public toSparql(): string {
     return this.mapping.getElementaryPropertyVariable(this.propertyName);
+  }
+}
+
+export class ParenthesesExpressionFactory {
+
+  public static doesApplyToRaw(raw) {
+    return raw.type === "parentheses-expression";
+  }
+
+  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping, factory: FilterExpressionFactory) {
+    // We don't have to return a ParenthesesExpression, let's choose the simpler way
+    return factory.fromRaw(raw.inner);
   }
 }
 

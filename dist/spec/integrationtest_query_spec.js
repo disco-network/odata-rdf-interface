@@ -121,6 +121,10 @@ describe("The query engine should evaluate", function () {
         expectSuccess(answer);
         expect(answer.result.length).toBe(0);
     });
+    createQuerySpec("/Posts?$filter=(Id eq '1')", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(1);
+    });
     function createQuerySpec(query, cb, pending) {
         if (pending === void 0) { pending = false; }
         var fn = pending ? xit : it;

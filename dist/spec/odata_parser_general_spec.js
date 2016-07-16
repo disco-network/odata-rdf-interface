@@ -37,6 +37,13 @@ describe("odata parser", function () {
         expect(filterOption.lhs.type).toBe("member-expression");
         expect(filterOption.lhs.path.propertyName).toBe("Id");
     });
+    it("should accept parentheses in a filter expression", function () {
+        var parser = initODataParser();
+        var result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"), "Posts?$filter=(Id eq '1')").evaluate();
+        var filterOption = result.queryOptions.filter;
+        expect(filterOption.type).toBe("parentheses-expression");
+        expect(filterOption.inner.type).toBe("operator");
+    });
     function initODataParser() {
         var abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
         var tok = abnfTokenizer.tokenize(abnf);

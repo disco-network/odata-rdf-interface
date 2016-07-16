@@ -48,6 +48,16 @@ describe("odata parser", function() {
     expect(filterOption.lhs.path.propertyName).toBe("Id");
   });
 
+  it("should accept parentheses in a filter expression", () => {
+    let parser = initODataParser();
+    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
+      "Posts?$filter=(Id eq '1')").evaluate();
+
+    let filterOption = result.queryOptions.filter;
+    expect(filterOption.type).toBe("parentheses-expression");
+    expect(filterOption.inner.type).toBe("operator");
+  });
+
   function initODataParser() {
     let abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
     let tok = abnfTokenizer.tokenize(abnf);

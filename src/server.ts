@@ -44,14 +44,15 @@ app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
   else if (req.method === "OPTIONS") {
     res.writeHeader(200, {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization",
+      "Access-Control-Allow-Headers":
+        "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization, odata-maxversion",
     });
     res.end();
   }
 });
 
 /**
- * Pass the results of the query to the HTTP result object
+ * Pass the results of the query to the HTTP response object
  */
 function sendResults(res, result): void {
   if (!result.error) {

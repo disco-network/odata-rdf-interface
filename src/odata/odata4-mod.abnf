@@ -467,18 +467,23 @@ boolCommonExpr = ( ;isofExpr
                    / geExpr:innerOp
                    ;/ hasExpr 
                    ]
-                 ;/ boolParenExpr:boolParenExpr
+                 / boolParenExpr:boolParenExpr
                  ) [ andExpr:outerOp / orExpr:outerOp ] 
   = {
     var d = this.getSubordinateDescriptors();
-    var innerLeftHandSide, innerRightHandSide;
+    var outerLeftHandSide;
     if(d.commonExpr) {
+      var innerLeftHandSide, innerRightHandSide;
       innerLeftHandSide = d.commonExpr.evaluate();
       innerRightHandSide = d.innerOp && d.innerOp.evaluate();
+      outerLeftHandSide = innerRightHandSide
+        ? { type: 'operator', lhs: innerLeftHandSide, rhs: innerRightHandSide.rhs, op: innerRightHandSide.op }
+        : innerLeftHandSide;
     }
-    var outerLeftHandSide = innerRightHandSide
-      ? { type: 'operator', lhs: innerLeftHandSide, rhs: innerRightHandSide.rhs, op: innerRightHandSide.op }
-      : innerLeftHandSide;
+    else if (d.boolParenExpr) {
+      var innerD = d.boolParenExpr.getSubordinateDescriptors();
+      outerLeftHandSide = { type: "parentheses-expression", inner: innerD.inner.evaluate() };
+    }
     var outerRightHandSide = d.outerOp && d.outerOp.evaluate();
     
     return outerRightHandSide
@@ -629,7 +634,7 @@ distanceMethodCallExpr   = 'geo.distance'   OPEN BWS commonExpr BWS COMMA BWS co
 geoLengthMethodCallExpr  = 'geo.length'     OPEN BWS commonExpr BWS CLOSE
 intersectsMethodCallExpr = 'geo.intersects' OPEN BWS commonExpr BWS COMMA BWS commonExpr BWS CLOSE
 
-boolParenExpr = OPEN BWS boolCommonExpr BWS CLOSE
+boolParenExpr = OPEN BWS boolCommonExpr:inner BWS CLOSE
 parenExpr     = OPEN BWS commonExpr:expr     BWS CLOSE = { return d.getSubordinateDescriptors().expr.evaluate()  }
 
 andExpr = RWS 'and':op RWS boolCommonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } } 

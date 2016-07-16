@@ -18,6 +18,7 @@ var FilterExpressionFactory = (function () {
     FilterExpressionFactory.prototype.registerDefaultFilterExpressions = function () {
         this.registerFilterExpressions([
             StringLiteralExpression, NumberLiteralExpression,
+            ParenthesesExpressionFactory,
             EqExpression,
             PropertyExpression,
         ]);
@@ -133,6 +134,19 @@ var PropertyExpression = (function () {
     return PropertyExpression;
 }());
 exports.PropertyExpression = PropertyExpression;
+var ParenthesesExpressionFactory = (function () {
+    function ParenthesesExpressionFactory() {
+    }
+    ParenthesesExpressionFactory.doesApplyToRaw = function (raw) {
+        return raw.type === "parentheses-expression";
+    };
+    ParenthesesExpressionFactory.create = function (raw, mapping, factory) {
+        // We don't have to return a ParenthesesExpression, let's choose the simpler way
+        return factory.fromRaw(raw.inner);
+    };
+    return ParenthesesExpressionFactory;
+}());
+exports.ParenthesesExpressionFactory = ParenthesesExpressionFactory;
 var PropertyTreeBuilder = (function () {
     function PropertyTreeBuilder() {
         this.tree = {};

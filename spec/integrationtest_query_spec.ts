@@ -130,6 +130,11 @@ describe("The query engine should evaluate", () => {
     expect(answer.result.length).toBe(0);
   });
 
+  createQuerySpec("/Posts?$filter=(Id eq '1')", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(1);
+  });
+
   function createQuerySpec(query: string, cb: (results: any) => void, pending: boolean = false) {
     let fn = pending ? xit : it;
     fn(query, (done) => {
