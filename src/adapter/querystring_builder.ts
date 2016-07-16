@@ -16,13 +16,20 @@ export class QueryStringBuilder {
 
   public buildGraphPatternStringWithOptions(graphPattern, options?: QueryStringBuilderOptions): string {
     let ret = "{ " + this.buildGraphPatternString(graphPattern);
+    let filter = this.buildFilterPatternAmendmentString(options);
+    ret += filter;
+    ret += " }";
+    return ret;
+  }
+
+  public buildFilterPatternAmendmentString(options?: QueryStringBuilderOptions) {
+    let ret = "";
     if (options && options.filterExpression) {
       if (options && options.filterPattern) {
         ret += " . " + this.buildGraphPatternString(options.filterPattern);
       }
       ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
     }
-    ret += " }";
     return ret;
   }
 

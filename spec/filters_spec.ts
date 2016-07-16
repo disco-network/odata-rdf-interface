@@ -83,6 +83,28 @@ describe("An OrExpression", () => {
   });
 });
 
+describe("A PropertyExpression", () => {
+  it("should apply to OData member expressions", () => {
+    expect(filters.PropertyExpression.doesApplyToRaw({
+      type: "member-expression",
+    })).toBe(true);
+  });
+
+  xit("should handle simple 'any' expressions", () => {
+    let factory = new filters.FilterExpressionFactory()
+      .registerDefaultFilterExpressions()
+      .registerFilterExpression(TestFilterExpression);
+    let expr = factory.fromRaw({
+      type: "member-expression", operator: "any", path: [ "Children" ],
+      lambdaExpression: {
+        variable: "it", predicateExpression: { type: "text", value: "(test)" },
+      },
+    });
+
+    expect(expr.toSparql()).toBe("EXISTS { ?x0 disco:parent ?root . FILTER((test)) }");
+  });
+});
+
 class TestFilterExpression implements filters.FilterExpression {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
   public static create(raw, factory) { return new TestFilterExpression(raw.value); }

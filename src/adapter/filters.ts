@@ -43,11 +43,13 @@ export class FilterExpressionFactory {
     for (let i = 0; i < types.length; ++i) {
       this.registerFilterExpression(types[i]);
     }
+    return this;
   }
 
   public registerFilterExpression(Type: FilterExpressionClass) {
     if (this.registeredFilterExpressions.indexOf(Type) === -1)
       this.registeredFilterExpressions.push(Type);
+    return this;
   }
 }
 

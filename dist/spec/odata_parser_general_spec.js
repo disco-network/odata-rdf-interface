@@ -37,6 +37,17 @@ describe("odata parser", function () {
         expect(filterOption.lhs.type).toBe("member-expression");
         expect(filterOption.lhs.path.length).toBe(1);
         expect(filterOption.lhs.path[0]).toBe("Id");
+        expect(filterOption.lhs.operation).toBe("property-value");
+    });
+    it("should parse a simple any expression", function () {
+        var parser = initODataParser();
+        var result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"), "Posts?$filter=Children/any(it: it/Id eq 2)").evaluate();
+        var filterOption = result.queryOptions.filter;
+        expect(filterOption.type).toBe("member-expression");
+        expect(filterOption.operation).toBe("any");
+        expect(filterOption.path).toEqual(["Children"]);
+        expect(filterOption.lambdaExpression.variable).toBe("it");
+        expect(filterOption.lambdaExpression.predicateExpression.type).toBe("operator");
     });
     it("should accept parentheses in a filter expression", function () {
         var parser = initODataParser();

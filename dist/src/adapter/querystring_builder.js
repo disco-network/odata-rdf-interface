@@ -12,13 +12,19 @@ var QueryStringBuilder = (function () {
     };
     QueryStringBuilder.prototype.buildGraphPatternStringWithOptions = function (graphPattern, options) {
         var ret = "{ " + this.buildGraphPatternString(graphPattern);
+        var filter = this.buildFilterPatternAmendmentString(options);
+        ret += filter;
+        ret += " }";
+        return ret;
+    };
+    QueryStringBuilder.prototype.buildFilterPatternAmendmentString = function (options) {
+        var ret = "";
         if (options && options.filterExpression) {
             if (options && options.filterPattern) {
                 ret += " . " + this.buildGraphPatternString(options.filterPattern);
             }
             ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
         }
-        ret += " }";
         return ret;
     };
     QueryStringBuilder.prototype.buildGraphPatternString = function (graphPattern) {

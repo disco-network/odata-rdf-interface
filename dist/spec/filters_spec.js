@@ -68,6 +68,25 @@ describe("An OrExpression", function () {
         expect(expr.toSparql()).toBe("((lhs) || (rhs))");
     });
 });
+describe("A PropertyExpression", function () {
+    it("should apply to OData member expressions", function () {
+        expect(filters.PropertyExpression.doesApplyToRaw({
+            type: "member-expression",
+        })).toBe(true);
+    });
+    xit("should handle simple 'any' expressions", function () {
+        var factory = new filters.FilterExpressionFactory()
+            .registerDefaultFilterExpressions()
+            .registerFilterExpression(TestFilterExpression);
+        var expr = factory.fromRaw({
+            type: "member-expression", operator: "any", path: ["Children"],
+            lambdaExpression: {
+                variable: "it", predicateExpression: { type: "text", value: "(test)" },
+            },
+        });
+        expect(expr.toSparql()).toBe("EXISTS { ?x0 disco:parent ?root . FILTER((test)) }");
+    });
+});
 var TestFilterExpression = (function () {
     function TestFilterExpression(value) {
         this.value = value;

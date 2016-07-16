@@ -497,7 +497,9 @@ firstMemberExpr = memberExpr:member
                 ;/ inscopeVariableExpr:inscopeVar [ "/" memberExpr:member ]
   = {
     var d = this.getSubordinateDescriptors();
-    return { type: 'member-expression', path: d.member && d.member.evaluate() }
+    var ret = d.member.evaluate();
+    ret.type = "member-expression";
+    return ret;
   }
 
 memberExpr = ; TODO: qualified entity set name
@@ -510,15 +512,27 @@ propertyPathExpr = odataIdentifier:propertyIdentifier
   [
     ;collectionNavigationExpr:collectionNavigation /
     singleNavigationExpr:singleNavigation
-    ;/ collectionPathExpr:collectionPath
+    / collectionPathExpr:collectionPath
     ;/ complexPathExpr:
     ;/ singlePathExpr 
   ] 
   = {
     var d = this.getSubordinateDescriptors();
-    var ret = d.singleNavigation ? d.singleNavigation.evaluate() : [];
-    ret.splice(0,0,d.propertyIdentifier.evaluate());
-    return ret;
+    if(d.singleNavigation) {
+      var ret = d.singleNavigation.evaluate();
+      ret.path.splice(0,0,d.propertyIdentifier.evaluate());
+      return ret;
+    }
+    else if(d.collectionPath) {
+      var anyExpr = d.collectionPath.evaluate();
+      var ret = {
+        operation: "any",
+        lambdaExpression: anyExpr.lambdaExpression,
+        path: [ d.propertyIdentifier.evaluate() ]
+      };
+      return ret;
+    }
+    else return { operation: "property-value", path: [ d.propertyIdentifier.evaluate() ] };
   }
                    
 inscopeVariableExpr       = implicitVariableExpr 
@@ -533,11 +547,15 @@ collectionNavigationExpr = [ "/" qualifiedEntityTypeName ]
 
 singleNavigationExpr = "/" memberExpr:member = { return this.getSubordinateDescriptors().member.evaluate() }
 
-collectionPathExpr = count:path
-                   ;/ "/" boundFunctionExpr
-                   ;/ "/" anyExpr
+collectionPathExpr = ;count:path
+                   ;/ "/" boundFunctionExpr /
+                   "/" anyExpr:anyExpr
                    ;/ "/" allExpr
-  = { return this.getSubordinateDescriptors().path.evaluate() }
+  = {
+    var d = this.getSubordinateDescriptors();
+    var anyExpr = d.anyExpr.evaluate();
+    return anyExpr;
+  }
  
 complexPathExpr = "/" [ qualifiedComplexTypeName "/" ]
                   ( propertyPathExpr 
@@ -561,9 +579,21 @@ functionExpr = namespace "."
 functionExprParameters = OPEN [ functionExprParameter *( COMMA functionExprParameter ) ] CLOSE
 functionExprParameter  = parameterName EQ ( parameterAlias / parameterValue )
 
-anyExpr = 'any' OPEN BWS [ lambdaVariableExpr BWS COLON BWS lambdaPredicateExpr ] BWS CLOSE
+anyExpr = 'any' OPEN BWS [ odataIdentifier:variableExpr BWS COLON BWS lambdaPredicateExpr:predicateExpr ] BWS CLOSE
+  = {
+    var d = this.getSubordinateDescriptors();
+    if(d.predicateExpr) {
+      var variable = d.variableExpr.evaluate();
+      var predicate = d.predicateExpr.evaluate();
+      return { type: "any", lambdaExpression: { variable: variable, predicateExpression: predicate } };
+    }
+    return { type: "any" };
+  }
 allExpr = 'all' OPEN BWS   lambdaVariableExpr BWS COLON BWS lambdaPredicateExpr   BWS CLOSE
-lambdaPredicateExpr = boolCommonExpr ; containing at least one lambdaVariableExpr
+lambdaPredicateExpr = boolCommonExpr:expr ; containing at least one lambdaVariableExpr
+  = {
+    return this.getSubordinateDescriptors().expr.evaluate();
+  }
 
 methodCallExpr = indexOfMethodCallExpr 
                / toLowerMethodCallExpr 

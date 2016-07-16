@@ -29,10 +29,12 @@ var FilterExpressionFactory = (function () {
         for (var i = 0; i < types.length; ++i) {
             this.registerFilterExpression(types[i]);
         }
+        return this;
     };
     FilterExpressionFactory.prototype.registerFilterExpression = function (Type) {
         if (this.registeredFilterExpressions.indexOf(Type) === -1)
             this.registeredFilterExpressions.push(Type);
+        return this;
     };
     return FilterExpressionFactory;
 }());
