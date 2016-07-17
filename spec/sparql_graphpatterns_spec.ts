@@ -1,7 +1,8 @@
-
-import SchemaModule = require("../src/odata/schema");
-let schema = new SchemaModule.Schema();
-import gpatterns = require("../src/adapter/graphpatterns");
+import schemaModule = require("../src/odata/schema");
+let schema = new schemaModule.Schema();
+import gpatterns = require("../src/odata/graphpatterns");
+import filterPatterns = require("../src/adapter/filterpatterns");
+import expandTreePatterns = require("../src/adapter/expandtree");
 import mhelper = require("./helpers/sparql_mappings");
 
 describe("tree graph patterns", function() {
@@ -104,7 +105,7 @@ describe("tree graph patterns", function() {
 describe("direct property graph patterns", function() {
   it("should store the direct properties in the mapping", function() {
     let mapping = mhelper.createStructuredMapping();
-    gpatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
+    expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
 
     expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
     expect(mapping.elementaryPropertyExists("ParentId")).toEqual(true);
@@ -114,13 +115,13 @@ describe("direct property graph patterns", function() {
   });
   it("should create the triples corresponding to the direct properties", function() {
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = gpatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
+    let gp = expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
 
     expect(gp.getDirectTriples()).toContain([ "?post", "disco:id", mapping.getElementaryPropertyVariable("Id") ]);
   });
   it("should create the triples corresponding to the mirrored direct properties", function() {
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = gpatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
+    let gp = expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
 
     expect(gp.getDirectTriples()).toContain(
       [ "?post", "disco:content", mapping.getComplexProperty("Content").getVariable() ]);
@@ -130,7 +131,7 @@ describe("direct property graph patterns", function() {
   });
   it("should create optional triples", function() {
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = gpatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
+    let gp = expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
 
     expect(gp.getOptionalPatterns()[0].getDirectTriples()).toContain(
       [ "?post", "disco:parent", mapping.getComplexProperty("Parent").getVariable() ]);
@@ -141,7 +142,7 @@ describe("complex-property expand tree graph patterns", function() {
   it("should expand the first depth level", function() {
     let expandTree = { Content: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = gpatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
+    let gp = expandTreePatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(mapping.getComplexProperty("Content").elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns().length).toEqual(2);
@@ -158,7 +159,7 @@ describe("complex-property expand tree graph patterns", function() {
   it("should expand the second depth level", function() {
     let expandTree = { Content: { Culture: {} } };
     let mapping = mhelper.createStructuredMapping("?post");
-    gpatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
+    expandTreePatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(mapping.getComplexProperty("Content").getComplexProperty("Culture")
     .elementaryPropertyExists("Id")).toEqual(true);
@@ -166,7 +167,7 @@ describe("complex-property expand tree graph patterns", function() {
   it("should expand the optional properties of the first depth level", function() {
     let expandTree = { Parent: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = gpatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
+    let gp = expandTreePatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(mapping.getComplexProperty("Parent").elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns()[1].branch("disco:parent")[0].getDirectTriples()).toContain(
@@ -179,7 +180,12 @@ describe("filter graph patterns", () => {
   it("should expand elementary properties of the first depth level", () => {
     let expandTree = { Id: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = gpatterns.FilterGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
+    let queryContext: filterPatterns.QueryContext = {
+      mapping: mapping,
+      entityType: schema.getEntityType("Post"),
+      lambdaExpressions: [],
+    };
+    let gp = filterPatterns.FilterGraphPatternFactory.create(queryContext, expandTree);
 
     expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns().length).toEqual(0);

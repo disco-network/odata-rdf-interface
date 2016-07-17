@@ -1,6 +1,8 @@
 /** @module */
 import mappings = require("./mappings");
-import gpatterns = require("./graphpatterns");
+import gpatterns = require("../odata/graphpatterns");
+import filterPatterns = require("./filterpatterns");
+import expandTreePatterns = require("./expandtree");
 import filters = require("./filters");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
@@ -80,14 +82,14 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 
   private createGraphPattern(): gpatterns.TreeGraphPattern {
-    return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(),
+    return expandTreePatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(),
       this.getExpandTree(), this.getOrInitMapping());
   }
 
   private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
     if (filterExpression !== undefined)
-      return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(),
-        filterExpression.getPropertyTree(), this.getOrInitMapping());
+      return filterPatterns.FilterGraphPatternFactory.create(this.createQueryContext(),
+        filterExpression.getPropertyTree());
   }
 
   private createFilterExpression(): filters.FilterExpression {
@@ -99,6 +101,14 @@ export class EntitySetQuery implements ODataQueries.Query {
     queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
     return queryStringBuilder;
+  }
+
+  private createQueryContext(): filterPatterns.QueryContext {
+    return {
+      mapping: this.getOrInitMapping(),
+      entityType: this.getTypeOfEntitySet(),
+      lambdaExpressions: [],
+    };
   }
 
   private getExpandTree() {

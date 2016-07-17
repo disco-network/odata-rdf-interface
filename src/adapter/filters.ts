@@ -1,5 +1,4 @@
 import mappings = require("./mappings");
-import gpatterns = require("./graphpatterns");
 import schema = require("../odata/schema");
 
 export interface FilterExpression {

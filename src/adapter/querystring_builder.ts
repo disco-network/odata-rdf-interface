@@ -1,4 +1,4 @@
-import gpatterns = require("./graphpatterns");
+import gpatterns = require("../odata/graphpatterns");
 import filters = require("./filters");
 
 export class QueryStringBuilder {

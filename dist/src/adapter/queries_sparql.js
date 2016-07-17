@@ -1,7 +1,8 @@
 "use strict";
 /** @module */
 var mappings = require("./mappings");
-var gpatterns = require("./graphpatterns");
+var filterPatterns = require("./filterpatterns");
+var expandTreePatterns = require("./expandtree");
 var filters = require("./filters");
 var qsBuilder = require("./querystring_builder");
 var ODataQueries = require("../odata/queries");
@@ -73,11 +74,11 @@ var EntitySetQuery = (function () {
         });
     };
     EntitySetQuery.prototype.createGraphPattern = function () {
-        return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.getOrInitMapping());
+        return expandTreePatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.getOrInitMapping());
     };
     EntitySetQuery.prototype.createFilterGraphPattern = function (filterExpression) {
         if (filterExpression !== undefined)
-            return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(), this.getOrInitMapping());
+            return filterPatterns.FilterGraphPatternFactory.create(this.createQueryContext(), filterExpression.getPropertyTree());
     };
     EntitySetQuery.prototype.createFilterExpression = function () {
         if (this.getRawFilter())
@@ -88,6 +89,13 @@ var EntitySetQuery = (function () {
         queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
         return queryStringBuilder;
+    };
+    EntitySetQuery.prototype.createQueryContext = function () {
+        return {
+            mapping: this.getOrInitMapping(),
+            entityType: this.getTypeOfEntitySet(),
+            lambdaExpressions: [],
+        };
     };
     EntitySetQuery.prototype.getExpandTree = function () {
         return this.model.expandTree;

@@ -1,5 +1,5 @@
 "use strict";
-var gpatterns = require("../src/adapter/graphpatterns");
+var gpatterns = require("../src/odata/graphpatterns");
 var qbuilder = require("../src/adapter/querystring_builder");
 describe("the query string builder", function () {
     it("should build queries without UNION and OPTIONAL", function () {
