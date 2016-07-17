@@ -319,17 +319,15 @@ export class FilterGraphPattern extends TreeGraphPattern {
   }
 }
 
-export class ComplexBranchInsertionBuilder {
+export class AbstractBranchInsertionBuilder {
 
-  private property: Schema.Property;
-  private mapping: Mappings.StructuredSparqlVariableMapping;
-  private value: TreeGraphPattern;
+  protected mapping: Mappings.StructuredSparqlVariableMapping;
 
-  public setComplexProperty(property: Schema.Property) {
-    if (property.getEntityKind() === Schema.EntityKind.Complex)
-      this.property = property;
-    else throw new Error("property should be complex");
-    return this;
+  public buildCommand(): BranchInsertionCommand {
+    if (this.validateParameters()) {
+      return this.buildCommandNoValidityChecks();
+    }
+    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
   }
 
   public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
@@ -337,17 +335,56 @@ export class ComplexBranchInsertionBuilder {
     return this;
   }
 
+  protected validateParameters() {
+    return this.mapping !== undefined;
+  }
+
+  protected buildCommandNoValidityChecks(): BranchInsertionCommand {
+    throw new Error("abstract method; not implemented");
+  }
+}
+
+export class AbstractComplexBranchInsertionBuilder extends AbstractBranchInsertionBuilder {
+
+  protected property: Schema.Property;
+  protected value: TreeGraphPattern;
+
+  public setComplexProperty(property: Schema.Property) {
+    if (property.getEntityKind() === Schema.EntityKind.Complex) {
+      this.property = property;
+      return this;
+    }
+    else
+      throw new Error("property should be complex");
+  }
+
   public setValue(value: TreeGraphPattern) {
     this.value = value;
     return this;
   }
 
-  public buildCommand(): BranchInsertionCommand {
-    if (this.property !== undefined && this.mapping !== undefined) {
-      return this.buildCommandNoValidityChecks();
-    }
-    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+  public validateParameters(): boolean {
+    return super.validateParameters() && this.property !== undefined && this.value !== undefined;
   }
+}
+
+export class AbstractElementaryBranchInsertionBuilder extends AbstractBranchInsertionBuilder {
+
+  protected property: Schema.Property;
+
+  public setElementaryProperty(property: Schema.Property) {
+    if (property.getEntityKind() === Schema.EntityKind.Elementary)
+      this.property = property;
+    else throw new Error("property should be elementary");
+    return this;
+  }
+
+  protected validateParameters(): boolean {
+    return super.validateParameters() && this.property !== undefined;
+  }
+}
+
+export class ComplexBranchInsertionBuilder extends AbstractComplexBranchInsertionBuilder {
 
   public buildCommandNoValidityChecks(): BranchInsertionCommand {
     if (this.property.hasDirectRdfRepresentation()) {
@@ -362,35 +399,7 @@ export class ComplexBranchInsertionBuilder {
   }
 }
 
-export class ComplexBranchInsertionBuilderForFiltering {
-
-  private property: Schema.Property;
-  private mapping: Mappings.StructuredSparqlVariableMapping;
-  private value: TreeGraphPattern;
-
-  public setComplexProperty(property: Schema.Property) {
-    if (property.getEntityKind() === Schema.EntityKind.Complex)
-      this.property = property;
-    else throw new Error("property should be complex");
-    return this;
-  }
-
-  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
-    this.mapping = mapping;
-    return this;
-  }
-
-  public setValue(value: TreeGraphPattern) {
-    this.value = value;
-    return this;
-  }
-
-  public buildCommand(): BranchInsertionCommand {
-    if (this.property !== undefined && this.mapping !== undefined) {
-      return this.buildCommandNoValidityChecks();
-    }
-    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
-  }
+export class ComplexBranchInsertionBuilderForFiltering extends AbstractComplexBranchInsertionBuilder {
 
   public buildCommandNoValidityChecks(): BranchInsertionCommand {
     if (this.property.hasDirectRdfRepresentation()) {
@@ -405,31 +414,9 @@ export class ComplexBranchInsertionBuilderForFiltering {
   }
 }
 
-export class ElementaryBranchInsertionBuilder {
+export class ElementaryBranchInsertionBuilder extends AbstractElementaryBranchInsertionBuilder {
 
-  private property: Schema.Property;
-  private mapping: Mappings.StructuredSparqlVariableMapping;
-
-  public setElementaryProperty(property: Schema.Property) {
-    if (property.getEntityKind() === Schema.EntityKind.Elementary)
-      this.property = property;
-    else throw new Error("property should be elementary");
-    return this;
-  }
-
-  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
-    this.mapping = mapping;
-    return this;
-  }
-
-  public buildCommand(): BranchInsertionCommand {
-    if (this.property !== undefined && this.mapping !== undefined) {
-      return this.buildCommandNoValidityChecks();
-    }
-    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
-  }
-
-  private buildCommandNoValidityChecks(): BranchInsertionCommand {
+  protected buildCommandNoValidityChecks(): BranchInsertionCommand {
     if (this.property.mirroredFromProperty()) {
       return this.buildMirroringPropertyNoValidityChecks();
     }
@@ -461,31 +448,9 @@ export class ElementaryBranchInsertionBuilder {
   }
 }
 
-export class ElementaryBranchInsertionBuilderForFiltering {
+export class ElementaryBranchInsertionBuilderForFiltering extends AbstractElementaryBranchInsertionBuilder {
 
-  private property: Schema.Property;
-  private mapping: Mappings.StructuredSparqlVariableMapping;
-
-  public setElementaryProperty(property: Schema.Property) {
-    if (property.getEntityKind() === Schema.EntityKind.Elementary)
-      this.property = property;
-    else throw new Error("property should be elementary");
-    return this;
-  }
-
-  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
-    this.mapping = mapping;
-    return this;
-  }
-
-  public buildCommand(): BranchInsertionCommand {
-    if (this.property !== undefined && this.mapping !== undefined) {
-      return this.buildCommandNoValidityChecks();
-    }
-    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
-  }
-
-  private buildCommandNoValidityChecks(): BranchInsertionCommand {
+  protected buildCommandNoValidityChecks(): BranchInsertionCommand {
     if (this.property.mirroredFromProperty()) {
       return this.buildMirroringPropertyNoValidityChecks();
     }

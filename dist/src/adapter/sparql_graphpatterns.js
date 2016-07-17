@@ -296,31 +296,75 @@ var FilterGraphPattern = (function (_super) {
     return FilterGraphPattern;
 }(TreeGraphPattern));
 exports.FilterGraphPattern = FilterGraphPattern;
-var ComplexBranchInsertionBuilder = (function () {
-    function ComplexBranchInsertionBuilder() {
+var AbstractBranchInsertionBuilder = (function () {
+    function AbstractBranchInsertionBuilder() {
     }
-    ComplexBranchInsertionBuilder.prototype.setComplexProperty = function (property) {
-        if (property.getEntityKind() === Schema.EntityKind.Complex)
-            this.property = property;
-        else
-            throw new Error("property should be complex");
-        return this;
-    };
-    ComplexBranchInsertionBuilder.prototype.setMapping = function (mapping) {
-        this.mapping = mapping;
-        return this;
-    };
-    ComplexBranchInsertionBuilder.prototype.setValue = function (value) {
-        this.value = value;
-        return this;
-    };
-    ComplexBranchInsertionBuilder.prototype.buildCommand = function () {
-        if (this.property !== undefined && this.mapping !== undefined) {
+    AbstractBranchInsertionBuilder.prototype.buildCommand = function () {
+        if (this.validateParameters()) {
             return this.buildCommandNoValidityChecks();
         }
         else
             throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
     };
+    AbstractBranchInsertionBuilder.prototype.setMapping = function (mapping) {
+        this.mapping = mapping;
+        return this;
+    };
+    AbstractBranchInsertionBuilder.prototype.validateParameters = function () {
+        return this.mapping !== undefined;
+    };
+    AbstractBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
+        throw new Error("abstract method; not implemented");
+    };
+    return AbstractBranchInsertionBuilder;
+}());
+exports.AbstractBranchInsertionBuilder = AbstractBranchInsertionBuilder;
+var AbstractComplexBranchInsertionBuilder = (function (_super) {
+    __extends(AbstractComplexBranchInsertionBuilder, _super);
+    function AbstractComplexBranchInsertionBuilder() {
+        _super.apply(this, arguments);
+    }
+    AbstractComplexBranchInsertionBuilder.prototype.setComplexProperty = function (property) {
+        if (property.getEntityKind() === Schema.EntityKind.Complex) {
+            this.property = property;
+            return this;
+        }
+        else
+            throw new Error("property should be complex");
+    };
+    AbstractComplexBranchInsertionBuilder.prototype.setValue = function (value) {
+        this.value = value;
+        return this;
+    };
+    AbstractComplexBranchInsertionBuilder.prototype.validateParameters = function () {
+        return _super.prototype.validateParameters.call(this) && this.property !== undefined && this.value !== undefined;
+    };
+    return AbstractComplexBranchInsertionBuilder;
+}(AbstractBranchInsertionBuilder));
+exports.AbstractComplexBranchInsertionBuilder = AbstractComplexBranchInsertionBuilder;
+var AbstractElementaryBranchInsertionBuilder = (function (_super) {
+    __extends(AbstractElementaryBranchInsertionBuilder, _super);
+    function AbstractElementaryBranchInsertionBuilder() {
+        _super.apply(this, arguments);
+    }
+    AbstractElementaryBranchInsertionBuilder.prototype.setElementaryProperty = function (property) {
+        if (property.getEntityKind() === Schema.EntityKind.Elementary)
+            this.property = property;
+        else
+            throw new Error("property should be elementary");
+        return this;
+    };
+    AbstractElementaryBranchInsertionBuilder.prototype.validateParameters = function () {
+        return _super.prototype.validateParameters.call(this) && this.property !== undefined;
+    };
+    return AbstractElementaryBranchInsertionBuilder;
+}(AbstractBranchInsertionBuilder));
+exports.AbstractElementaryBranchInsertionBuilder = AbstractElementaryBranchInsertionBuilder;
+var ComplexBranchInsertionBuilder = (function (_super) {
+    __extends(ComplexBranchInsertionBuilder, _super);
+    function ComplexBranchInsertionBuilder() {
+        _super.apply(this, arguments);
+    }
     ComplexBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.hasDirectRdfRepresentation()) {
             return new NormalBranchInsertionCommand()
@@ -333,33 +377,13 @@ var ComplexBranchInsertionBuilder = (function () {
         }
     };
     return ComplexBranchInsertionBuilder;
-}());
+}(AbstractComplexBranchInsertionBuilder));
 exports.ComplexBranchInsertionBuilder = ComplexBranchInsertionBuilder;
-var ComplexBranchInsertionBuilderForFiltering = (function () {
+var ComplexBranchInsertionBuilderForFiltering = (function (_super) {
+    __extends(ComplexBranchInsertionBuilderForFiltering, _super);
     function ComplexBranchInsertionBuilderForFiltering() {
+        _super.apply(this, arguments);
     }
-    ComplexBranchInsertionBuilderForFiltering.prototype.setComplexProperty = function (property) {
-        if (property.getEntityKind() === Schema.EntityKind.Complex)
-            this.property = property;
-        else
-            throw new Error("property should be complex");
-        return this;
-    };
-    ComplexBranchInsertionBuilderForFiltering.prototype.setMapping = function (mapping) {
-        this.mapping = mapping;
-        return this;
-    };
-    ComplexBranchInsertionBuilderForFiltering.prototype.setValue = function (value) {
-        this.value = value;
-        return this;
-    };
-    ComplexBranchInsertionBuilderForFiltering.prototype.buildCommand = function () {
-        if (this.property !== undefined && this.mapping !== undefined) {
-            return this.buildCommandNoValidityChecks();
-        }
-        else
-            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
-    };
     ComplexBranchInsertionBuilderForFiltering.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.hasDirectRdfRepresentation()) {
             return new OptionalBranchInsertionCommand()
@@ -372,29 +396,13 @@ var ComplexBranchInsertionBuilderForFiltering = (function () {
         }
     };
     return ComplexBranchInsertionBuilderForFiltering;
-}());
+}(AbstractComplexBranchInsertionBuilder));
 exports.ComplexBranchInsertionBuilderForFiltering = ComplexBranchInsertionBuilderForFiltering;
-var ElementaryBranchInsertionBuilder = (function () {
+var ElementaryBranchInsertionBuilder = (function (_super) {
+    __extends(ElementaryBranchInsertionBuilder, _super);
     function ElementaryBranchInsertionBuilder() {
+        _super.apply(this, arguments);
     }
-    ElementaryBranchInsertionBuilder.prototype.setElementaryProperty = function (property) {
-        if (property.getEntityKind() === Schema.EntityKind.Elementary)
-            this.property = property;
-        else
-            throw new Error("property should be elementary");
-        return this;
-    };
-    ElementaryBranchInsertionBuilder.prototype.setMapping = function (mapping) {
-        this.mapping = mapping;
-        return this;
-    };
-    ElementaryBranchInsertionBuilder.prototype.buildCommand = function () {
-        if (this.property !== undefined && this.mapping !== undefined) {
-            return this.buildCommandNoValidityChecks();
-        }
-        else
-            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
-    };
     ElementaryBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.mirroredFromProperty()) {
             return this.buildMirroringPropertyNoValidityChecks();
@@ -422,29 +430,13 @@ var ElementaryBranchInsertionBuilder = (function () {
         return property.isOptional() ? new OptionalBranchInsertionCommand() : new NormalBranchInsertionCommand();
     };
     return ElementaryBranchInsertionBuilder;
-}());
+}(AbstractElementaryBranchInsertionBuilder));
 exports.ElementaryBranchInsertionBuilder = ElementaryBranchInsertionBuilder;
-var ElementaryBranchInsertionBuilderForFiltering = (function () {
+var ElementaryBranchInsertionBuilderForFiltering = (function (_super) {
+    __extends(ElementaryBranchInsertionBuilderForFiltering, _super);
     function ElementaryBranchInsertionBuilderForFiltering() {
+        _super.apply(this, arguments);
     }
-    ElementaryBranchInsertionBuilderForFiltering.prototype.setElementaryProperty = function (property) {
-        if (property.getEntityKind() === Schema.EntityKind.Elementary)
-            this.property = property;
-        else
-            throw new Error("property should be elementary");
-        return this;
-    };
-    ElementaryBranchInsertionBuilderForFiltering.prototype.setMapping = function (mapping) {
-        this.mapping = mapping;
-        return this;
-    };
-    ElementaryBranchInsertionBuilderForFiltering.prototype.buildCommand = function () {
-        if (this.property !== undefined && this.mapping !== undefined) {
-            return this.buildCommandNoValidityChecks();
-        }
-        else
-            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
-    };
     ElementaryBranchInsertionBuilderForFiltering.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.mirroredFromProperty()) {
             return this.buildMirroringPropertyNoValidityChecks();
@@ -472,7 +464,7 @@ var ElementaryBranchInsertionBuilderForFiltering = (function () {
         return new OptionalBranchInsertionCommand();
     };
     return ElementaryBranchInsertionBuilderForFiltering;
-}());
+}(AbstractElementaryBranchInsertionBuilder));
 exports.ElementaryBranchInsertionBuilderForFiltering = ElementaryBranchInsertionBuilderForFiltering;
 var NormalBranchInsertionCommand = (function () {
     function NormalBranchInsertionCommand() {
