@@ -2,59 +2,6 @@
 import Mappings = require("./sparql_mappings");
 import Schema = require("../odata/schema");
 
-export class GraphPatternWithBranches {
-  private createTriple: (property: string, branch: TreeGraphPattern) => any[];
-  private branches: { [id: string]: TreeGraphPattern[] } = {};
-
-  constructor(createTriple: (property: string, branch: TreeGraphPattern) => any[]) {
-    this.createTriple = createTriple;
-  }
-
-  public branch(property: string): TreeGraphPattern[];
-  public branch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
-  public branch(property: string, arg?): any {
-    switch (typeof arg) {
-      case "undefined":
-        return this.branches[property] || [];
-      case "object":
-        if (this.branches[property] !== undefined)
-          this.branches[property].push(arg);
-        else
-          this.branches[property] = [ arg as TreeGraphPattern ];
-        return arg;
-      default:
-        throw new Error("branch argument was specified but is no object");
-    }
-  }
-
-  public getDirectTriples(): any[][] {
-    let triples: any[][] = [];
-    this.enumerateBranches((property, branch) => {
-        triples.push(this.createTriple(property, branch));
-    });
-    return triples;
-  }
-
-  public getBranchPatterns(): TreeGraphPattern[] {
-    let patterns: TreeGraphPattern[] = [];
-    this.enumerateBranches((property, branch) => patterns.push(branch));
-    return patterns;
-  }
-
-  public enumerateBranches(fn: (property: string, branch: TreeGraphPattern) => void) {
-    for (let property in this.branches) {
-      let branches = this.branches[property];
-      branches.forEach(branch => fn(property, branch));
-    }
-  }
-
-  public merge(other: GraphPatternWithBranches) {
-    other.enumerateBranches((property, branch) => {
-      this.branch(property, branch);
-    });
-  }
-}
-
 /**
  * Provides a SPARQL graph pattern whose triples are generated from a
  * property tree
@@ -221,6 +168,59 @@ export class TreeGraphPattern {
   }
 }
 
+export class GraphPatternWithBranches {
+  private createTriple: (property: string, branch: TreeGraphPattern) => any[];
+  private branches: { [id: string]: TreeGraphPattern[] } = {};
+
+  constructor(createTriple: (property: string, branch: TreeGraphPattern) => any[]) {
+    this.createTriple = createTriple;
+  }
+
+  public branch(property: string): TreeGraphPattern[];
+  public branch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
+  public branch(property: string, arg?): any {
+    switch (typeof arg) {
+      case "undefined":
+        return this.branches[property] || [];
+      case "object":
+        if (this.branches[property] !== undefined)
+          this.branches[property].push(arg);
+        else
+          this.branches[property] = [ arg as TreeGraphPattern ];
+        return arg;
+      default:
+        throw new Error("branch argument was specified but is no object");
+    }
+  }
+
+  public getDirectTriples(): any[][] {
+    let triples: any[][] = [];
+    this.enumerateBranches((property, branch) => {
+        triples.push(this.createTriple(property, branch));
+    });
+    return triples;
+  }
+
+  public getBranchPatterns(): TreeGraphPattern[] {
+    let patterns: TreeGraphPattern[] = [];
+    this.enumerateBranches((property, branch) => patterns.push(branch));
+    return patterns;
+  }
+
+  public enumerateBranches(fn: (property: string, branch: TreeGraphPattern) => void) {
+    for (let property in this.branches) {
+      let branches = this.branches[property];
+      branches.forEach(branch => fn(property, branch));
+    }
+  }
+
+  public merge(other: GraphPatternWithBranches) {
+    other.enumerateBranches((property, branch) => {
+      this.branch(property, branch);
+    });
+  }
+}
+
 export class ValueLeaf {
   public value: string;
 
@@ -247,7 +247,7 @@ export class DirectPropertiesGraphPattern extends TreeGraphPattern {
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.isNavigationProperty() === false) {
-        new ODataBasedElementaryBranchInsertionBuilder()
+        new ElementaryBranchInsertionBuilder()
           .setMapping(mapping)
           .setElementaryProperty(property)
           .buildCommand()
@@ -272,14 +272,13 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
     this.newUnionPattern(directPropertyPattern);
     Object.keys(expandTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
-
       let baseGraphPattern = this.newUnionPattern();
-      let branchAtProperty = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName],
+      let branch = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName],
         mapping.getComplexProperty(propertyName));
 
-      new ODataBasedComplexBranchInsertionBuilder()
+      new ComplexBranchInsertionBuilder()
         .setComplexProperty(property)
-        .setValue(branchAtProperty)
+        .setValue(branch)
         .setMapping(mapping)
         .buildCommand()
         .applyTo(baseGraphPattern);
@@ -287,7 +286,40 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
   }
 }
 
-export class ODataBasedComplexBranchInsertionBuilder {
+export class FilterGraphPattern extends TreeGraphPattern {
+  constructor(entityType: Schema.EntityType, propertyTree: any, mapping: Mappings.StructuredSparqlVariableMapping) {
+    super(mapping.getVariable());
+
+    Object.keys(propertyTree).forEach(propertyName => {
+      let property = entityType.getProperty(propertyName);
+      switch (property.getEntityKind()) {
+        case Schema.EntityKind.Elementary:
+          new ElementaryBranchInsertionBuilderForFiltering()
+            .setElementaryProperty(property)
+            .setMapping(mapping)
+            .buildCommand()
+            .applyTo(this);
+          break;
+        case Schema.EntityKind.Complex:
+          if (!property.isCardinalityOne()) throw new Error("properties of higher cardinality are not allowed");
+
+          let branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName],
+            mapping.getComplexProperty(propertyName));
+          new ComplexBranchInsertionBuilderForFiltering()
+            .setComplexProperty(property)
+            .setMapping(mapping)
+            .setValue(branchedPattern)
+            .buildCommand()
+            .applyTo(this);
+          break;
+        default:
+          throw new Error("invalid entity kind " + property.getEntityKind());
+      }
+    });
+  }
+}
+
+export class ComplexBranchInsertionBuilder {
 
   private property: Schema.Property;
   private mapping: Mappings.StructuredSparqlVariableMapping;
@@ -330,7 +362,50 @@ export class ODataBasedComplexBranchInsertionBuilder {
   }
 }
 
-export class ODataBasedElementaryBranchInsertionBuilder {
+export class ComplexBranchInsertionBuilderForFiltering {
+
+  private property: Schema.Property;
+  private mapping: Mappings.StructuredSparqlVariableMapping;
+  private value: TreeGraphPattern;
+
+  public setComplexProperty(property: Schema.Property) {
+    if (property.getEntityKind() === Schema.EntityKind.Complex)
+      this.property = property;
+    else throw new Error("property should be complex");
+    return this;
+  }
+
+  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
+    this.mapping = mapping;
+    return this;
+  }
+
+  public setValue(value: TreeGraphPattern) {
+    this.value = value;
+    return this;
+  }
+
+  public buildCommand(): BranchInsertionCommand {
+    if (this.property !== undefined && this.mapping !== undefined) {
+      return this.buildCommandNoValidityChecks();
+    }
+    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+  }
+
+  public buildCommandNoValidityChecks(): BranchInsertionCommand {
+    if (this.property.hasDirectRdfRepresentation()) {
+      return new OptionalBranchInsertionCommand()
+        .branch(this.property.getNamespacedUri(), this.value);
+    }
+    else {
+      let inverseProperty = this.property.getInverseProperty();
+      return new OptionalInverseBranchInsertionCommand()
+        .branch(inverseProperty.getNamespacedUri(), this.value);
+    }
+  }
+}
+
+export class ElementaryBranchInsertionBuilder {
 
   private property: Schema.Property;
   private mapping: Mappings.StructuredSparqlVariableMapping;
@@ -386,6 +461,62 @@ export class ODataBasedElementaryBranchInsertionBuilder {
   }
 }
 
+export class ElementaryBranchInsertionBuilderForFiltering {
+
+  private property: Schema.Property;
+  private mapping: Mappings.StructuredSparqlVariableMapping;
+
+  public setElementaryProperty(property: Schema.Property) {
+    if (property.getEntityKind() === Schema.EntityKind.Elementary)
+      this.property = property;
+    else throw new Error("property should be elementary");
+    return this;
+  }
+
+  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
+    this.mapping = mapping;
+    return this;
+  }
+
+  public buildCommand(): BranchInsertionCommand {
+    if (this.property !== undefined && this.mapping !== undefined) {
+      return this.buildCommandNoValidityChecks();
+    }
+    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+  }
+
+  private buildCommandNoValidityChecks(): BranchInsertionCommand {
+    if (this.property.mirroredFromProperty()) {
+      return this.buildMirroringPropertyNoValidityChecks();
+    }
+    else {
+      return this.buildNotMirroringPropertyNoValidityChecks();
+    }
+  }
+
+  private buildMirroringPropertyNoValidityChecks() {
+    let mirroringProperty = this.property.mirroredFromProperty();
+    let mirroringPropertyVariable = this.mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+
+    let insertionCommand = this.createCommand(mirroringProperty);
+    insertionCommand
+      .branch(mirroringProperty.getNamespacedUri(), mirroringPropertyVariable)
+      .branch("disco:id", this.mapping.getElementaryPropertyVariable(this.property.getName()));
+    return insertionCommand;
+  }
+
+  private buildNotMirroringPropertyNoValidityChecks() {
+    let insertionCommand = this.createCommand(this.property);
+    insertionCommand
+      .branch(this.property.getNamespacedUri(), this.mapping.getElementaryPropertyVariable(this.property.getName()));
+    return insertionCommand;
+  }
+
+  private createCommand(property: Schema.Property): BranchInsertionCommand {
+    return new OptionalBranchInsertionCommand();
+  }
+}
+
 export interface BranchInsertionCommand {
   branch(property: string, value: string | TreeGraphPattern): BranchInsertionCommand;
   applyTo(graphPattern: TreeGraphPattern);
@@ -426,9 +557,9 @@ export class InverseBranchInsertionCommand implements BranchInsertionCommand {
 }
 
 export class OptionalBranchInsertionCommand implements BranchInsertionCommand {
-  private branchingChain: { property: string; value: string }[] = [];
+  private branchingChain: { property: string; value: string | TreeGraphPattern }[] = [];
 
-  public branch(property: string, value: string) {
+  public branch(property: string, value: string | TreeGraphPattern) {
     this.branchingChain.push({ property: property, value: value });
     return this;
   }
@@ -447,42 +578,24 @@ export class OptionalBranchInsertionCommand implements BranchInsertionCommand {
   }
 }
 
-export class FilterGraphPattern extends TreeGraphPattern {
-  constructor(entityType: Schema.EntityType, propertyTree: any, mapping: Mappings.StructuredSparqlVariableMapping) {
-    super(mapping.getVariable());
+export class OptionalInverseBranchInsertionCommand implements BranchInsertionCommand {
+  private branchingChain: { property: string; value: string | TreeGraphPattern }[] = [];
 
-    Object.keys(propertyTree).forEach(propertyName => {
-      let property = entityType.getProperty(propertyName);
-      switch (property.getEntityKind()) {
-        case Schema.EntityKind.Elementary:
-          if (property.mirroredFromProperty()) {
-            let mirroringProperty = property.mirroredFromProperty();
-            let mirroringPropertyVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
-            this
-              .optionalBranch(mirroringProperty.getNamespacedUri(), mirroringPropertyVar)
-              /* @smell "disco:id" */
-              .branch("disco:id", mapping.getElementaryPropertyVariable(propertyName));
-          }
-          else {
-            this.optionalBranch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
-          }
-          break;
-        case Schema.EntityKind.Complex:
-          if (!property.isQuantityOne()) throw new Error("properties of higher cardinality are not allowed");
+  public branch(property: string, value: string | TreeGraphPattern) {
+    this.branchingChain.push({ property: property, value: value });
+    return this;
+  }
 
-          let branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName],
-            mapping.getComplexProperty(propertyName));
-          if (property.hasDirectRdfRepresentation()) {
-            this.optionalBranch(property.getNamespacedUri(), branchedPattern);
-          }
-          else {
-            let inverseProperty = property.getInverseProperty();
-            this.optionalInverseBranch(inverseProperty.getNamespacedUri(), branchedPattern);
-          }
-          break;
-        default:
-          throw new Error("invalid entity kind " + property.getEntityKind());
+  public applyTo(graphPattern: TreeGraphPattern) {
+    let currentBranch = graphPattern;
+    for (let i = 0; i < this.branchingChain.length; ++i) {
+      let step = this.branchingChain[i];
+      if (i === 0) {
+        currentBranch = currentBranch.optionalInverseBranch(step.property, step.value);
       }
-    });
+      else {
+        throw new Error("cannot chain optional inverse branches");
+      }
+    }
   }
 }

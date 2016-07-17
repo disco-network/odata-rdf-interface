@@ -121,7 +121,7 @@ var EntityFactory = (function () {
     EntityFactory.fromPropertyWithContext = function (property, context) {
         var kind = property.getEntityKind();
         var subContext = context.getSubContext(property.getName());
-        if (property.isQuantityOne()) {
+        if (property.isCardinalityOne()) {
             return EntityFactory.fromEntityKind(kind, subContext);
         }
         else {

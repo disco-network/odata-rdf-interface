@@ -5,57 +5,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var Schema = require("../odata/schema");
-var GraphPatternWithBranches = (function () {
-    function GraphPatternWithBranches(createTriple) {
-        this.branches = {};
-        this.createTriple = createTriple;
-    }
-    GraphPatternWithBranches.prototype.branch = function (property, arg) {
-        switch (typeof arg) {
-            case "undefined":
-                return this.branches[property] || [];
-            case "object":
-                if (this.branches[property] !== undefined)
-                    this.branches[property].push(arg);
-                else
-                    this.branches[property] = [arg];
-                return arg;
-            default:
-                throw new Error("branch argument was specified but is no object");
-        }
-    };
-    GraphPatternWithBranches.prototype.getDirectTriples = function () {
-        var _this = this;
-        var triples = [];
-        this.enumerateBranches(function (property, branch) {
-            triples.push(_this.createTriple(property, branch));
-        });
-        return triples;
-    };
-    GraphPatternWithBranches.prototype.getBranchPatterns = function () {
-        var patterns = [];
-        this.enumerateBranches(function (property, branch) { return patterns.push(branch); });
-        return patterns;
-    };
-    GraphPatternWithBranches.prototype.enumerateBranches = function (fn) {
-        var _loop_1 = function(property) {
-            var branches = this_1.branches[property];
-            branches.forEach(function (branch) { return fn(property, branch); });
-        };
-        var this_1 = this;
-        for (var property in this.branches) {
-            _loop_1(property);
-        }
-    };
-    GraphPatternWithBranches.prototype.merge = function (other) {
-        var _this = this;
-        other.enumerateBranches(function (property, branch) {
-            _this.branch(property, branch);
-        });
-    };
-    return GraphPatternWithBranches;
-}());
-exports.GraphPatternWithBranches = GraphPatternWithBranches;
 /**
  * Provides a SPARQL graph pattern whose triples are generated from a
  * property tree
@@ -80,15 +29,15 @@ var TreeGraphPattern = (function () {
     TreeGraphPattern.prototype.getDirectTriples = function () {
         var _this = this;
         var triples = [];
-        var _loop_2 = function(property) {
-            var leaves = this_2.valueLeaves[property];
+        var _loop_1 = function(property) {
+            var leaves = this_1.valueLeaves[property];
             leaves.forEach(function (leaf) {
                 triples.push([_this.name(), property, "\"" + leaf.value + "\""]);
             });
         };
-        var this_2 = this;
+        var this_1 = this;
         for (var property in this.valueLeaves) {
-            _loop_2(property);
+            _loop_1(property);
         }
         triples.push.apply(triples, this.branchPattern.getDirectTriples());
         triples.push.apply(triples, this.inverseBranchPattern.getDirectTriples());
@@ -198,6 +147,57 @@ var TreeGraphPattern = (function () {
     return TreeGraphPattern;
 }());
 exports.TreeGraphPattern = TreeGraphPattern;
+var GraphPatternWithBranches = (function () {
+    function GraphPatternWithBranches(createTriple) {
+        this.branches = {};
+        this.createTriple = createTriple;
+    }
+    GraphPatternWithBranches.prototype.branch = function (property, arg) {
+        switch (typeof arg) {
+            case "undefined":
+                return this.branches[property] || [];
+            case "object":
+                if (this.branches[property] !== undefined)
+                    this.branches[property].push(arg);
+                else
+                    this.branches[property] = [arg];
+                return arg;
+            default:
+                throw new Error("branch argument was specified but is no object");
+        }
+    };
+    GraphPatternWithBranches.prototype.getDirectTriples = function () {
+        var _this = this;
+        var triples = [];
+        this.enumerateBranches(function (property, branch) {
+            triples.push(_this.createTriple(property, branch));
+        });
+        return triples;
+    };
+    GraphPatternWithBranches.prototype.getBranchPatterns = function () {
+        var patterns = [];
+        this.enumerateBranches(function (property, branch) { return patterns.push(branch); });
+        return patterns;
+    };
+    GraphPatternWithBranches.prototype.enumerateBranches = function (fn) {
+        var _loop_2 = function(property) {
+            var branches = this_2.branches[property];
+            branches.forEach(function (branch) { return fn(property, branch); });
+        };
+        var this_2 = this;
+        for (var property in this.branches) {
+            _loop_2(property);
+        }
+    };
+    GraphPatternWithBranches.prototype.merge = function (other) {
+        var _this = this;
+        other.enumerateBranches(function (property, branch) {
+            _this.branch(property, branch);
+        });
+    };
+    return GraphPatternWithBranches;
+}());
+exports.GraphPatternWithBranches = GraphPatternWithBranches;
 var ValueLeaf = (function () {
     function ValueLeaf(value) {
         this.value = value;
@@ -223,7 +223,7 @@ var DirectPropertiesGraphPattern = (function (_super) {
             if (propertyName === "Id" && options.indexOf("no-id-property") >= 0)
                 continue;
             if (property.isNavigationProperty() === false) {
-                new ODataBasedElementaryBranchInsertionBuilder()
+                new ElementaryBranchInsertionBuilder()
                     .setMapping(mapping)
                     .setElementaryProperty(property)
                     .buildCommand()
@@ -250,10 +250,10 @@ var ExpandTreeGraphPattern = (function (_super) {
         Object.keys(expandTree).forEach(function (propertyName) {
             var property = entityType.getProperty(propertyName);
             var baseGraphPattern = _this.newUnionPattern();
-            var branchAtProperty = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName], mapping.getComplexProperty(propertyName));
-            new ODataBasedComplexBranchInsertionBuilder()
+            var branch = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName], mapping.getComplexProperty(propertyName));
+            new ComplexBranchInsertionBuilder()
                 .setComplexProperty(property)
-                .setValue(branchAtProperty)
+                .setValue(branch)
                 .setMapping(mapping)
                 .buildCommand()
                 .applyTo(baseGraphPattern);
@@ -262,32 +262,66 @@ var ExpandTreeGraphPattern = (function (_super) {
     return ExpandTreeGraphPattern;
 }(TreeGraphPattern));
 exports.ExpandTreeGraphPattern = ExpandTreeGraphPattern;
-var ODataBasedComplexBranchInsertionBuilder = (function () {
-    function ODataBasedComplexBranchInsertionBuilder() {
+var FilterGraphPattern = (function (_super) {
+    __extends(FilterGraphPattern, _super);
+    function FilterGraphPattern(entityType, propertyTree, mapping) {
+        var _this = this;
+        _super.call(this, mapping.getVariable());
+        Object.keys(propertyTree).forEach(function (propertyName) {
+            var property = entityType.getProperty(propertyName);
+            switch (property.getEntityKind()) {
+                case Schema.EntityKind.Elementary:
+                    new ElementaryBranchInsertionBuilderForFiltering()
+                        .setElementaryProperty(property)
+                        .setMapping(mapping)
+                        .buildCommand()
+                        .applyTo(_this);
+                    break;
+                case Schema.EntityKind.Complex:
+                    if (!property.isCardinalityOne())
+                        throw new Error("properties of higher cardinality are not allowed");
+                    var branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty(propertyName));
+                    new ComplexBranchInsertionBuilderForFiltering()
+                        .setComplexProperty(property)
+                        .setMapping(mapping)
+                        .setValue(branchedPattern)
+                        .buildCommand()
+                        .applyTo(_this);
+                    break;
+                default:
+                    throw new Error("invalid entity kind " + property.getEntityKind());
+            }
+        });
     }
-    ODataBasedComplexBranchInsertionBuilder.prototype.setComplexProperty = function (property) {
+    return FilterGraphPattern;
+}(TreeGraphPattern));
+exports.FilterGraphPattern = FilterGraphPattern;
+var ComplexBranchInsertionBuilder = (function () {
+    function ComplexBranchInsertionBuilder() {
+    }
+    ComplexBranchInsertionBuilder.prototype.setComplexProperty = function (property) {
         if (property.getEntityKind() === Schema.EntityKind.Complex)
             this.property = property;
         else
             throw new Error("property should be complex");
         return this;
     };
-    ODataBasedComplexBranchInsertionBuilder.prototype.setMapping = function (mapping) {
+    ComplexBranchInsertionBuilder.prototype.setMapping = function (mapping) {
         this.mapping = mapping;
         return this;
     };
-    ODataBasedComplexBranchInsertionBuilder.prototype.setValue = function (value) {
+    ComplexBranchInsertionBuilder.prototype.setValue = function (value) {
         this.value = value;
         return this;
     };
-    ODataBasedComplexBranchInsertionBuilder.prototype.buildCommand = function () {
+    ComplexBranchInsertionBuilder.prototype.buildCommand = function () {
         if (this.property !== undefined && this.mapping !== undefined) {
             return this.buildCommandNoValidityChecks();
         }
         else
             throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
     };
-    ODataBasedComplexBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
+    ComplexBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.hasDirectRdfRepresentation()) {
             return new NormalBranchInsertionCommand()
                 .branch(this.property.getNamespacedUri(), this.value);
@@ -298,31 +332,70 @@ var ODataBasedComplexBranchInsertionBuilder = (function () {
                 .branch(inverseProperty.getNamespacedUri(), this.value);
         }
     };
-    return ODataBasedComplexBranchInsertionBuilder;
+    return ComplexBranchInsertionBuilder;
 }());
-exports.ODataBasedComplexBranchInsertionBuilder = ODataBasedComplexBranchInsertionBuilder;
-var ODataBasedElementaryBranchInsertionBuilder = (function () {
-    function ODataBasedElementaryBranchInsertionBuilder() {
+exports.ComplexBranchInsertionBuilder = ComplexBranchInsertionBuilder;
+var ComplexBranchInsertionBuilderForFiltering = (function () {
+    function ComplexBranchInsertionBuilderForFiltering() {
     }
-    ODataBasedElementaryBranchInsertionBuilder.prototype.setElementaryProperty = function (property) {
-        if (property.getEntityKind() === Schema.EntityKind.Elementary)
+    ComplexBranchInsertionBuilderForFiltering.prototype.setComplexProperty = function (property) {
+        if (property.getEntityKind() === Schema.EntityKind.Complex)
             this.property = property;
         else
-            throw new Error("property should be elementary");
+            throw new Error("property should be complex");
         return this;
     };
-    ODataBasedElementaryBranchInsertionBuilder.prototype.setMapping = function (mapping) {
+    ComplexBranchInsertionBuilderForFiltering.prototype.setMapping = function (mapping) {
         this.mapping = mapping;
         return this;
     };
-    ODataBasedElementaryBranchInsertionBuilder.prototype.buildCommand = function () {
+    ComplexBranchInsertionBuilderForFiltering.prototype.setValue = function (value) {
+        this.value = value;
+        return this;
+    };
+    ComplexBranchInsertionBuilderForFiltering.prototype.buildCommand = function () {
         if (this.property !== undefined && this.mapping !== undefined) {
             return this.buildCommandNoValidityChecks();
         }
         else
             throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
     };
-    ODataBasedElementaryBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
+    ComplexBranchInsertionBuilderForFiltering.prototype.buildCommandNoValidityChecks = function () {
+        if (this.property.hasDirectRdfRepresentation()) {
+            return new OptionalBranchInsertionCommand()
+                .branch(this.property.getNamespacedUri(), this.value);
+        }
+        else {
+            var inverseProperty = this.property.getInverseProperty();
+            return new OptionalInverseBranchInsertionCommand()
+                .branch(inverseProperty.getNamespacedUri(), this.value);
+        }
+    };
+    return ComplexBranchInsertionBuilderForFiltering;
+}());
+exports.ComplexBranchInsertionBuilderForFiltering = ComplexBranchInsertionBuilderForFiltering;
+var ElementaryBranchInsertionBuilder = (function () {
+    function ElementaryBranchInsertionBuilder() {
+    }
+    ElementaryBranchInsertionBuilder.prototype.setElementaryProperty = function (property) {
+        if (property.getEntityKind() === Schema.EntityKind.Elementary)
+            this.property = property;
+        else
+            throw new Error("property should be elementary");
+        return this;
+    };
+    ElementaryBranchInsertionBuilder.prototype.setMapping = function (mapping) {
+        this.mapping = mapping;
+        return this;
+    };
+    ElementaryBranchInsertionBuilder.prototype.buildCommand = function () {
+        if (this.property !== undefined && this.mapping !== undefined) {
+            return this.buildCommandNoValidityChecks();
+        }
+        else
+            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+    };
+    ElementaryBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.mirroredFromProperty()) {
             return this.buildMirroringPropertyNoValidityChecks();
         }
@@ -330,7 +403,7 @@ var ODataBasedElementaryBranchInsertionBuilder = (function () {
             return this.buildNotMirroringPropertyNoValidityChecks();
         }
     };
-    ODataBasedElementaryBranchInsertionBuilder.prototype.buildMirroringPropertyNoValidityChecks = function () {
+    ElementaryBranchInsertionBuilder.prototype.buildMirroringPropertyNoValidityChecks = function () {
         var mirroringProperty = this.property.mirroredFromProperty();
         var mirroringPropertyVariable = this.mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
         var insertionCommand = this.createMandatoryOrOptionalCommand(mirroringProperty);
@@ -339,18 +412,68 @@ var ODataBasedElementaryBranchInsertionBuilder = (function () {
             .branch("disco:id", this.mapping.getElementaryPropertyVariable(this.property.getName()));
         return insertionCommand;
     };
-    ODataBasedElementaryBranchInsertionBuilder.prototype.buildNotMirroringPropertyNoValidityChecks = function () {
+    ElementaryBranchInsertionBuilder.prototype.buildNotMirroringPropertyNoValidityChecks = function () {
         var insertionCommand = this.createMandatoryOrOptionalCommand(this.property);
         insertionCommand
             .branch(this.property.getNamespacedUri(), this.mapping.getElementaryPropertyVariable(this.property.getName()));
         return insertionCommand;
     };
-    ODataBasedElementaryBranchInsertionBuilder.prototype.createMandatoryOrOptionalCommand = function (property) {
+    ElementaryBranchInsertionBuilder.prototype.createMandatoryOrOptionalCommand = function (property) {
         return property.isOptional() ? new OptionalBranchInsertionCommand() : new NormalBranchInsertionCommand();
     };
-    return ODataBasedElementaryBranchInsertionBuilder;
+    return ElementaryBranchInsertionBuilder;
 }());
-exports.ODataBasedElementaryBranchInsertionBuilder = ODataBasedElementaryBranchInsertionBuilder;
+exports.ElementaryBranchInsertionBuilder = ElementaryBranchInsertionBuilder;
+var ElementaryBranchInsertionBuilderForFiltering = (function () {
+    function ElementaryBranchInsertionBuilderForFiltering() {
+    }
+    ElementaryBranchInsertionBuilderForFiltering.prototype.setElementaryProperty = function (property) {
+        if (property.getEntityKind() === Schema.EntityKind.Elementary)
+            this.property = property;
+        else
+            throw new Error("property should be elementary");
+        return this;
+    };
+    ElementaryBranchInsertionBuilderForFiltering.prototype.setMapping = function (mapping) {
+        this.mapping = mapping;
+        return this;
+    };
+    ElementaryBranchInsertionBuilderForFiltering.prototype.buildCommand = function () {
+        if (this.property !== undefined && this.mapping !== undefined) {
+            return this.buildCommandNoValidityChecks();
+        }
+        else
+            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+    };
+    ElementaryBranchInsertionBuilderForFiltering.prototype.buildCommandNoValidityChecks = function () {
+        if (this.property.mirroredFromProperty()) {
+            return this.buildMirroringPropertyNoValidityChecks();
+        }
+        else {
+            return this.buildNotMirroringPropertyNoValidityChecks();
+        }
+    };
+    ElementaryBranchInsertionBuilderForFiltering.prototype.buildMirroringPropertyNoValidityChecks = function () {
+        var mirroringProperty = this.property.mirroredFromProperty();
+        var mirroringPropertyVariable = this.mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+        var insertionCommand = this.createCommand(mirroringProperty);
+        insertionCommand
+            .branch(mirroringProperty.getNamespacedUri(), mirroringPropertyVariable)
+            .branch("disco:id", this.mapping.getElementaryPropertyVariable(this.property.getName()));
+        return insertionCommand;
+    };
+    ElementaryBranchInsertionBuilderForFiltering.prototype.buildNotMirroringPropertyNoValidityChecks = function () {
+        var insertionCommand = this.createCommand(this.property);
+        insertionCommand
+            .branch(this.property.getNamespacedUri(), this.mapping.getElementaryPropertyVariable(this.property.getName()));
+        return insertionCommand;
+    };
+    ElementaryBranchInsertionBuilderForFiltering.prototype.createCommand = function (property) {
+        return new OptionalBranchInsertionCommand();
+    };
+    return ElementaryBranchInsertionBuilderForFiltering;
+}());
+exports.ElementaryBranchInsertionBuilderForFiltering = ElementaryBranchInsertionBuilderForFiltering;
 var NormalBranchInsertionCommand = (function () {
     function NormalBranchInsertionCommand() {
         this.branchingChain = [];
@@ -410,45 +533,28 @@ var OptionalBranchInsertionCommand = (function () {
     return OptionalBranchInsertionCommand;
 }());
 exports.OptionalBranchInsertionCommand = OptionalBranchInsertionCommand;
-var FilterGraphPattern = (function (_super) {
-    __extends(FilterGraphPattern, _super);
-    function FilterGraphPattern(entityType, propertyTree, mapping) {
-        var _this = this;
-        _super.call(this, mapping.getVariable());
-        Object.keys(propertyTree).forEach(function (propertyName) {
-            var property = entityType.getProperty(propertyName);
-            switch (property.getEntityKind()) {
-                case Schema.EntityKind.Elementary:
-                    if (property.mirroredFromProperty()) {
-                        var mirroringProperty = property.mirroredFromProperty();
-                        var mirroringPropertyVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
-                        _this
-                            .optionalBranch(mirroringProperty.getNamespacedUri(), mirroringPropertyVar)
-                            .branch("disco:id", mapping.getElementaryPropertyVariable(propertyName));
-                    }
-                    else {
-                        _this.optionalBranch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
-                    }
-                    break;
-                case Schema.EntityKind.Complex:
-                    if (!property.isQuantityOne())
-                        throw new Error("properties of higher cardinality are not allowed");
-                    var branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty(propertyName));
-                    if (property.hasDirectRdfRepresentation()) {
-                        _this.optionalBranch(property.getNamespacedUri(), branchedPattern);
-                    }
-                    else {
-                        var inverseProperty = property.getInverseProperty();
-                        _this.optionalInverseBranch(inverseProperty.getNamespacedUri(), branchedPattern);
-                    }
-                    break;
-                default:
-                    throw new Error("invalid entity kind " + property.getEntityKind());
-            }
-        });
+var OptionalInverseBranchInsertionCommand = (function () {
+    function OptionalInverseBranchInsertionCommand() {
+        this.branchingChain = [];
     }
-    return FilterGraphPattern;
-}(TreeGraphPattern));
-exports.FilterGraphPattern = FilterGraphPattern;
+    OptionalInverseBranchInsertionCommand.prototype.branch = function (property, value) {
+        this.branchingChain.push({ property: property, value: value });
+        return this;
+    };
+    OptionalInverseBranchInsertionCommand.prototype.applyTo = function (graphPattern) {
+        var currentBranch = graphPattern;
+        for (var i = 0; i < this.branchingChain.length; ++i) {
+            var step = this.branchingChain[i];
+            if (i === 0) {
+                currentBranch = currentBranch.optionalInverseBranch(step.property, step.value);
+            }
+            else {
+                throw new Error("cannot chain optional inverse branches");
+            }
+        }
+    };
+    return OptionalInverseBranchInsertionCommand;
+}());
+exports.OptionalInverseBranchInsertionCommand = OptionalInverseBranchInsertionCommand;
 
 //# sourceMappingURL=../../../maps/src/adapter/sparql_graphpatterns.js.map

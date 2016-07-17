@@ -143,7 +143,7 @@ export class Property extends RdfBasedSchemaResource {
     return this.getEntityType().isElementary() === false;
   }
 
-  public isQuantityOne(): boolean {
+  public isCardinalityOne(): boolean {
     return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
   }
 

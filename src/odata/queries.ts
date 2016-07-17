@@ -152,7 +152,7 @@ export class EntityFactory {
   public static fromPropertyWithContext(property: Schema.Property, context: QueryContext): EntityValue {
     let kind = property.getEntityKind();
     let subContext = context.getSubContext(property.getName());
-    if (property.isQuantityOne()) {
+    if (property.isCardinalityOne()) {
       return EntityFactory.fromEntityKind(kind, subContext);
     }
     else {

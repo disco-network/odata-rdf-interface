@@ -143,7 +143,7 @@ var Property = (function (_super) {
     Property.prototype.isNavigationProperty = function () {
         return this.getEntityType().isElementary() === false;
     };
-    Property.prototype.isQuantityOne = function () {
+    Property.prototype.isCardinalityOne = function () {
         return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
     };
     Property.prototype.getEntityKind = function () {
