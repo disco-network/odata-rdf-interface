@@ -1,5 +1,5 @@
-import mappings = require("./sparql_mappings");
-import gpatterns = require("./sparql_graphpatterns");
+import mappings = require("./mappings");
+import gpatterns = require("./graphpatterns");
 import schema = require("../odata/schema");
 
 export interface FilterExpression {

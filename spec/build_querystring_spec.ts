@@ -1,4 +1,4 @@
-import gpatterns = require("../src/adapter/sparql_graphpatterns");
+import gpatterns = require("../src/adapter/graphpatterns");
 import qbuilder = require("../src/adapter/querystring_builder");
 
 describe("the query string builder", function() {

@@ -1,7 +1,7 @@
 "use strict";
 /** @module */
-var mappings = require("./sparql_mappings");
-var gpatterns = require("./sparql_graphpatterns");
+var mappings = require("./mappings");
+var gpatterns = require("./graphpatterns");
 var filters = require("./filters");
 var qsBuilder = require("./querystring_builder");
 var ODataQueries = require("../odata/queries");
@@ -35,13 +35,12 @@ var EntitySetQuery = (function () {
         });
     };
     EntitySetQuery.prototype.prepareSparqlQuery = function () {
-        this.initializeVariableMapping();
         this.initializeFilterExpressionFactory();
-        this.initializeQueryStringAfterMapping();
+        this.initializeQueryString();
     };
     EntitySetQuery.prototype.translateResponseToOData = function (response) {
         if (!response.error) {
-            var queryContext = new SparqlQueryContext(this.mapping, this.getTypeOfEntitySet(), this.getExpandTree());
+            var queryContext = new SparqlQueryContext(this.getOrInitMapping(), this.getTypeOfEntitySet(), this.getExpandTree());
             var resultBuilder = new ODataQueries.JsonResultBuilder();
             return { result: resultBuilder.run(response.result, queryContext) };
         }
@@ -60,11 +59,10 @@ var EntitySetQuery = (function () {
     EntitySetQuery.prototype.initializeFilterExpressionFactory = function () {
         this.filterExpressionFactory = new filters.FilterExpressionFactory()
             .registerDefaultFilterExpressions()
-            .setSparqlVariableMapping(this.mapping)
+            .setSparqlVariableMapping(this.getOrInitMapping())
             .setEntityType(this.getTypeOfEntitySet());
     };
-    /** this.mapping has to be initialized before. */
-    EntitySetQuery.prototype.initializeQueryStringAfterMapping = function () {
+    EntitySetQuery.prototype.initializeQueryString = function () {
         var expandGraphPattern = this.createGraphPattern();
         var filterExpression = this.createFilterExpression();
         var filterGraphPattern = this.createFilterGraphPattern(filterExpression);
@@ -75,11 +73,11 @@ var EntitySetQuery = (function () {
         });
     };
     EntitySetQuery.prototype.createGraphPattern = function () {
-        return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
+        return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.getOrInitMapping());
     };
     EntitySetQuery.prototype.createFilterGraphPattern = function (filterExpression) {
         if (filterExpression !== undefined)
-            return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(), this.mapping);
+            return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(), this.getOrInitMapping());
     };
     EntitySetQuery.prototype.createFilterExpression = function () {
         if (this.getRawFilter())
@@ -96,6 +94,12 @@ var EntitySetQuery = (function () {
     };
     EntitySetQuery.prototype.getRawFilter = function () {
         return this.model.filterOption;
+    };
+    EntitySetQuery.prototype.getOrInitMapping = function () {
+        if (this.mapping === undefined) {
+            this.initializeVariableMapping();
+        }
+        return this.mapping;
     };
     return EntitySetQuery;
 }());

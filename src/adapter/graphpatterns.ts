@@ -1,6 +1,6 @@
 /** @module */
-import Mappings = require("./sparql_mappings");
-import Schema = require("../odata/schema");
+import mappings = require("./mappings");
+import schema = require("../odata/schema");
 
 /**
  * Provides a SPARQL graph pattern whose triples are generated from a
@@ -236,8 +236,8 @@ export class ValueLeaf {
  */
 export class DirectPropertiesGraphPatternFactory {
 
-  public static create(entityType: Schema.EntityType,
-                       mapping: Mappings.StructuredSparqlVariableMapping, options: string): TreeGraphPattern {
+  public static create(entityType: schema.EntityType,
+                       mapping: mappings.StructuredSparqlVariableMapping, options: string): TreeGraphPattern {
     let result = new TreeGraphPattern(mapping.getVariable());
 
     let propertyNames = entityType.getPropertyNames();
@@ -267,7 +267,7 @@ export class DirectPropertiesGraphPatternFactory {
  */
 export class ExpandTreeGraphPatternFactory {
 
-  public static create(entityType: Schema.EntityType, expandTree, mapping: Mappings.StructuredSparqlVariableMapping) {
+  public static create(entityType: schema.EntityType, expandTree, mapping: mappings.StructuredSparqlVariableMapping) {
     let result = new TreeGraphPattern(mapping.getVariable());
 
     result.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
@@ -294,21 +294,21 @@ export class ExpandTreeGraphPatternFactory {
 
 export class FilterGraphPatternFactory {
 
-  public static create(entityType: Schema.EntityType, propertyTree: any,
-                       mapping: Mappings.StructuredSparqlVariableMapping) {
+  public static create(entityType: schema.EntityType, propertyTree: any,
+                       mapping: mappings.StructuredSparqlVariableMapping) {
     let result = new TreeGraphPattern(mapping.getVariable());
 
     Object.keys(propertyTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
       switch (property.getEntityKind()) {
-        case Schema.EntityKind.Elementary:
+        case schema.EntityKind.Elementary:
           new ElementaryBranchInsertionBuilderForFiltering()
             .setElementaryProperty(property)
             .setMapping(mapping)
             .buildCommand()
             .applyTo(result);
           break;
-        case Schema.EntityKind.Complex:
+        case schema.EntityKind.Complex:
           if (!property.isCardinalityOne()) throw new Error("Properties of higher cardinality are not allowed.");
 
           let branchedPattern = FilterGraphPatternFactory.create(property.getEntityType(),
@@ -331,7 +331,7 @@ export class FilterGraphPatternFactory {
 
 export class AbstractBranchInsertionBuilder {
 
-  protected mapping: Mappings.StructuredSparqlVariableMapping;
+  protected mapping: mappings.StructuredSparqlVariableMapping;
 
   public buildCommand(): BranchInsertionCommand {
     if (this.validateParameters()) {
@@ -340,7 +340,7 @@ export class AbstractBranchInsertionBuilder {
     else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
   }
 
-  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
+  public setMapping(mapping: mappings.StructuredSparqlVariableMapping) {
     this.mapping = mapping;
     return this;
   }
@@ -356,11 +356,11 @@ export class AbstractBranchInsertionBuilder {
 
 export class AbstractComplexBranchInsertionBuilder extends AbstractBranchInsertionBuilder {
 
-  protected property: Schema.Property;
+  protected property: schema.Property;
   protected value: TreeGraphPattern;
 
-  public setComplexProperty(property: Schema.Property) {
-    if (property.getEntityKind() === Schema.EntityKind.Complex) {
+  public setComplexProperty(property: schema.Property) {
+    if (property.getEntityKind() === schema.EntityKind.Complex) {
       this.property = property;
       return this;
     }
@@ -380,10 +380,10 @@ export class AbstractComplexBranchInsertionBuilder extends AbstractBranchInserti
 
 export class AbstractElementaryBranchInsertionBuilder extends AbstractBranchInsertionBuilder {
 
-  protected property: Schema.Property;
+  protected property: schema.Property;
 
-  public setElementaryProperty(property: Schema.Property) {
-    if (property.getEntityKind() === Schema.EntityKind.Elementary)
+  public setElementaryProperty(property: schema.Property) {
+    if (property.getEntityKind() === schema.EntityKind.Elementary)
       this.property = property;
     else throw new Error("property should be elementary");
     return this;
@@ -453,7 +453,7 @@ export class ElementaryBranchInsertionBuilder extends AbstractElementaryBranchIn
     return insertionCommand;
   }
 
-  private createMandatoryOrOptionalCommand(property: Schema.Property): BranchInsertionCommand {
+  private createMandatoryOrOptionalCommand(property: schema.Property): BranchInsertionCommand {
     return property.isOptional() ? new OptionalBranchInsertionCommand() : new NormalBranchInsertionCommand();
   }
 }
@@ -487,7 +487,7 @@ export class ElementaryBranchInsertionBuilderForFiltering extends AbstractElemen
     return insertionCommand;
   }
 
-  private createCommand(property: Schema.Property): BranchInsertionCommand {
+  private createCommand(property: schema.Property): BranchInsertionCommand {
     return new OptionalBranchInsertionCommand();
   }
 }

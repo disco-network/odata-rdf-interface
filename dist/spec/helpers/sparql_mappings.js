@@ -1,5 +1,5 @@
 "use strict";
-var mappings = require("../../src/adapter/sparql_mappings");
+var mappings = require("../../src/adapter/mappings");
 function createUnstructuredMapping() {
     var mapping = new mappings.SparqlVariableMapping(new mappings.SparqlVariableGenerator());
     return mapping;

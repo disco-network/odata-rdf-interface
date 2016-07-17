@@ -1,7 +1,7 @@
 "use strict";
 var SchemaModule = require("../src/odata/schema");
 var schema = new SchemaModule.Schema();
-var gpatterns = require("../src/adapter/sparql_graphpatterns");
+var gpatterns = require("../src/adapter/graphpatterns");
 var mhelper = require("./helpers/sparql_mappings");
 describe('OData properties with quantity "many"', function () {
     it("should be integrated with UNION", function () {

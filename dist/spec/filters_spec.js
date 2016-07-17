@@ -1,6 +1,6 @@
 "use strict";
 var filters = require("../src/adapter/filters");
-var mappings = require("../src/adapter/sparql_mappings");
+var mappings = require("../src/adapter/mappings");
 describe("A filter factory", function () {
     it("should choose the right FilterExpression-implementing class", function () {
         var raw = {

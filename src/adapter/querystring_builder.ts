@@ -1,4 +1,4 @@
-import gpatterns = require("./sparql_graphpatterns");
+import gpatterns = require("./graphpatterns");
 import filters = require("./filters");
 
 export class QueryStringBuilder {

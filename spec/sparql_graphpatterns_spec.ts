@@ -1,7 +1,7 @@
 
 import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
-import gpatterns = require("../src/adapter/sparql_graphpatterns");
+import gpatterns = require("../src/adapter/graphpatterns");
 import mhelper = require("./helpers/sparql_mappings");
 
 describe("tree graph patterns", function() {

@@ -1,6 +1,6 @@
 /** @module */
-import mappings = require("./sparql_mappings");
-import gpatterns = require("./sparql_graphpatterns");
+import mappings = require("./mappings");
+import gpatterns = require("./graphpatterns");
 import filters = require("./filters");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
@@ -35,14 +35,14 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 
   private prepareSparqlQuery() {
-    this.initializeVariableMapping();
     this.initializeFilterExpressionFactory();
-    this.initializeQueryStringAfterMapping();
+    this.initializeQueryString();
   }
 
   private translateResponseToOData(response: { error?: any, result?: any }): { error?: any, result?: any } {
     if (!response.error) {
-      let queryContext = new SparqlQueryContext(this.mapping, this.getTypeOfEntitySet(), this.getExpandTree());
+      let queryContext = new SparqlQueryContext(this.getOrInitMapping(),
+        this.getTypeOfEntitySet(), this.getExpandTree());
       let resultBuilder = new ODataQueries.JsonResultBuilder();
       return { result: resultBuilder.run(response.result, queryContext) };
     }
@@ -64,12 +64,11 @@ export class EntitySetQuery implements ODataQueries.Query {
   private initializeFilterExpressionFactory() {
     this.filterExpressionFactory = new filters.FilterExpressionFactory()
       .registerDefaultFilterExpressions()
-      .setSparqlVariableMapping(this.mapping)
+      .setSparqlVariableMapping(this.getOrInitMapping())
       .setEntityType(this.getTypeOfEntitySet());
   }
 
-  /** this.mapping has to be initialized before. */
-  private initializeQueryStringAfterMapping() {
+  private initializeQueryString() {
     let expandGraphPattern = this.createGraphPattern();
     let filterExpression = this.createFilterExpression();
     let filterGraphPattern = this.createFilterGraphPattern(filterExpression);
@@ -82,13 +81,13 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private createGraphPattern(): gpatterns.TreeGraphPattern {
     return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(),
-      this.getExpandTree(), this.mapping);
+      this.getExpandTree(), this.getOrInitMapping());
   }
 
   private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
     if (filterExpression !== undefined)
       return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(),
-        filterExpression.getPropertyTree(), this.mapping);
+        filterExpression.getPropertyTree(), this.getOrInitMapping());
   }
 
   private createFilterExpression(): filters.FilterExpression {
@@ -108,6 +107,13 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private getRawFilter() {
     return this.model.filterOption;
+  }
+
+  private getOrInitMapping() {
+    if (this.mapping === undefined) {
+      this.initializeVariableMapping();
+    }
+    return this.mapping;
   }
 }
 

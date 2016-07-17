@@ -1,5 +1,5 @@
 import filters = require("../src/adapter/filters");
-import mappings = require("../src/adapter/sparql_mappings");
+import mappings = require("../src/adapter/mappings");
 
 describe("A filter factory", () => {
   it("should choose the right FilterExpression-implementing class", () => {
