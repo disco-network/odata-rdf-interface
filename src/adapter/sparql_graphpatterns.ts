@@ -251,24 +251,11 @@ export class DirectPropertiesGraphPattern extends TreeGraphPattern {
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.isNavigationProperty() === false) {
-        if (!property.mirroredFromProperty()) {
-          /* @todo optional */
-          this.branch(property.getNamespacedUri(), mapping.getElementaryPropertyVariable(propertyName));
-        }
-        else {
-          let mirroringProperty = property.mirroredFromProperty();
-          let propertyValueVar = mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
-          if (mirroringProperty.isOptional() === false) {
-            this
-              .branch(mirroringProperty.getNamespacedUri(), propertyValueVar)
-              .branch("disco:id", mapping.getElementaryPropertyVariable(propertyName));
-          }
-          else {
-            this
-              .optionalBranch(mirroringProperty.getNamespacedUri(), propertyValueVar)
-              .branch("disco:id", mapping.getElementaryPropertyVariable(propertyName));
-          }
-        }
+        new ODataBasedElementaryBranchInsertionBuilder()
+          .setMapping(mapping)
+          .setElementaryProperty(property)
+          .buildCommand()
+          .applyTo(this);
       }
     }
   }
@@ -305,6 +292,106 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
         this.newUnionPattern().branch(property.getNamespacedUri(), gp);
       }
     });
+  }
+}
+
+export class ODataBasedElementaryBranchInsertionBuilder {
+
+  private property: Schema.Property;
+  private mapping: Mappings.StructuredSparqlVariableMapping;
+
+  public setElementaryProperty(property: Schema.Property) {
+    if (property.getEntityKind() === Schema.EntityKind.Elementary)
+      this.property = property;
+    else throw new Error("property should be elementary");
+    return this;
+  }
+
+  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
+    this.mapping = mapping;
+    return this;
+  }
+
+  public buildCommand(): BranchInsertionCommand {
+    if (this.property !== undefined && this.mapping !== undefined) {
+      return this.buildCommandNoValidityChecks();
+    }
+    else throw new Error("Don't forget to set property and value before building the branch insertion command!");
+  }
+
+  private buildCommandNoValidityChecks(): BranchInsertionCommand {
+    if (this.property.mirroredFromProperty()) {
+      return this.buildMirroringPropertyNoValidityChecks();
+    }
+    else {
+      return this.buildNotMirroringPropertyNoValidityChecks();
+    }
+  }
+
+  private buildMirroringPropertyNoValidityChecks() {
+    let mirroringProperty = this.property.mirroredFromProperty();
+    let mirroringPropertyVariable = this.mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+
+    let insertionCommand = this.createMandatoryOrOptionalCommand(mirroringProperty);
+    insertionCommand
+      .branch(mirroringProperty.getNamespacedUri(), mirroringPropertyVariable)
+      .branch("disco:id", this.mapping.getElementaryPropertyVariable(this.property.getName()));
+    return insertionCommand;
+  }
+
+  private buildNotMirroringPropertyNoValidityChecks() {
+    let insertionCommand = this.createMandatoryOrOptionalCommand(this.property);
+    insertionCommand
+      .branch(this.property.getNamespacedUri(), this.mapping.getElementaryPropertyVariable(this.property.getName()));
+    return insertionCommand;
+  }
+
+  private createMandatoryOrOptionalCommand(property: Schema.Property): BranchInsertionCommand {
+    return property.isOptional() ? new OptionalBranchInsertionCommand() : new NormalBranchInsertionCommand();
+  }
+}
+
+export interface BranchInsertionCommand {
+  branch(property: string, value: string): BranchInsertionCommand;
+  applyTo(graphPattern: TreeGraphPattern);
+}
+
+export class NormalBranchInsertionCommand implements BranchInsertionCommand {
+  private branchingChain: { property: string; value: string }[] = [];
+
+  public branch(property: string, value: string) {
+    this.branchingChain.push({ property: property, value: value });
+    return this;
+  }
+
+  public applyTo(graphPattern: TreeGraphPattern) {
+    let currentBranch = graphPattern;
+    for (let i = 0; i < this.branchingChain.length; ++i) {
+      let step = this.branchingChain[i];
+      currentBranch = currentBranch.branch(step.property, step.value);
+    }
+  }
+}
+
+export class OptionalBranchInsertionCommand implements BranchInsertionCommand {
+  private branchingChain: { property: string; value: string }[] = [];
+
+  public branch(property: string, value: string) {
+    this.branchingChain.push({ property: property, value: value });
+    return this;
+  }
+
+  public applyTo(graphPattern: TreeGraphPattern) {
+    let currentBranch = graphPattern;
+    for (let i = 0; i < this.branchingChain.length; ++i) {
+      let step = this.branchingChain[i];
+      if (i === 0) {
+        currentBranch = currentBranch.optionalBranch(step.property, step.value);
+      }
+      else {
+        currentBranch = currentBranch.branch(step.property, step.value);
+      }
+    }
   }
 }
 
