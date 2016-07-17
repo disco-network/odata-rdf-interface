@@ -80,14 +80,15 @@ export class EntitySetQuery implements ODataQueries.Query {
     });
   }
 
-  private createGraphPattern(): gpatterns.ExpandTreeGraphPattern {
-    return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
+  private createGraphPattern(): gpatterns.TreeGraphPattern {
+    return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(),
+      this.getExpandTree(), this.mapping);
   }
 
-  private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.FilterGraphPattern {
+  private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
     if (filterExpression !== undefined)
-      return new gpatterns.FilterGraphPattern(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(),
-        this.mapping);
+      return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(),
+        filterExpression.getPropertyTree(), this.mapping);
   }
 
   private createFilterExpression(): filters.FilterExpression {

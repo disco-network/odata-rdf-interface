@@ -230,14 +230,15 @@ export class ValueLeaf {
 }
 
 /**
- * Provides a SPARQL graph pattern involving all the direct and elementary
+ * Creates a SPARQL graph pattern involving all direct and elementary
  * properties belonging to the OData entity type passed as schema.
  * Please separate the options like this: "no-id-property|some-other-option"
  */
-export class DirectPropertiesGraphPattern extends TreeGraphPattern {
-  constructor(entityType: Schema.EntityType, mapping: Mappings.StructuredSparqlVariableMapping, options: string) {
-    let entityVariable: string = mapping.getVariable();
-    super(entityVariable);
+export class DirectPropertiesGraphPatternFactory {
+
+  public static create(entityType: Schema.EntityType,
+                       mapping: Mappings.StructuredSparqlVariableMapping, options: string): TreeGraphPattern {
+    let result = new TreeGraphPattern(mapping.getVariable());
 
     let propertyNames = entityType.getPropertyNames();
     let properties = propertyNames.map(p => entityType.getProperty(p));
@@ -251,29 +252,32 @@ export class DirectPropertiesGraphPattern extends TreeGraphPattern {
           .setMapping(mapping)
           .setElementaryProperty(property)
           .buildCommand()
-          .applyTo(this);
+          .applyTo(result);
       }
     }
+
+    return result;
   }
 }
 
 /**
- * Provides a SPARQL graph pattern according to an entity type schema, an expand tree
+ * Creates a SPARQL graph pattern depending an entity type schema, an expand tree
  * (only considering complex properties) and a StructuredSparqlVariableMapping
  * so that it contains all data necessary for an OData $expand query.
  */
-export class ExpandTreeGraphPattern extends TreeGraphPattern {
-  constructor(entityType: Schema.EntityType, expandTree, mapping: Mappings.StructuredSparqlVariableMapping) {
-    super(mapping.getVariable());
+export class ExpandTreeGraphPatternFactory {
 
-    this.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
+  public static create(entityType: Schema.EntityType, expandTree, mapping: Mappings.StructuredSparqlVariableMapping) {
+    let result = new TreeGraphPattern(mapping.getVariable());
 
-    let directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping, "no-id-property");
-    this.newUnionPattern(directPropertyPattern);
+    result.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
+
+    let directPropertyPattern = DirectPropertiesGraphPatternFactory.create(entityType, mapping, "no-id-property");
+    result.newUnionPattern(directPropertyPattern);
     Object.keys(expandTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
-      let baseGraphPattern = this.newUnionPattern();
-      let branch = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName],
+      let baseGraphPattern = result.newUnionPattern();
+      let branch = ExpandTreeGraphPatternFactory.create(property.getEntityType(), expandTree[propertyName],
         mapping.getComplexProperty(propertyName));
 
       new ComplexBranchInsertionBuilder()
@@ -283,12 +287,16 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
         .buildCommand()
         .applyTo(baseGraphPattern);
     });
+
+    return result;
   }
 }
 
-export class FilterGraphPattern extends TreeGraphPattern {
-  constructor(entityType: Schema.EntityType, propertyTree: any, mapping: Mappings.StructuredSparqlVariableMapping) {
-    super(mapping.getVariable());
+export class FilterGraphPatternFactory {
+
+  public static create(entityType: Schema.EntityType, propertyTree: any,
+                       mapping: Mappings.StructuredSparqlVariableMapping) {
+    let result = new TreeGraphPattern(mapping.getVariable());
 
     Object.keys(propertyTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
@@ -298,24 +306,26 @@ export class FilterGraphPattern extends TreeGraphPattern {
             .setElementaryProperty(property)
             .setMapping(mapping)
             .buildCommand()
-            .applyTo(this);
+            .applyTo(result);
           break;
         case Schema.EntityKind.Complex:
-          if (!property.isCardinalityOne()) throw new Error("properties of higher cardinality are not allowed");
+          if (!property.isCardinalityOne()) throw new Error("Properties of higher cardinality are not allowed.");
 
-          let branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName],
-            mapping.getComplexProperty(propertyName));
+          let branchedPattern = FilterGraphPatternFactory.create(property.getEntityType(),
+            propertyTree[propertyName], mapping.getComplexProperty(propertyName));
           new ComplexBranchInsertionBuilderForFiltering()
             .setComplexProperty(property)
             .setMapping(mapping)
             .setValue(branchedPattern)
             .buildCommand()
-            .applyTo(this);
+            .applyTo(result);
           break;
         default:
           throw new Error("invalid entity kind " + property.getEntityKind());
       }
     });
+
+    return result;
   }
 }
 
