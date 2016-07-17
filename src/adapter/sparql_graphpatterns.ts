@@ -134,8 +134,7 @@ export class TreeGraphPattern {
   }
 
   public branch(property: string): TreeGraphPattern[];
-  public branch(property: string, arg: string): TreeGraphPattern;
-  public branch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
+  public branch(property: string, arg: string | TreeGraphPattern): TreeGraphPattern;
   public branch(property: string, arg: ValueLeaf): void;
   public branch(property: string, arg?): any {
     switch (typeof arg) {
@@ -159,8 +158,7 @@ export class TreeGraphPattern {
   }
 
   public inverseBranch(property: string): TreeGraphPattern[];
-  public inverseBranch(property: string, arg: string): TreeGraphPattern;
-  public inverseBranch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
+  public inverseBranch(property: string, arg: string | TreeGraphPattern): TreeGraphPattern;
   public inverseBranch(property: string, arg?): any {
     switch (typeof arg) {
       case "undefined":
@@ -175,8 +173,7 @@ export class TreeGraphPattern {
   }
 
   public optionalBranch(property: string): TreeGraphPattern[];
-  public optionalBranch(property: string, arg: string): TreeGraphPattern;
-  public optionalBranch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
+  public optionalBranch(property: string, arg: string | TreeGraphPattern): TreeGraphPattern;
   public optionalBranch(property, arg?): any {
     switch (typeof arg) {
       case "undefined":
@@ -191,8 +188,7 @@ export class TreeGraphPattern {
   }
 
   public optionalInverseBranch(property: string): TreeGraphPattern[];
-  public optionalInverseBranch(property: string, arg: string): TreeGraphPattern;
-  public optionalInverseBranch(property: string, arg: TreeGraphPattern): TreeGraphPattern;
+  public optionalInverseBranch(property: string, arg: string | TreeGraphPattern): TreeGraphPattern;
   public optionalInverseBranch(property, arg?): any {
     switch (typeof arg) {
       case "undefined":
@@ -276,22 +272,61 @@ export class ExpandTreeGraphPattern extends TreeGraphPattern {
     this.newUnionPattern(directPropertyPattern);
     Object.keys(expandTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
-      let propertyType = property.getEntityType();
-      // Next recursion level
-      let gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName],
+
+      let baseGraphPattern = this.newUnionPattern();
+      let branchAtProperty = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName],
         mapping.getComplexProperty(propertyName));
 
-      if (!property.hasDirectRdfRepresentation()) {
-
-        let inverseProperty = property.getInverseProperty();
-        let unionPattern = this.newUnionPattern();
-        unionPattern.inverseBranch(inverseProperty.getNamespacedUri(), gp);
-
-      } else {
-
-        this.newUnionPattern().branch(property.getNamespacedUri(), gp);
-      }
+      new ODataBasedComplexBranchInsertionBuilder()
+        .setComplexProperty(property)
+        .setValue(branchAtProperty)
+        .setMapping(mapping)
+        .buildCommand()
+        .applyTo(baseGraphPattern);
     });
+  }
+}
+
+export class ODataBasedComplexBranchInsertionBuilder {
+
+  private property: Schema.Property;
+  private mapping: Mappings.StructuredSparqlVariableMapping;
+  private value: TreeGraphPattern;
+
+  public setComplexProperty(property: Schema.Property) {
+    if (property.getEntityKind() === Schema.EntityKind.Complex)
+      this.property = property;
+    else throw new Error("property should be complex");
+    return this;
+  }
+
+  public setMapping(mapping: Mappings.StructuredSparqlVariableMapping) {
+    this.mapping = mapping;
+    return this;
+  }
+
+  public setValue(value: TreeGraphPattern) {
+    this.value = value;
+    return this;
+  }
+
+  public buildCommand(): BranchInsertionCommand {
+    if (this.property !== undefined && this.mapping !== undefined) {
+      return this.buildCommandNoValidityChecks();
+    }
+    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+  }
+
+  public buildCommandNoValidityChecks(): BranchInsertionCommand {
+    if (this.property.hasDirectRdfRepresentation()) {
+      return new NormalBranchInsertionCommand()
+        .branch(this.property.getNamespacedUri(), this.value);
+    }
+    else {
+      let inverseProperty = this.property.getInverseProperty();
+      return new InverseBranchInsertionCommand()
+        .branch(inverseProperty.getNamespacedUri(), this.value);
+    }
   }
 }
 
@@ -316,7 +351,7 @@ export class ODataBasedElementaryBranchInsertionBuilder {
     if (this.property !== undefined && this.mapping !== undefined) {
       return this.buildCommandNoValidityChecks();
     }
-    else throw new Error("Don't forget to set property and value before building the branch insertion command!");
+    else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
   }
 
   private buildCommandNoValidityChecks(): BranchInsertionCommand {
@@ -352,14 +387,14 @@ export class ODataBasedElementaryBranchInsertionBuilder {
 }
 
 export interface BranchInsertionCommand {
-  branch(property: string, value: string): BranchInsertionCommand;
+  branch(property: string, value: string | TreeGraphPattern): BranchInsertionCommand;
   applyTo(graphPattern: TreeGraphPattern);
 }
 
 export class NormalBranchInsertionCommand implements BranchInsertionCommand {
-  private branchingChain: { property: string; value: string }[] = [];
+  private branchingChain: { property: string; value: string | TreeGraphPattern }[] = [];
 
-  public branch(property: string, value: string) {
+  public branch(property: string, value: string | TreeGraphPattern) {
     this.branchingChain.push({ property: property, value: value });
     return this;
   }
@@ -369,6 +404,23 @@ export class NormalBranchInsertionCommand implements BranchInsertionCommand {
     for (let i = 0; i < this.branchingChain.length; ++i) {
       let step = this.branchingChain[i];
       currentBranch = currentBranch.branch(step.property, step.value);
+    }
+  }
+}
+
+export class InverseBranchInsertionCommand implements BranchInsertionCommand {
+  private branchingChain: { property: string; value: string | TreeGraphPattern }[] = [];
+
+  public branch(property: string, value: string | TreeGraphPattern) {
+    this.branchingChain.push({ property: property, value: value });
+    return this;
+  }
+
+  public applyTo(graphPattern: TreeGraphPattern) {
+    let currentBranch = graphPattern;
+    for (let i = 0; i < this.branchingChain.length; ++i) {
+      let step = this.branchingChain[i];
+      currentBranch = currentBranch.inverseBranch(step.property, step.value);
     }
   }
 }

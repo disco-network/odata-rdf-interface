@@ -249,22 +249,58 @@ var ExpandTreeGraphPattern = (function (_super) {
         this.newUnionPattern(directPropertyPattern);
         Object.keys(expandTree).forEach(function (propertyName) {
             var property = entityType.getProperty(propertyName);
-            var propertyType = property.getEntityType();
-            // Next recursion level
-            var gp = new ExpandTreeGraphPattern(propertyType, expandTree[propertyName], mapping.getComplexProperty(propertyName));
-            if (!property.hasDirectRdfRepresentation()) {
-                var inverseProperty = property.getInverseProperty();
-                var unionPattern = _this.newUnionPattern();
-                unionPattern.inverseBranch(inverseProperty.getNamespacedUri(), gp);
-            }
-            else {
-                _this.newUnionPattern().branch(property.getNamespacedUri(), gp);
-            }
+            var baseGraphPattern = _this.newUnionPattern();
+            var branchAtProperty = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName], mapping.getComplexProperty(propertyName));
+            new ODataBasedComplexBranchInsertionBuilder()
+                .setComplexProperty(property)
+                .setValue(branchAtProperty)
+                .setMapping(mapping)
+                .buildCommand()
+                .applyTo(baseGraphPattern);
         });
     }
     return ExpandTreeGraphPattern;
 }(TreeGraphPattern));
 exports.ExpandTreeGraphPattern = ExpandTreeGraphPattern;
+var ODataBasedComplexBranchInsertionBuilder = (function () {
+    function ODataBasedComplexBranchInsertionBuilder() {
+    }
+    ODataBasedComplexBranchInsertionBuilder.prototype.setComplexProperty = function (property) {
+        if (property.getEntityKind() === Schema.EntityKind.Complex)
+            this.property = property;
+        else
+            throw new Error("property should be complex");
+        return this;
+    };
+    ODataBasedComplexBranchInsertionBuilder.prototype.setMapping = function (mapping) {
+        this.mapping = mapping;
+        return this;
+    };
+    ODataBasedComplexBranchInsertionBuilder.prototype.setValue = function (value) {
+        this.value = value;
+        return this;
+    };
+    ODataBasedComplexBranchInsertionBuilder.prototype.buildCommand = function () {
+        if (this.property !== undefined && this.mapping !== undefined) {
+            return this.buildCommandNoValidityChecks();
+        }
+        else
+            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
+    };
+    ODataBasedComplexBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
+        if (this.property.hasDirectRdfRepresentation()) {
+            return new NormalBranchInsertionCommand()
+                .branch(this.property.getNamespacedUri(), this.value);
+        }
+        else {
+            var inverseProperty = this.property.getInverseProperty();
+            return new InverseBranchInsertionCommand()
+                .branch(inverseProperty.getNamespacedUri(), this.value);
+        }
+    };
+    return ODataBasedComplexBranchInsertionBuilder;
+}());
+exports.ODataBasedComplexBranchInsertionBuilder = ODataBasedComplexBranchInsertionBuilder;
 var ODataBasedElementaryBranchInsertionBuilder = (function () {
     function ODataBasedElementaryBranchInsertionBuilder() {
     }
@@ -284,7 +320,7 @@ var ODataBasedElementaryBranchInsertionBuilder = (function () {
             return this.buildCommandNoValidityChecks();
         }
         else
-            throw new Error("Don't forget to set property and value before building the branch insertion command!");
+            throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
     };
     ODataBasedElementaryBranchInsertionBuilder.prototype.buildCommandNoValidityChecks = function () {
         if (this.property.mirroredFromProperty()) {
@@ -333,6 +369,24 @@ var NormalBranchInsertionCommand = (function () {
     return NormalBranchInsertionCommand;
 }());
 exports.NormalBranchInsertionCommand = NormalBranchInsertionCommand;
+var InverseBranchInsertionCommand = (function () {
+    function InverseBranchInsertionCommand() {
+        this.branchingChain = [];
+    }
+    InverseBranchInsertionCommand.prototype.branch = function (property, value) {
+        this.branchingChain.push({ property: property, value: value });
+        return this;
+    };
+    InverseBranchInsertionCommand.prototype.applyTo = function (graphPattern) {
+        var currentBranch = graphPattern;
+        for (var i = 0; i < this.branchingChain.length; ++i) {
+            var step = this.branchingChain[i];
+            currentBranch = currentBranch.inverseBranch(step.property, step.value);
+        }
+    };
+    return InverseBranchInsertionCommand;
+}());
+exports.InverseBranchInsertionCommand = InverseBranchInsertionCommand;
 var OptionalBranchInsertionCommand = (function () {
     function OptionalBranchInsertionCommand() {
         this.branchingChain = [];
