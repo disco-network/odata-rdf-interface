@@ -64,7 +64,8 @@ export class EntitySetQuery implements ODataQueries.Query {
   private initializeFilterExpressionFactory() {
     this.filterExpressionFactory = new filters.FilterExpressionFactory()
       .registerDefaultFilterExpressions()
-      .setSparqlVariableMapping(this.mapping);
+      .setSparqlVariableMapping(this.mapping)
+      .setEntityType(this.getTypeOfEntitySet());
   }
 
   /** this.mapping has to be initialized before. */

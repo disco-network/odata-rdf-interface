@@ -1,4 +1,6 @@
 import mappings = require("./sparql_mappings");
+import gpatterns = require("./sparql_graphpatterns");
+import schema = require("../odata/schema");
 
 export interface FilterExpression {
   getSubExpressions(): FilterExpression[];
@@ -6,25 +8,50 @@ export interface FilterExpression {
   toSparql(): string;
 }
 
-export interface FilterExpressionClass {
-  create(raw, mapping: mappings.StructuredSparqlVariableMapping, factory: FilterExpressionFactory): FilterExpression;
+export interface FilterExpressionStaticMembers {
+  create(raw, args: FilterExpressionArgs): FilterExpression;
   doesApplyToRaw(raw): boolean;
 }
 
+export interface FilterExpressionArgs {
+  factory: FilterExpressionFactory;
+  entityType?: schema.EntityType;
+  mapping?: mappings.StructuredSparqlVariableMapping;
+}
+
 export class FilterExpressionFactory {
-  private registeredFilterExpressions: FilterExpressionClass[] = [];
-  private mapping: mappings.StructuredSparqlVariableMapping;
+  private registeredFilterExpressions: FilterExpressionStaticMembers[] = [];
+  private creationArgs: FilterExpressionArgs;
+
+  constructor() {
+    this.creationArgs = {
+      factory: this,
+      entityType: undefined,
+      mapping: undefined,
+    };
+  }
 
   public fromRaw(raw: any): FilterExpression {
-    for (let i = 0; i < this.registeredFilterExpressions.length; ++i) {
-      let SelectedFilterExpression = this.registeredFilterExpressions[i];
-      if (SelectedFilterExpression.doesApplyToRaw(raw)) return SelectedFilterExpression.create(raw, this.mapping, this);
+    if (this.validateCreationArgs()) {
+      for (let i = 0; i < this.registeredFilterExpressions.length; ++i) {
+        let SelectedFilterExpression = this.registeredFilterExpressions[i];
+        if (SelectedFilterExpression.doesApplyToRaw(raw))
+          return SelectedFilterExpression.create(raw, this.creationArgs);
+      }
+      throw new Error("filter expression is not supported: " + JSON.stringify(raw));
     }
-    throw new Error("filter expression is not supported: " + JSON.stringify(raw));
+    else {
+      throw new Error("Can't create filter expressions with incomplete creation args.");
+    }
   }
 
   public setSparqlVariableMapping(mapping: mappings.StructuredSparqlVariableMapping) {
-    this.mapping = mapping;
+    this.creationArgs.mapping = mapping;
+    return this;
+  }
+
+  public setEntityType(entityType: schema.EntityType) {
+    this.creationArgs.entityType = entityType;
     return this;
   }
 
@@ -39,17 +66,23 @@ export class FilterExpressionFactory {
     return this;
   }
 
-  public registerFilterExpressions(types: FilterExpressionClass[]) {
+  public registerFilterExpressions(types: FilterExpressionStaticMembers[]) {
     for (let i = 0; i < types.length; ++i) {
       this.registerFilterExpression(types[i]);
     }
     return this;
   }
 
-  public registerFilterExpression(Type: FilterExpressionClass) {
+  public registerFilterExpression(Type: FilterExpressionStaticMembers) {
     if (this.registeredFilterExpressions.indexOf(Type) === -1)
       this.registeredFilterExpressions.push(Type);
     return this;
+  }
+
+  private validateCreationArgs(): boolean {
+    return this.creationArgs.entityType !== undefined &&
+      this.creationArgs.mapping !== undefined &&
+      this.creationArgs.factory !== undefined;
   }
 }
 
@@ -86,18 +119,32 @@ export class PropertyExpression implements FilterExpression {
     return raw.type === "member-expression";
   }
 
-  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
-                       factory: FilterExpressionFactory): PropertyExpression {
+  public static create(raw, args: FilterExpressionArgs): PropertyExpression {
     let ret = new PropertyExpression();
     ret.properties = raw.path;
-    ret.mapping = mapping;
+    ret.operation = this.operationFromRaw(raw.operation);
+    ret.mapping = args.mapping;
+    ret.entityType = args.entityType;
     return ret;
+  }
+
+  private static operationFromRaw(raw: string) {
+    switch (raw) {
+      case "property-value":
+        return PropertyExpressionOperation.PropertyValue;
+      case "any":
+        return PropertyExpressionOperation.Any;
+      default:
+        throw new Error("invalid operation string: " + raw);
+    }
   }
 
   // ===
 
   private properties: string[];
+  private operation: PropertyExpressionOperation;
   private mapping: mappings.StructuredSparqlVariableMapping;
+  private entityType: schema.EntityType;
 
   public getSubExpressions(): FilterExpression[] {
     return [];
@@ -113,12 +160,39 @@ export class PropertyExpression implements FilterExpression {
   }
 
   public toSparql(): string {
+    switch (this.operation) {
+      case PropertyExpressionOperation.PropertyValue:
+        return this.propertyValueExpressionToSparql();
+      case PropertyExpressionOperation.Any:
+        return this.anyExpressionToSparql();
+      default:
+        throw new Error("Huh? this.operation has an invalid value");
+    }
+  }
+
+  private propertyValueExpressionToSparql(): string {
     let currentMapping = this.mapping;
     for (let i = 0; i < (this.properties.length - 1); ++i) {
         currentMapping = currentMapping.getComplexProperty(this.properties[i]);
     }
     return currentMapping.getElementaryPropertyVariable(this.properties[this.properties.length - 1]);
   }
+
+  private anyExpressionToSparql(): string {
+    /* @construction
+    let vargen = new mappings.SparqlVariableGenerator();
+    let mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+    let filterPattern = new gpatterns.FilterGraphPattern(
+      this.entityType, "propertyTree", mapping
+    );
+    return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";
+    */
+    return "nope";
+  }
+}
+
+export enum PropertyExpressionOperation {
+  PropertyValue, Any
 }
 
 export class ParenthesesExpressionFactory {
@@ -127,14 +201,13 @@ export class ParenthesesExpressionFactory {
     return raw.type === "parentheses-expression";
   }
 
-  public static create(raw, mapping: mappings.StructuredSparqlVariableMapping, factory: FilterExpressionFactory) {
-    // We don't have to return a ParenthesesExpression, let's choose the simpler way
-    return factory.fromRaw(raw.inner);
+  public static create(raw, args: FilterExpressionArgs) {
+    // We don't have to return a ParenthesesExpression, let's choose the direct way
+    return args.factory.fromRaw(raw.inner);
   }
 }
 
-function literalExpression<ValueType>(
-args: {
+function literalExpression<ValueType>(config: {
   typeName: string;
   parse: (raw) => ValueType;
   toSparql: (value: ValueType) => string }
@@ -143,13 +216,12 @@ args: {
   let GeneratedClass = class {
 
     public static doesApplyToRaw(raw): boolean {
-      return raw.type === args.typeName;
+      return raw.type === config.typeName;
     }
 
-    public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
-                         factory: FilterExpressionFactory) {
+    public static create(raw, args: FilterExpressionArgs) {
       let ret = new GeneratedClass();
-      ret.value = args.parse(raw);
+      ret.value = config.parse(raw);
       return ret;
     }
 
@@ -166,25 +238,24 @@ args: {
     }
 
     public toSparql(): string {
-      return args.toSparql(this.value);
+      return config.toSparql(this.value);
     }
   };
   return GeneratedClass;
 }
 
-function binaryOperator(args: { opName: string; sparql: string }) {
+function binaryOperator(config: { opName: string; sparql: string }) {
 
   let GeneratedClass = class {
 
     public static doesApplyToRaw(raw): boolean {
-      return raw.type === "operator" && raw.op === args.opName;
+      return raw.type === "operator" && raw.op === config.opName;
     }
 
-    public static create(raw, mapping: mappings.StructuredSparqlVariableMapping,
-                         factory: FilterExpressionFactory) {
+    public static create(raw, args: FilterExpressionArgs) {
       let ret = new GeneratedClass();
-      ret.lhs = factory.fromRaw(raw.lhs);
-      ret.rhs = factory.fromRaw(raw.rhs);
+      ret.lhs = args.factory.fromRaw(raw.lhs);
+      ret.rhs = args.factory.fromRaw(raw.rhs);
       return ret;
     }
 
@@ -202,7 +273,7 @@ function binaryOperator(args: { opName: string; sparql: string }) {
     }
 
     public toSparql(): string {
-      return "(" + this.lhs.toSparql() + " " + args.sparql + " " + this.rhs.toSparql() + ")";
+      return "(" + this.lhs.toSparql() + " " + config.sparql + " " + this.rhs.toSparql() + ")";
     }
   };
   return GeneratedClass;

@@ -60,7 +60,8 @@ var EntitySetQuery = (function () {
     EntitySetQuery.prototype.initializeFilterExpressionFactory = function () {
         this.filterExpressionFactory = new filters.FilterExpressionFactory()
             .registerDefaultFilterExpressions()
-            .setSparqlVariableMapping(this.mapping);
+            .setSparqlVariableMapping(this.mapping)
+            .setEntityType(this.getTypeOfEntitySet());
     };
     /** this.mapping has to be initialized before. */
     EntitySetQuery.prototype.initializeQueryStringAfterMapping = function () {
