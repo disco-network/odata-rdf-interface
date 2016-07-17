@@ -75,11 +75,11 @@ var EntitySetQuery = (function () {
         });
     };
     EntitySetQuery.prototype.createGraphPattern = function () {
-        return new gpatterns.ExpandTreeGraphPattern(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
+        return gpatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.mapping);
     };
     EntitySetQuery.prototype.createFilterGraphPattern = function (filterExpression) {
         if (filterExpression !== undefined)
-            return new gpatterns.FilterGraphPattern(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(), this.mapping);
+            return gpatterns.FilterGraphPatternFactory.create(this.getTypeOfEntitySet(), filterExpression.getPropertyTree(), this.mapping);
     };
     EntitySetQuery.prototype.createFilterExpression = function () {
         if (this.getRawFilter())

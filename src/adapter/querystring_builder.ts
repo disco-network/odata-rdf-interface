@@ -71,5 +71,5 @@ export class QueryStringBuilder {
 
 export interface QueryStringBuilderOptions {
   filterExpression?: filters.FilterExpression;
-  filterPattern?: gpatterns.FilterGraphPattern;
+  filterPattern?: gpatterns.TreeGraphPattern;
 }

@@ -7,7 +7,7 @@ describe('OData properties with quantity "many"', function() {
   it("should be integrated with UNION", function() {
     let expandTree = { Children: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = new gpatterns.ExpandTreeGraphPattern(schema.getEntityType("Post"), expandTree, mapping);
+    let gp = gpatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(gp.getUnionPatterns().length).toEqual(2);
     expect(gp.getUnionPatterns()[1].inverseBranch("disco:parent").length).toEqual(1);

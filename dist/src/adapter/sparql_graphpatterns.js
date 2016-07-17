@@ -206,15 +206,15 @@ var ValueLeaf = (function () {
 }());
 exports.ValueLeaf = ValueLeaf;
 /**
- * Provides a SPARQL graph pattern involving all the direct and elementary
+ * Creates a SPARQL graph pattern involving all direct and elementary
  * properties belonging to the OData entity type passed as schema.
  * Please separate the options like this: "no-id-property|some-other-option"
  */
-var DirectPropertiesGraphPattern = (function (_super) {
-    __extends(DirectPropertiesGraphPattern, _super);
-    function DirectPropertiesGraphPattern(entityType, mapping, options) {
-        var entityVariable = mapping.getVariable();
-        _super.call(this, entityVariable);
+var DirectPropertiesGraphPatternFactory = (function () {
+    function DirectPropertiesGraphPatternFactory() {
+    }
+    DirectPropertiesGraphPatternFactory.create = function (entityType, mapping, options) {
+        var result = new TreeGraphPattern(mapping.getVariable());
         var propertyNames = entityType.getPropertyNames();
         var properties = propertyNames.map(function (p) { return entityType.getProperty(p); });
         for (var i = 0; i < properties.length; ++i) {
@@ -227,30 +227,31 @@ var DirectPropertiesGraphPattern = (function (_super) {
                     .setMapping(mapping)
                     .setElementaryProperty(property)
                     .buildCommand()
-                    .applyTo(this);
+                    .applyTo(result);
             }
         }
-    }
-    return DirectPropertiesGraphPattern;
-}(TreeGraphPattern));
-exports.DirectPropertiesGraphPattern = DirectPropertiesGraphPattern;
+        return result;
+    };
+    return DirectPropertiesGraphPatternFactory;
+}());
+exports.DirectPropertiesGraphPatternFactory = DirectPropertiesGraphPatternFactory;
 /**
- * Provides a SPARQL graph pattern according to an entity type schema, an expand tree
+ * Creates a SPARQL graph pattern depending an entity type schema, an expand tree
  * (only considering complex properties) and a StructuredSparqlVariableMapping
  * so that it contains all data necessary for an OData $expand query.
  */
-var ExpandTreeGraphPattern = (function (_super) {
-    __extends(ExpandTreeGraphPattern, _super);
-    function ExpandTreeGraphPattern(entityType, expandTree, mapping) {
-        var _this = this;
-        _super.call(this, mapping.getVariable());
-        this.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
-        var directPropertyPattern = new DirectPropertiesGraphPattern(entityType, mapping, "no-id-property");
-        this.newUnionPattern(directPropertyPattern);
+var ExpandTreeGraphPatternFactory = (function () {
+    function ExpandTreeGraphPatternFactory() {
+    }
+    ExpandTreeGraphPatternFactory.create = function (entityType, expandTree, mapping) {
+        var result = new TreeGraphPattern(mapping.getVariable());
+        result.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
+        var directPropertyPattern = DirectPropertiesGraphPatternFactory.create(entityType, mapping, "no-id-property");
+        result.newUnionPattern(directPropertyPattern);
         Object.keys(expandTree).forEach(function (propertyName) {
             var property = entityType.getProperty(propertyName);
-            var baseGraphPattern = _this.newUnionPattern();
-            var branch = new ExpandTreeGraphPattern(property.getEntityType(), expandTree[propertyName], mapping.getComplexProperty(propertyName));
+            var baseGraphPattern = result.newUnionPattern();
+            var branch = ExpandTreeGraphPatternFactory.create(property.getEntityType(), expandTree[propertyName], mapping.getComplexProperty(propertyName));
             new ComplexBranchInsertionBuilder()
                 .setComplexProperty(property)
                 .setValue(branch)
@@ -258,15 +259,16 @@ var ExpandTreeGraphPattern = (function (_super) {
                 .buildCommand()
                 .applyTo(baseGraphPattern);
         });
+        return result;
+    };
+    return ExpandTreeGraphPatternFactory;
+}());
+exports.ExpandTreeGraphPatternFactory = ExpandTreeGraphPatternFactory;
+var FilterGraphPatternFactory = (function () {
+    function FilterGraphPatternFactory() {
     }
-    return ExpandTreeGraphPattern;
-}(TreeGraphPattern));
-exports.ExpandTreeGraphPattern = ExpandTreeGraphPattern;
-var FilterGraphPattern = (function (_super) {
-    __extends(FilterGraphPattern, _super);
-    function FilterGraphPattern(entityType, propertyTree, mapping) {
-        var _this = this;
-        _super.call(this, mapping.getVariable());
+    FilterGraphPatternFactory.create = function (entityType, propertyTree, mapping) {
+        var result = new TreeGraphPattern(mapping.getVariable());
         Object.keys(propertyTree).forEach(function (propertyName) {
             var property = entityType.getProperty(propertyName);
             switch (property.getEntityKind()) {
@@ -275,27 +277,28 @@ var FilterGraphPattern = (function (_super) {
                         .setElementaryProperty(property)
                         .setMapping(mapping)
                         .buildCommand()
-                        .applyTo(_this);
+                        .applyTo(result);
                     break;
                 case Schema.EntityKind.Complex:
                     if (!property.isCardinalityOne())
-                        throw new Error("properties of higher cardinality are not allowed");
-                    var branchedPattern = new FilterGraphPattern(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty(propertyName));
+                        throw new Error("Properties of higher cardinality are not allowed.");
+                    var branchedPattern = FilterGraphPatternFactory.create(property.getEntityType(), propertyTree[propertyName], mapping.getComplexProperty(propertyName));
                     new ComplexBranchInsertionBuilderForFiltering()
                         .setComplexProperty(property)
                         .setMapping(mapping)
                         .setValue(branchedPattern)
                         .buildCommand()
-                        .applyTo(_this);
+                        .applyTo(result);
                     break;
                 default:
                     throw new Error("invalid entity kind " + property.getEntityKind());
             }
         });
-    }
-    return FilterGraphPattern;
-}(TreeGraphPattern));
-exports.FilterGraphPattern = FilterGraphPattern;
+        return result;
+    };
+    return FilterGraphPatternFactory;
+}());
+exports.FilterGraphPatternFactory = FilterGraphPatternFactory;
 var AbstractBranchInsertionBuilder = (function () {
     function AbstractBranchInsertionBuilder() {
     }
