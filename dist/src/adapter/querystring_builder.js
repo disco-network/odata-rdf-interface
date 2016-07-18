@@ -41,6 +41,9 @@ var QueryStringBuilder = (function () {
             .map(function (p) { return "OPTIONAL " + _this.buildGraphPatternString(p); })
             .filter(function (str) { return str !== ""; })
             .join(" . ");
+        var conjunctivePatternsString = graphPattern.getConjunctivePatterns()
+            .map(function (p) { return _this.buildGraphPatternString(p); })
+            .join(" . ");
         var unionsString = graphPattern.getUnionPatterns()
             .map(function (p) { return _this.buildGraphPatternString(p); })
             .join(" UNION ");
@@ -51,6 +54,8 @@ var QueryStringBuilder = (function () {
             parts.push(subPatternsString);
         if (optionalPatternsString !== "")
             parts.push(optionalPatternsString);
+        if (conjunctivePatternsString !== "")
+            parts.push(conjunctivePatternsString);
         if (unionsString !== "")
             parts.push(unionsString);
         return parts.join(" . ");

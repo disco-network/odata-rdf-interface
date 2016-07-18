@@ -118,7 +118,7 @@ export class ElementaryBranchInsertionBuilderForFiltering extends AbstractElemen
 
 export interface BranchInsertionCommand {
   branch(property: string, value: string | gpatterns.TreeGraphPattern): BranchInsertionCommand;
-  applyTo(graphPattern: gpatterns.TreeGraphPattern);
+  applyTo(graphPattern: gpatterns.TreeGraphPattern): gpatterns.TreeGraphPattern;
 }
 
 export class NormalBranchInsertionCommand implements BranchInsertionCommand {
@@ -135,6 +135,7 @@ export class NormalBranchInsertionCommand implements BranchInsertionCommand {
       let step = this.branchingChain[i];
       currentBranch = currentBranch.branch(step.property, step.value);
     }
+    return currentBranch;
   }
 }
 
@@ -152,6 +153,7 @@ export class InverseBranchInsertionCommand implements BranchInsertionCommand {
       let step = this.branchingChain[i];
       currentBranch = currentBranch.inverseBranch(step.property, step.value);
     }
+    return currentBranch;
   }
 }
 
@@ -174,6 +176,7 @@ export class OptionalBranchInsertionCommand implements BranchInsertionCommand {
         currentBranch = currentBranch.branch(step.property, step.value);
       }
     }
+    return currentBranch;
   }
 }
 
@@ -196,5 +199,6 @@ export class OptionalInverseBranchInsertionCommand implements BranchInsertionCom
         throw new Error("cannot chain optional inverse branches");
       }
     }
+    return currentBranch;
   }
 }

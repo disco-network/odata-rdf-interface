@@ -1,5 +1,7 @@
 import filters = require("../src/adapter/filters");
 import mappings = require("../src/adapter/mappings");
+import schemaModule = require("../src/odata/schema");
+let schema = new schemaModule.Schema();
 
 describe("A filter factory", () => {
   it("should choose the right FilterExpression-implementing class", () => {
@@ -23,6 +25,14 @@ describe("A filter factory", () => {
 
     expect(() => factory.fromRaw(raw)).toThrow();
   });
+  it("should pass the factory to the FilterExpression", () => {
+    let raw = { type: "test" };
+    let factory = createTestFilterExpressionFactory();
+    let args = (factory.fromRaw(raw) as TestFilterExpression).args;
+
+    expect(args.factory).toBeDefined();
+    expect(args.factory).toBe(factory);
+  })
 });
 
 describe("A StringLiteralExpression", () => {
@@ -86,21 +96,21 @@ describe("A PropertyExpression", () => {
     })).toBe(true);
   });
 
-  xit("should handle simple 'any' expressions", () => {
+  it("should handle simple 'any' expressions", () => {
     let vargen = new mappings.SparqlVariableGenerator();
     let mapping = new mappings.StructuredSparqlVariableMapping("?root", vargen);
     let expr = filters.PropertyExpression.create({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
-        variable: "it", predicateExpression: { type: "text", value: "{test}" },
+        variable: "it", predicateExpression: { type: "test", value: "{test}" },
       },
     }, {
       mapping: mapping,
-      factory: null,
-      entityType: null,
+      factory: createTestFilterExpressionFactory(),
+      entityType: schema.getEntityType("Post"),
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { ?x0 disco:parent ?root . FILTER({test}) }");
+    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . FILTER({test}) }");
   });
 
   xit("should handle simple 'any' expressions", () => {
@@ -133,9 +143,9 @@ function createNullArgs() {
 
 class TestFilterExpression implements filters.FilterExpression {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
-  public static create(raw, factory) { return new TestFilterExpression(raw.value); }
+  public static create(raw, args: filters.FilterExpressionArgs) { return new TestFilterExpression(raw.value, args); }
 
-  constructor(public value) {}
+  constructor(public value, public args: filters.FilterExpressionArgs) {}
   public getSubExpressions(): filters.FilterExpression[] { return []; }
   public getPropertyTree(): filters.PropertyTree { return {}; }
   public toSparql(): string { return this.value.toString(); }

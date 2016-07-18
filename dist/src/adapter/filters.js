@@ -1,4 +1,6 @@
 "use strict";
+var qsBuilder = require("./querystring_builder");
+var filterPatterns = require("./filterpatterns");
 var FilterExpressionFactory = (function () {
     function FilterExpressionFactory() {
         this.registeredFilterExpressions = [];
@@ -132,23 +134,30 @@ var PropertyExpression = (function () {
         return currentMapping.getElementaryPropertyVariable(this.properties[this.properties.length - 1]);
     };
     PropertyExpression.prototype.anyExpressionToSparql = function () {
-        /* @construction let rawLambdaExpression = this.raw.lambdaExpression;
-        let lambdaExpression: filterPatterns.LambdaExpression = {
-          variable: rawLambdaExpression.variable,
-          expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
+        var rawLambdaExpression = this.raw.lambdaExpression;
+        var lambdaExpression = {
+            variable: rawLambdaExpression.variable,
+            expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
+            entityType: this.getEntityTypeOfPropertyPath(),
         };
-        let filterContext: filterPatterns.FilterContext = {
-          mapping: this.mapping,
-          entityType: this.entityType,
-          lambdaExpressions: {},
+        var filterContext = {
+            mapping: this.mapping,
+            entityType: this.entityType,
+            lambdaExpressions: {},
         };
         filterContext.lambdaExpressions[lambdaExpression.variable] = lambdaExpression;
-        let filterPattern = filterPatterns.FilterGraphPatternFactory.create(
-          filterContext, lambdaExpression.expression.getPropertyTree()
-        );
-        let queryStringBuilder = ;
-        return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";*/
-        return "nope";
+        var filterPattern = filterPatterns.FilterGraphPatternFactory.createAnyExpressionPattern(filterContext, lambdaExpression.expression.getPropertyTree(), lambdaExpression, this.properties);
+        var queryStringBuilder = new qsBuilder.QueryStringBuilder();
+        var patternContentString = queryStringBuilder.buildGraphPatternContentString(filterPattern);
+        var filterString = " . FILTER(" + lambdaExpression.expression.toSparql() + ")";
+        return "EXISTS { " + patternContentString + filterString + " }";
+    };
+    PropertyExpression.prototype.getEntityTypeOfPropertyPath = function () {
+        var currentType = this.entityType;
+        for (var i = 0; i < this.properties.length; ++i) {
+            currentType = currentType.getProperty(this.properties[i]).getEntityType();
+        }
+        return currentType;
     };
     return PropertyExpression;
 }());

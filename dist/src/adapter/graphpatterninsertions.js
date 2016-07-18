@@ -136,6 +136,7 @@ var NormalBranchInsertionCommand = (function () {
             var step = this.branchingChain[i];
             currentBranch = currentBranch.branch(step.property, step.value);
         }
+        return currentBranch;
     };
     return NormalBranchInsertionCommand;
 }());
@@ -154,6 +155,7 @@ var InverseBranchInsertionCommand = (function () {
             var step = this.branchingChain[i];
             currentBranch = currentBranch.inverseBranch(step.property, step.value);
         }
+        return currentBranch;
     };
     return InverseBranchInsertionCommand;
 }());
@@ -177,6 +179,7 @@ var OptionalBranchInsertionCommand = (function () {
                 currentBranch = currentBranch.branch(step.property, step.value);
             }
         }
+        return currentBranch;
     };
     return OptionalBranchInsertionCommand;
 }());
@@ -200,6 +203,7 @@ var OptionalInverseBranchInsertionCommand = (function () {
                 throw new Error("cannot chain optional inverse branches");
             }
         }
+        return currentBranch;
     };
     return OptionalInverseBranchInsertionCommand;
 }());

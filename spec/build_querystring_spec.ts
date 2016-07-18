@@ -61,4 +61,15 @@ describe("the query string builder", function() {
       "{ OPTIONAL { ?root disco:parent ?par . ?par disco:id ?id } }"
     );
   });
+  it("should build queries with conjunctive patterns", () => {
+    let pattern = new gpatterns.TreeGraphPattern("?rootA");
+    pattern.newConjunctivePattern(new gpatterns.TreeGraphPattern("?rootB")).branch("disco:id", "?id");
+
+    let builder = new qbuilder.QueryStringBuilder();
+    let queryString = builder.buildGraphPatternString(pattern);
+
+    expect(queryString).toEqual(
+      "{ { ?rootB disco:id ?id } }"
+    );
+  });
 });

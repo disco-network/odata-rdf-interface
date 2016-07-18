@@ -47,6 +47,9 @@ export class QueryStringBuilder {
       .map(p => "OPTIONAL " + this.buildGraphPatternString(p))
       .filter(str => str !== "")
       .join(" . ");
+    let conjunctivePatternsString = graphPattern.getConjunctivePatterns()
+      .map(p => this.buildGraphPatternString(p))
+      .join(" . ");
     let unionsString = graphPattern.getUnionPatterns()
       .map(p => this.buildGraphPatternString(p))
       .join(" UNION ");
@@ -55,6 +58,7 @@ export class QueryStringBuilder {
     if (triplesString !== "") parts.push(triplesString);
     if (subPatternsString !== "") parts.push(subPatternsString);
     if (optionalPatternsString !== "") parts.push(optionalPatternsString);
+    if (conjunctivePatternsString !== "") parts.push(conjunctivePatternsString);
     if (unionsString !== "") parts.push(unionsString);
 
     return parts.join(" . ");

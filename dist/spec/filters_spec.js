@@ -1,6 +1,8 @@
 "use strict";
 var filters = require("../src/adapter/filters");
 var mappings = require("../src/adapter/mappings");
+var schemaModule = require("../src/odata/schema");
+var schema = new schemaModule.Schema();
 describe("A filter factory", function () {
     it("should choose the right FilterExpression-implementing class", function () {
         var raw = {
@@ -19,6 +21,13 @@ describe("A filter factory", function () {
         var raw = { type: "is-42", value: "4*2" };
         var factory = createTestFilterExpressionFactory();
         expect(function () { return factory.fromRaw(raw); }).toThrow();
+    });
+    it("should pass the factory to the FilterExpression", function () {
+        var raw = { type: "test" };
+        var factory = createTestFilterExpressionFactory();
+        var args = factory.fromRaw(raw).args;
+        expect(args.factory).toBeDefined();
+        expect(args.factory).toBe(factory);
     });
 });
 describe("A StringLiteralExpression", function () {
@@ -76,14 +85,14 @@ describe("A PropertyExpression", function () {
         var expr = filters.PropertyExpression.create({
             type: "member-expression", operation: "any", path: ["Children"],
             lambdaExpression: {
-                variable: "it", predicateExpression: { type: "text", value: "{test}" },
+                variable: "it", predicateExpression: { type: "test", value: "{test}" },
             },
         }, {
             mapping: mapping,
-            factory: null,
-            entityType: null,
+            factory: createTestFilterExpressionFactory(),
+            entityType: schema.getEntityType("Post"),
         });
-        expect(expr.toSparql()).toBe("EXISTS { ?x0 disco:parent ?root . FILTER({test}) }");
+        expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . FILTER({test}) }");
     });
     xit("should handle simple 'any' expressions", function () {
         var factory = new filters.FilterExpressionFactory()
@@ -110,11 +119,12 @@ function createNullArgs() {
     return { mapping: null, entityType: null, factory: null };
 }
 var TestFilterExpression = (function () {
-    function TestFilterExpression(value) {
+    function TestFilterExpression(value, args) {
         this.value = value;
+        this.args = args;
     }
     TestFilterExpression.doesApplyToRaw = function (raw) { return raw.type === "test"; };
-    TestFilterExpression.create = function (raw, factory) { return new TestFilterExpression(raw.value); };
+    TestFilterExpression.create = function (raw, args) { return new TestFilterExpression(raw.value, args); };
     TestFilterExpression.prototype.getSubExpressions = function () { return []; };
     TestFilterExpression.prototype.getPropertyTree = function () { return {}; };
     TestFilterExpression.prototype.toSparql = function () { return this.value.toString(); };

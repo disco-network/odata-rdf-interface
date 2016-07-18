@@ -1,5 +1,6 @@
 import mappings = require("./mappings");
 import schema = require("../odata/schema");
+import qsBuilder = require("./querystring_builder");
 import filterPatterns = require("./filterpatterns");
 
 export interface FilterExpression {
@@ -183,10 +184,11 @@ export class PropertyExpression implements FilterExpression {
   }
 
   private anyExpressionToSparql(): string {
-    /* @construction let rawLambdaExpression = this.raw.lambdaExpression;
+    let rawLambdaExpression = this.raw.lambdaExpression;
     let lambdaExpression: filterPatterns.LambdaExpression = {
       variable: rawLambdaExpression.variable,
       expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
+      entityType: this.getEntityTypeOfPropertyPath(),
     };
     let filterContext: filterPatterns.FilterContext = {
       mapping: this.mapping,
@@ -194,12 +196,22 @@ export class PropertyExpression implements FilterExpression {
       lambdaExpressions: {},
     };
     filterContext.lambdaExpressions[lambdaExpression.variable] = lambdaExpression;
-    let filterPattern = filterPatterns.FilterGraphPatternFactory.create(
-      filterContext, lambdaExpression.expression.getPropertyTree()
+
+    let filterPattern = filterPatterns.FilterGraphPatternFactory.createAnyExpressionPattern(
+      filterContext, lambdaExpression.expression.getPropertyTree(), lambdaExpression, this.properties
     );
-    let queryStringBuilder = ;
-    return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";*/
-    return "nope";
+    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
+    let patternContentString = queryStringBuilder.buildGraphPatternContentString(filterPattern);
+    let filterString = " . FILTER(" + lambdaExpression.expression.toSparql() + ")";
+    return "EXISTS { " + patternContentString + filterString + " }";
+  }
+
+  private getEntityTypeOfPropertyPath(): schema.EntityType {
+    let currentType = this.entityType;
+    for (let i = 0; i < this.properties.length; ++i) {
+      currentType = currentType.getProperty(this.properties[i]).getEntityType();
+    }
+    return currentType;
   }
 }
 
