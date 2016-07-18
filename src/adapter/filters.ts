@@ -114,6 +114,7 @@ export type AndExpression = FilterExpression;
 export let EqExpression = binaryOperator({ opName: "eq", sparql: "=" });
 export type EqExpression = FilterExpression;
 
+/* @smell create two classes: PropertyValueExpression and AnyExpression */
 export class PropertyExpression implements FilterExpression {
 
   public static doesApplyToRaw(raw) {
@@ -158,8 +159,20 @@ export class PropertyExpression implements FilterExpression {
   public getPropertyTree(): PropertyTree {
     let tree: PropertyTree = {};
     let branch = tree;
-    for (let i = 0; i < this.properties.length; ++i) {
-      branch = branch[this.properties[i]] = branch[this.properties[i]] || {};
+    let propertiesToInclude: string[];
+    switch (this.operation) {
+      case PropertyExpressionOperation.PropertyValue:
+        propertiesToInclude = this.properties;
+        break;
+      case PropertyExpressionOperation.Any:
+        propertiesToInclude = this.properties.slice(0, -1);
+        break;
+      default:
+        throw new Error("this.operation has an invalid value");
+    }
+    for (let i = 0; i < propertiesToInclude.length; ++i) {
+      let property = propertiesToInclude[i];
+      branch = branch[property] = branch[property] || {};
     }
     return tree;
   }

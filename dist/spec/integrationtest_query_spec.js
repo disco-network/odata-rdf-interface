@@ -146,6 +146,15 @@ describe("The query engine should evaluate", function () {
         expect(answer.result.length).toBe(1);
         expect(answer.result[0].ContentId).toBe("1");
     });
+    createQuerySpec("/Posts?$filter=Children/any(it: 1 eq 1)", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(1);
+    });
+    // problem in filter.ts: PropertyExpressions need information about LambdaExpression context
+    createQuerySpec("/Posts?$filter=Children/any(it: it/Id eq 2)", function (answer) {
+        expectSuccess(answer);
+        expect(answer.result.length).toBe(1);
+    }, true);
     function createQuerySpec(query, cb, pending) {
         if (pending === void 0) { pending = false; }
         var fn = pending ? xit : it;

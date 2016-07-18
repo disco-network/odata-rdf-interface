@@ -35,6 +35,18 @@ describe("rdfstore should execute", function () {
         expect(answer.error).toBe(null);
         expect(answer.result.length).toBe(1);
     });
+    createSpec("SELECT * WHERE { { ?x0 disco:id ?x1 } . FILTER(EXISTS {  { ?x6 disco:parent ?x0 } }) }", function (answer) {
+        expect(answer.error).toBe(null);
+        expect(answer.result.length).toBe(1);
+    });
+    createSpec("SELECT * WHERE {}", function (answer) {
+        expect(answer.error).toBe(null);
+        expect(answer.result.length).toBe(0);
+    });
+    createSpec("SELECT * WHERE { OPTIONAL { ?post disco:id '1' . ?post rdf:type disco:Post } }", function (answer) {
+        expect(answer.error).toBe(null);
+        expect(answer.result.length).toBe(1);
+    });
     function createSpec(query, cb) {
         var prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
         prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";
@@ -63,6 +75,7 @@ function storeSeed(store, graphName, cb) {
     graph.add(store.rdf.createTriple(node("disco:post2"), node("rdf:type"), node("disco:Post")));
     graph.add(store.rdf.createTriple(node("disco:post2"), node("disco:id"), literal("2")));
     graph.add(store.rdf.createTriple(node("disco:post2"), node("disco:content"), node("disco:content2")));
+    graph.add(store.rdf.createTriple(node("disco:post2"), node("disco:parent"), node("disco:post1")));
     graph.add(store.rdf.createTriple(node("disco:content1"), node("disco:id"), literal("1")));
     graph.add(store.rdf.createTriple(node("disco:content1"), node("disco:title"), literal("Post Nr. 1")));
     graph.add(store.rdf.createTriple(node("disco:content2"), node("disco:id"), literal("2")));

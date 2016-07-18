@@ -21,7 +21,10 @@ var QueryStringBuilder = (function () {
         var ret = "";
         if (options && options.filterExpression) {
             if (options && options.filterPattern) {
-                ret += " . " + this.buildGraphPatternString(options.filterPattern);
+                var filterPatternString = this.buildGraphPatternString(options.filterPattern);
+                /* we need to filter out empty patterns because of an issue in rdfstore-js */
+                if (filterPatternString !== "{  }")
+                    ret += " . " + filterPatternString;
             }
             ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
         }
@@ -43,9 +46,11 @@ var QueryStringBuilder = (function () {
             .join(" . ");
         var conjunctivePatternsString = graphPattern.getConjunctivePatterns()
             .map(function (p) { return _this.buildGraphPatternString(p); })
+            .filter(function (s) { return s !== "{  }"; })
             .join(" . ");
         var unionsString = graphPattern.getUnionPatterns()
             .map(function (p) { return _this.buildGraphPatternString(p); })
+            .filter(function (s) { return s !== "{  }"; })
             .join(" UNION ");
         var parts = [];
         if (triplesString !== "")

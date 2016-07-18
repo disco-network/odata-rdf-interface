@@ -79,6 +79,7 @@ exports.NumberLiteralExpression = literalExpression({
 exports.OrExpression = binaryOperator({ opName: "or", sparql: "||" });
 exports.AndExpression = binaryOperator({ opName: "and", sparql: "&&" });
 exports.EqExpression = binaryOperator({ opName: "eq", sparql: "=" });
+/* @smell create two classes: PropertyValueExpression and AnyExpression */
 var PropertyExpression = (function () {
     function PropertyExpression() {
     }
@@ -111,8 +112,20 @@ var PropertyExpression = (function () {
     PropertyExpression.prototype.getPropertyTree = function () {
         var tree = {};
         var branch = tree;
-        for (var i = 0; i < this.properties.length; ++i) {
-            branch = branch[this.properties[i]] = branch[this.properties[i]] || {};
+        var propertiesToInclude;
+        switch (this.operation) {
+            case PropertyExpressionOperation.PropertyValue:
+                propertiesToInclude = this.properties;
+                break;
+            case PropertyExpressionOperation.Any:
+                propertiesToInclude = this.properties.slice(0, -1);
+                break;
+            default:
+                throw new Error("this.operation has an invalid value");
+        }
+        for (var i = 0; i < propertiesToInclude.length; ++i) {
+            var property = propertiesToInclude[i];
+            branch = branch[property] = branch[property] || {};
         }
         return tree;
     };

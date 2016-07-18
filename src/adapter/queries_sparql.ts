@@ -79,6 +79,7 @@ export class EntitySetQuery implements ODataQueries.Query {
       filterExpression: filterExpression,
       filterPattern: filterGraphPattern,
     });
+    console.log(this.queryString); /* @debug */
   }
 
   private createGraphPattern(): gpatterns.TreeGraphPattern {

@@ -72,6 +72,7 @@ var EntitySetQuery = (function () {
             filterExpression: filterExpression,
             filterPattern: filterGraphPattern,
         });
+        console.log(this.queryString); /* @debug */
     };
     EntitySetQuery.prototype.createGraphPattern = function () {
         return expandTreePatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.getOrInitMapping());

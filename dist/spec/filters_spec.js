@@ -94,17 +94,18 @@ describe("A PropertyExpression", function () {
         });
         expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . FILTER({test}) }");
     });
-    xit("should handle simple 'any' expressions", function () {
-        var factory = new filters.FilterExpressionFactory()
-            .registerDefaultFilterExpressions()
-            .registerFilterExpression(TestFilterExpression);
-        var expr = factory.fromRaw({
-            type: "member-expression", operation: "any", path: ["Children"],
+    it("should not insert the collection property of 'any' operations into the property tree", function () {
+        var expr = filters.PropertyExpression.create({
+            type: "member-expression", operation: "any", path: ["A", "B", "Children"],
             lambdaExpression: {
-                variable: "it", predicateExpression: { type: "text", value: "{test}" },
+                variable: "it", predicateExpression: { type: "test", value: "{test}" },
             },
+        }, {
+            mapping: null,
+            factory: createTestFilterExpressionFactory(),
+            entityType: null,
         });
-        expect(expr.toSparql()).toBe("EXISTS { ?x0 disco:parent ?root . FILTER({test}) }");
+        expect(expr.getPropertyTree()).toEqual({ A: { B: {} } });
     });
 });
 function createTestFilterExpressionFactory() {

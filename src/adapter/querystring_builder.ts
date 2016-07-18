@@ -26,7 +26,10 @@ export class QueryStringBuilder {
     let ret = "";
     if (options && options.filterExpression) {
       if (options && options.filterPattern) {
-        ret += " . " + this.buildGraphPatternString(options.filterPattern);
+        let filterPatternString = this.buildGraphPatternString(options.filterPattern);
+        /* we need to filter out empty patterns because of an issue in rdfstore-js */
+        if (filterPatternString !== "{  }")
+          ret += " . " + filterPatternString;
       }
       ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
     }
@@ -49,9 +52,12 @@ export class QueryStringBuilder {
       .join(" . ");
     let conjunctivePatternsString = graphPattern.getConjunctivePatterns()
       .map(p => this.buildGraphPatternString(p))
+      /* we need to filter out empty patterns because of an issue in rdfstore-js */
+      .filter(s => s !== "{  }")
       .join(" . ");
     let unionsString = graphPattern.getUnionPatterns()
       .map(p => this.buildGraphPatternString(p))
+      .filter(s => s !== "{  }")
       .join(" UNION ");
     let parts = [];
 

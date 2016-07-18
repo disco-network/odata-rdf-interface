@@ -43,6 +43,21 @@ describe("rdfstore should execute", function() {
     expect(answer.result.length).toBe(1);
   });
 
+  createSpec("SELECT * WHERE { { ?x0 disco:id ?x1 } . FILTER(EXISTS {  { ?x6 disco:parent ?x0 } }) }", answer => {
+    expect(answer.error).toBe(null);
+    expect(answer.result.length).toBe(1);
+  });
+
+  createSpec("SELECT * WHERE {}", answer => {
+    expect(answer.error).toBe(null);
+    expect(answer.result.length).toBe(0);
+  });
+
+  createSpec("SELECT * WHERE { OPTIONAL { ?post disco:id '1' . ?post rdf:type disco:Post } }", answer => {
+    expect(answer.error).toBe(null);
+    expect(answer.result.length).toBe(1);
+  });
+
   function createSpec(query: string, cb: (results: any) => void) {
     let prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
     prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";
@@ -86,6 +101,9 @@ function storeSeed(store, graphName, cb) {
   ));
   graph.add(store.rdf.createTriple(
     node("disco:post2"), node("disco:content"), node("disco:content2")
+  ));
+  graph.add(store.rdf.createTriple(
+    node("disco:post2"), node("disco:parent"), node("disco:post1")
   ));
 
   graph.add(store.rdf.createTriple(
