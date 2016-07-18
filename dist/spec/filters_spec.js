@@ -70,7 +70,7 @@ describe("A PropertyExpression", function () {
             type: "member-expression",
         })).toBe(true);
     });
-    xit("should handle simple 'any' expressions", function () {
+    it("should handle simple 'any' expressions", function () {
         var vargen = new mappings.SparqlVariableGenerator();
         var mapping = new mappings.StructuredSparqlVariableMapping("?root", vargen);
         var expr = filters.PropertyExpression.create({

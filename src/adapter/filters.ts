@@ -1,5 +1,6 @@
 import mappings = require("./mappings");
 import schema = require("../odata/schema");
+import filterPatterns = require("./filterpatterns");
 
 export interface FilterExpression {
   getSubExpressions(): FilterExpression[];
@@ -120,6 +121,8 @@ export class PropertyExpression implements FilterExpression {
 
   public static create(raw, args: FilterExpressionArgs): PropertyExpression {
     let ret = new PropertyExpression();
+    ret.raw = raw;
+    ret.factory = args.factory;
     ret.properties = raw.path;
     ret.operation = this.operationFromRaw(raw.operation);
     ret.mapping = args.mapping;
@@ -140,6 +143,8 @@ export class PropertyExpression implements FilterExpression {
 
   // ===
 
+  private raw: any;
+  private factory: FilterExpressionFactory;
   private properties: string[];
   private operation: PropertyExpressionOperation;
   private mapping: mappings.StructuredSparqlVariableMapping;
@@ -178,14 +183,22 @@ export class PropertyExpression implements FilterExpression {
   }
 
   private anyExpressionToSparql(): string {
-    /* @construction
-    let vargen = new mappings.SparqlVariableGenerator();
-    let mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
-    let filterPattern = new gpatterns.FilterGraphPattern(
-      this.entityType, "propertyTree", mapping
+    /* @construction let rawLambdaExpression = this.raw.lambdaExpression;
+    let lambdaExpression: filterPatterns.LambdaExpression = {
+      variable: rawLambdaExpression.variable,
+      expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
+    };
+    let filterContext: filterPatterns.FilterContext = {
+      mapping: this.mapping,
+      entityType: this.entityType,
+      lambdaExpressions: {},
+    };
+    filterContext.lambdaExpressions[lambdaExpression.variable] = lambdaExpression;
+    let filterPattern = filterPatterns.FilterGraphPatternFactory.create(
+      filterContext, lambdaExpression.expression.getPropertyTree()
     );
-    return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";
-    */
+    let queryStringBuilder = ;
+    return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";*/
     return "nope";
   }
 }

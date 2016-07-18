@@ -11,6 +11,7 @@ var StructuredSparqlVariableMapping = (function () {
         var complexVargen = new ComplexSparqlVariableGenerator(vargen);
         this.elementaryProperties = new SparqlVariableMapping(vargen);
         this.complexProperties = new SparqlVariableMapping(complexVargen);
+        this.lambdaNamespaces = new SparqlVariableMapping(complexVargen);
     }
     StructuredSparqlVariableMapping.prototype.getVariable = function () {
         return this.variableName;
@@ -23,11 +24,18 @@ var StructuredSparqlVariableMapping = (function () {
         return this.elementaryProperties.getPropertyVariable(name);
     };
     /**
-     * Registers an complex property in this mapping if it does not exist yet
+     * Registers a complex property in this mapping if it does not exist yet
      * and returns the structured mapping.
      */
     StructuredSparqlVariableMapping.prototype.getComplexProperty = function (name) {
         return this.complexProperties.getPropertyVariable(name);
+    };
+    /**
+     * Registers a lambda namespace whose identifier is the name of the argument
+     * passed to the lambda function. Each namespace is another structured mapping.
+     */
+    StructuredSparqlVariableMapping.prototype.getLambdaNamespace = function (namespaceIdentifier) {
+        return this.lambdaNamespaces.getPropertyVariable(namespaceIdentifier);
     };
     StructuredSparqlVariableMapping.prototype.elementaryPropertyExists = function (name) {
         return this.elementaryProperties.mappingExists(name);

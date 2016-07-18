@@ -176,16 +176,16 @@ describe("complex-property expand tree graph patterns", function() {
   });
 });
 
-describe("filter graph patterns", () => {
+describe("A filter graph pattern", () => {
   it("should expand elementary properties of the first depth level", () => {
     let expandTree = { Id: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let queryContext: filterPatterns.QueryContext = {
+    let filterContext: filterPatterns.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
-      lambdaExpressions: [],
+      lambdaExpressions: {},
     };
-    let gp = filterPatterns.FilterGraphPatternFactory.create(queryContext, expandTree);
+    let gp = filterPatterns.FilterGraphPatternFactory.create(filterContext, expandTree);
 
     expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns().length).toEqual(0);
@@ -193,5 +193,26 @@ describe("filter graph patterns", () => {
     expect(gp.getOptionalPatterns()[0].getDirectTriples()).toEqual(
       [[ "?post", "disco:id", mapping.getElementaryPropertyVariable("Id") ]]
     );
+  });
+  it("should work in a lambda environment", () => {
+    let expandTree = { Id: {}, it: { Id: {} } };
+    let mapping = mhelper.createStructuredMapping("?post");
+    let filterContext: filterPatterns.FilterContext = {
+      mapping: mapping,
+      entityType: schema.getEntityType("Post"),
+      lambdaExpressions: {
+        it: {
+          variable: "it",
+          entityType: schema.getEntityType("Post"),
+        },
+      },
+    };
+    let filterPattern = filterPatterns.FilterGraphPatternFactory.create(filterContext, expandTree);
+
+    expect(filterPattern.getConjunctivePatterns().length).toBe(1);
+    expect(filterPattern.getConjunctivePatterns()[0].getOptionalPatterns()[0].name())
+      .toBe(mapping.getLambdaNamespace("it").getVariable());
+    expect(filterPattern.getConjunctivePatterns()[0].getOptionalPatterns()[0].branch("disco:id")[0].name())
+      .toBe(mapping.getLambdaNamespace("it").getElementaryPropertyVariable("Id"));
   });
 });

@@ -8,6 +8,7 @@ var TreeGraphPattern = (function () {
         var _this = this;
         this.valueLeaves = {};
         this.unionPatterns = [];
+        this.conjunctivePatterns = [];
         var createTriple = function (property, branch) {
             return [_this.name(), property, branch.name()];
         };
@@ -62,6 +63,9 @@ var TreeGraphPattern = (function () {
     };
     TreeGraphPattern.prototype.getUnionPatterns = function () {
         return this.unionPatterns;
+    };
+    TreeGraphPattern.prototype.getConjunctivePatterns = function () {
+        return this.conjunctivePatterns;
     };
     TreeGraphPattern.prototype.name = function () {
         return this.rootName;
@@ -125,6 +129,12 @@ var TreeGraphPattern = (function () {
     TreeGraphPattern.prototype.newUnionPattern = function (pattern) {
         pattern = pattern || new TreeGraphPattern(this.name());
         this.unionPatterns.push(pattern);
+        return pattern;
+    };
+    /** Create a graph pattern with independent root variable. Append it with AND, i.e. " . " */
+    TreeGraphPattern.prototype.newConjunctivePattern = function (pattern) {
+        pattern = pattern || new TreeGraphPattern(this.name());
+        this.conjunctivePatterns.push(pattern);
         return pattern;
     };
     TreeGraphPattern.prototype.branchExists = function (property) {

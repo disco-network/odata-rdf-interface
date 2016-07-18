@@ -9,8 +9,9 @@ export class TreeGraphPattern {
   private optionalBranchPattern: GraphPatternWithBranches;
   private optionalInverseBranchPattern: GraphPatternWithBranches;
 
-  private valueLeaves: { [id: string]: ValueLeaf[] } = { };
-  private unionPatterns: TreeGraphPattern[] = [ ];
+  private valueLeaves: { [id: string]: ValueLeaf[] } = {};
+  private unionPatterns: TreeGraphPattern[] = [];
+  private conjunctivePatterns: TreeGraphPattern[] = [];
 
   constructor(rootName: string) {
     let createTriple = (property: string, branch: TreeGraphPattern) => {
@@ -70,6 +71,10 @@ export class TreeGraphPattern {
 
   public getUnionPatterns(): TreeGraphPattern[] {
     return this.unionPatterns;
+  }
+
+  public getConjunctivePatterns(): TreeGraphPattern[] {
+    return this.conjunctivePatterns;
   }
 
   public name(): string {
@@ -148,6 +153,13 @@ export class TreeGraphPattern {
   public newUnionPattern(pattern?: TreeGraphPattern): TreeGraphPattern {
     pattern = pattern || new TreeGraphPattern(this.name());
     this.unionPatterns.push(pattern);
+    return pattern;
+  }
+
+  /** Create a graph pattern with independent root variable. Append it with AND, i.e. " . " */
+  public newConjunctivePattern(pattern?: TreeGraphPattern): TreeGraphPattern {
+    pattern = pattern || new TreeGraphPattern(this.name());
+    this.conjunctivePatterns.push(pattern);
     return pattern;
   }
 

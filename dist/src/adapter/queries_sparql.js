@@ -78,7 +78,7 @@ var EntitySetQuery = (function () {
     };
     EntitySetQuery.prototype.createFilterGraphPattern = function (filterExpression) {
         if (filterExpression !== undefined)
-            return filterPatterns.FilterGraphPatternFactory.create(this.createQueryContext(), filterExpression.getPropertyTree());
+            return filterPatterns.FilterGraphPatternFactory.create(this.createFilterContext(), filterExpression.getPropertyTree());
     };
     EntitySetQuery.prototype.createFilterExpression = function () {
         if (this.getRawFilter())
@@ -90,11 +90,11 @@ var EntitySetQuery = (function () {
         queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
         return queryStringBuilder;
     };
-    EntitySetQuery.prototype.createQueryContext = function () {
+    EntitySetQuery.prototype.createFilterContext = function () {
         return {
             mapping: this.getOrInitMapping(),
             entityType: this.getTypeOfEntitySet(),
-            lambdaExpressions: [],
+            lambdaExpressions: {},
         };
     };
     EntitySetQuery.prototype.getExpandTree = function () {

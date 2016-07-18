@@ -143,20 +143,40 @@ describe("complex-property expand tree graph patterns", function () {
             mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id")]);
     });
 });
-describe("filter graph patterns", function () {
+describe("A filter graph pattern", function () {
     it("should expand elementary properties of the first depth level", function () {
         var expandTree = { Id: {} };
         var mapping = mhelper.createStructuredMapping("?post");
-        var queryContext = {
+        var filterContext = {
             mapping: mapping,
             entityType: schema.getEntityType("Post"),
-            lambdaExpressions: [],
+            lambdaExpressions: {},
         };
-        var gp = filterPatterns.FilterGraphPatternFactory.create(queryContext, expandTree);
+        var gp = filterPatterns.FilterGraphPatternFactory.create(filterContext, expandTree);
         expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
         expect(gp.getUnionPatterns().length).toEqual(0);
         expect(gp.getOptionalPatterns().length).toEqual(1);
         expect(gp.getOptionalPatterns()[0].getDirectTriples()).toEqual([["?post", "disco:id", mapping.getElementaryPropertyVariable("Id")]]);
+    });
+    it("should work in a lambda environment", function () {
+        var expandTree = { Id: {}, it: { Id: {} } };
+        var mapping = mhelper.createStructuredMapping("?post");
+        var filterContext = {
+            mapping: mapping,
+            entityType: schema.getEntityType("Post"),
+            lambdaExpressions: {
+                it: {
+                    variable: "it",
+                    entityType: schema.getEntityType("Post"),
+                },
+            },
+        };
+        var filterPattern = filterPatterns.FilterGraphPatternFactory.create(filterContext, expandTree);
+        expect(filterPattern.getConjunctivePatterns().length).toBe(1);
+        expect(filterPattern.getConjunctivePatterns()[0].getOptionalPatterns()[0].name())
+            .toBe(mapping.getLambdaNamespace("it").getVariable());
+        expect(filterPattern.getConjunctivePatterns()[0].getOptionalPatterns()[0].branch("disco:id")[0].name())
+            .toBe(mapping.getLambdaNamespace("it").getElementaryPropertyVariable("Id"));
     });
 });
 

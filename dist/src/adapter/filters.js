@@ -85,6 +85,8 @@ var PropertyExpression = (function () {
     };
     PropertyExpression.create = function (raw, args) {
         var ret = new PropertyExpression();
+        ret.raw = raw;
+        ret.factory = args.factory;
         ret.properties = raw.path;
         ret.operation = this.operationFromRaw(raw.operation);
         ret.mapping = args.mapping;
@@ -130,14 +132,22 @@ var PropertyExpression = (function () {
         return currentMapping.getElementaryPropertyVariable(this.properties[this.properties.length - 1]);
     };
     PropertyExpression.prototype.anyExpressionToSparql = function () {
-        /* @construction
-        let vargen = new mappings.SparqlVariableGenerator();
-        let mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
-        let filterPattern = new gpatterns.FilterGraphPattern(
-          this.entityType, "propertyTree", mapping
+        /* @construction let rawLambdaExpression = this.raw.lambdaExpression;
+        let lambdaExpression: filterPatterns.LambdaExpression = {
+          variable: rawLambdaExpression.variable,
+          expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
+        };
+        let filterContext: filterPatterns.FilterContext = {
+          mapping: this.mapping,
+          entityType: this.entityType,
+          lambdaExpressions: {},
+        };
+        filterContext.lambdaExpressions[lambdaExpression.variable] = lambdaExpression;
+        let filterPattern = filterPatterns.FilterGraphPatternFactory.create(
+          filterContext, lambdaExpression.expression.getPropertyTree()
         );
-        return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";
-        */
+        let queryStringBuilder = ;
+        return "EXISTS { ?root disco:prop ?child . FilterPattern[root=?child] . FILTER() }";*/
         return "nope";
     };
     return PropertyExpression;

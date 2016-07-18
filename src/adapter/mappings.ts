@@ -8,11 +8,13 @@
 export class StructuredSparqlVariableMapping {
   private elementaryProperties: SparqlVariableMapping<string>;
   private complexProperties: SparqlVariableMapping<StructuredSparqlVariableMapping>;
+  private lambdaNamespaces: SparqlVariableMapping<StructuredSparqlVariableMapping>;
 
   constructor(private variableName: string, vargen: SparqlVariableGenerator) {
     let complexVargen = new ComplexSparqlVariableGenerator(vargen);
     this.elementaryProperties = new SparqlVariableMapping(vargen);
     this.complexProperties = new SparqlVariableMapping(complexVargen);
+    this.lambdaNamespaces = new SparqlVariableMapping(complexVargen);
   }
 
   public getVariable(): string {
@@ -28,11 +30,19 @@ export class StructuredSparqlVariableMapping {
   }
 
   /**
-   * Registers an complex property in this mapping if it does not exist yet
+   * Registers a complex property in this mapping if it does not exist yet
    * and returns the structured mapping.
    */
   public getComplexProperty(name: string): StructuredSparqlVariableMapping {
     return this.complexProperties.getPropertyVariable(name);
+  }
+
+  /**
+   * Registers a lambda namespace whose identifier is the name of the argument
+   * passed to the lambda function. Each namespace is another structured mapping.
+   */
+  public getLambdaNamespace(namespaceIdentifier: string): StructuredSparqlVariableMapping {
+    return this.lambdaNamespaces.getPropertyVariable(namespaceIdentifier);
   }
 
   public elementaryPropertyExists(name: string): boolean {

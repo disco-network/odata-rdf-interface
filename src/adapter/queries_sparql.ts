@@ -88,7 +88,7 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
     if (filterExpression !== undefined)
-      return filterPatterns.FilterGraphPatternFactory.create(this.createQueryContext(),
+      return filterPatterns.FilterGraphPatternFactory.create(this.createFilterContext(),
         filterExpression.getPropertyTree());
   }
 
@@ -103,11 +103,11 @@ export class EntitySetQuery implements ODataQueries.Query {
     return queryStringBuilder;
   }
 
-  private createQueryContext(): filterPatterns.QueryContext {
+  private createFilterContext(): filterPatterns.FilterContext {
     return {
       mapping: this.getOrInitMapping(),
       entityType: this.getTypeOfEntitySet(),
-      lambdaExpressions: [],
+      lambdaExpressions: {},
     };
   }
 
