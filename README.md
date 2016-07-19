@@ -31,7 +31,9 @@ Possible queries are at the moment:
  * /Posts?$expand=Children/Parent
  * /Posts?$filter=Id eq 1
  * /Posts?$filter=Content/Id eq 1
- * /Posts?filter=(Parent/Id eq 1) and (Content/Id eq 2)
+ * /Posts?$filter=(Parent/Id eq 1) and (Content/Id eq 2)
+ * /Posts?$filter=Children/any(child: child/Id eq 2)
+ * /Posts?$filter=Children/any(c1: c1/Children/any(c2: 1 eq 1))
 
 # development
 To develop this project, please use NPM to install further development dependencies, especially gulp.

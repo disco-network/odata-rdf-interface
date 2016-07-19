@@ -33,6 +33,7 @@ describe("A filter factory", () => {
     expect(args.factory).toBeDefined();
     expect(args.factory).toBe(factory);
   });
+  xit("should be clonable", () => undefined);
 });
 
 describe("A StringLiteralExpression", () => {
@@ -150,10 +151,11 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { OPTIONAL { ?root disco:id ?x0 } . { OPTIONAL { ?x1 disco:parent ?root } } . FILTER(?x0) }");
+    expect(expr.toSparql()).toBe("EXISTS { OPTIONAL { ?root disco:id ?x0 } . "
+      + "{ OPTIONAL { ?x1 disco:parent ?root } } . FILTER(?x0) }");
   });
 
-  xit("should process properties of the lambda entity in 'any' expessions", () => {
+  it("should process properties of the lambda entity in 'any' expessions", () => {
     let factory = new filters.FilterExpressionFactory()
       .registerDefaultFilterExpressions()
       .setFilterContext({
@@ -169,7 +171,9 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:id ?x1 } } . { OPTIONAL { ?x1 disco:parent ?root } } . FILTER(?x0) }");
+    /* @todo is it a good idea to use _OPTIONAL_ { ?x0 disco:parent ?root } ? */
+    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:id ?x1 } } . "
+      + "{ OPTIONAL { ?x0 disco:parent ?root } } . FILTER(?x1) }");
   });
 });
 

@@ -170,11 +170,29 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts?$filter=Children/any(it: it/Id eq 2)", answer => {
     expectSuccess(answer);
     expect(answer.result.length).toBe(1);
-  }, true);
+  });
 
-  function createQuerySpec(query: string, cb: (results: any) => void, pending: boolean = false) {
+  createQuerySpec("/Posts?$filter=Children/any(it: Id eq 1)", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(1);
+  });
+
+  createQuerySpec("/Posts?$filter=Children/any(it: Id eq 2)", answer => {
+    expectSuccess(answer);
+    expect(answer.result.length).toBe(0);
+  });
+
+  createQuerySpec("/Posts?$filter=Children/any(it: it/Children/any(it2: 1 eq 1))", answer => {
+    expectSuccess(answer);
+  }, () => {
+    "before execution";
+  });
+
+  function createQuerySpec(query: string, cb: (results: any) => void, before: () => void = () => null,
+                           pending: boolean = false) {
     let fn = pending ? xit : it;
     fn(query, (done) => {
+      before();
       rdfstore.create((error, store) => {
         let graphName = "http://example.org/";
         storeSeed(store, graphName, () => {
