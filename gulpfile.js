@@ -1,9 +1,9 @@
 var gulp = require('gulp'),
   jasmine = require('gulp-jasmine'),
   tslint = require('gulp-tslint');
-  tslint = require('gulp-tslint'),
+tslint = require('gulp-tslint'),
   tsc = require('gulp-typescript'),
-	sourcemaps = require('gulp-sourcemaps');
+  sourcemaps = require('gulp-sourcemaps');
 
 gulp.task('lint', function () {
   return gulp.src([
@@ -24,13 +24,17 @@ gulp.task('build', function () {
     .pipe(sourcemaps.init())
     .pipe(tsc(tsProject))
     .js
-    //.pipe(sourcemaps.write('../maps'))
-    .pipe(sourcemaps.write('.', {debug: true, includeContent: false, sourceRoot: '../../'}))
+    .pipe(sourcemaps.write('.', {
+      includeContent: false,
+      sourceRoot: function (file) {
+        var path = '../'.repeat((file.relative.match(/\//g) || []).length + 1);
+        return path;
+      }
+    }))
     .pipe(gulp.dest('lib'));
 })
 
-//gulp.task('tests', ['build'], function () {
-gulp.task('tests', function () {
+gulp.task('tests', ['build'], function () {
   return gulp.src('./lib/spec/*.js')
     .pipe(jasmine({ includeStackTrace: true, verbose: true }));
 });
