@@ -1,7 +1,6 @@
 var gulp = require('gulp'),
   jasmine = require('gulp-jasmine'),
   tslint = require('gulp-tslint'),
-  tslint = require('gulp-tslint'),
   tsc = require('gulp-typescript'),
   sourcemaps = require('gulp-sourcemaps');
 
