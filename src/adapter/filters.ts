@@ -149,8 +149,6 @@ export class PropertyExpression implements FilterExpression {
     ret.factory = args.factory;
     ret.properties = raw.path;
     ret.operation = this.operationFromRaw(raw.operation);
-    ret.mapping = args.filterContext.mapping;
-    ret.entityType = args.filterContext.entityType;
     return ret;
   }
 
@@ -172,8 +170,6 @@ export class PropertyExpression implements FilterExpression {
   private factory: FilterExpressionFactory;
   private properties: string[];
   private operation: PropertyExpressionOperation;
-  private mapping: mappings.StructuredSparqlVariableMapping;
-  private entityType: schema.EntityType;
 
   public getSubExpressions(): FilterExpression[] {
     return [];
@@ -182,17 +178,7 @@ export class PropertyExpression implements FilterExpression {
   public getPropertyTree(): PropertyTree {
     let tree: PropertyTree = {};
     let branch = tree;
-    let propertiesToInclude: string[];
-    switch (this.operation) {
-      case PropertyExpressionOperation.PropertyValue:
-        propertiesToInclude = this.properties;
-        break;
-      case PropertyExpressionOperation.Any:
-        propertiesToInclude = this.properties.slice(0, -1);
-        break;
-      default:
-        throw new Error("this.operation has an invalid value");
-    }
+    let propertiesToInclude = this.getPropertyPathSegmentOfCardinalityOne();
     for (let i = 0; i < propertiesToInclude.length; ++i) {
       let property = propertiesToInclude[i];
       branch = branch[property] = branch[property] || {};
@@ -211,32 +197,36 @@ export class PropertyExpression implements FilterExpression {
     }
   }
 
+  private getPropertyPathSegmentOfCardinalityOne() {
+    switch (this.operation) {
+      case PropertyExpressionOperation.PropertyValue:
+        return this.properties;
+      case PropertyExpressionOperation.Any:
+        return this.properties.slice(0, -1);
+      default:
+        throw new Error("this.operation has an invalid value");
+    }
+  }
+
   private propertyValueExpressionToSparql(): string {
-    let currentMapping = this.mapping;
-    if (this.properties.length >= 2) {
-      let firstProperty = this.properties[0];
-      if (this.filterContext.lambdaExpressions[firstProperty] !== undefined) {
-        currentMapping = currentMapping.getLambdaNamespace(firstProperty);
-      }
-      else {
-        currentMapping = currentMapping.getComplexProperty(firstProperty);
-      }
+    let currentMapping = this.getMappingAfterLambdaPrefix();
+    let propertiesWithoutLambdaPrefix = this.getPathWithoutLambdaPrefix();
+    for (let i = 0; i < (propertiesWithoutLambdaPrefix.length - 1); ++i) {
+        currentMapping = currentMapping.getComplexProperty(propertiesWithoutLambdaPrefix[i]);
     }
-    for (let i = 1; i < (this.properties.length - 1); ++i) {
-        currentMapping = currentMapping.getComplexProperty(this.properties[i]);
-    }
-    return currentMapping.getElementaryPropertyVariable(this.properties[this.properties.length - 1]);
+    return currentMapping.getElementaryPropertyVariable(
+      propertiesWithoutLambdaPrefix[propertiesWithoutLambdaPrefix.length - 1]);
   }
 
   private anyExpressionToSparql(): string {
-    let rawLambdaExpression = this.raw.lambdaExpression;
     let lambdaExpressionFilterContext = {
-      mapping: this.mapping,
-      entityType: this.entityType,
+      mapping: this.filterContext.mapping,
+      entityType: this.filterContext.entityType,
       lambdaExpressions: this.cloneLambdaExpressionDictionary(this.filterContext.lambdaExpressions),
     };
     let lambdaExpressionFactory = this.factory.clone();
     lambdaExpressionFactory.setFilterContext(lambdaExpressionFilterContext);
+    let rawLambdaExpression = this.raw.lambdaExpression;
     let lambdaExpression: LambdaExpression = {
       variable: rawLambdaExpression.variable,
       entityType: this.getEntityTypeOfPropertyPath(),
@@ -254,18 +244,51 @@ export class PropertyExpression implements FilterExpression {
   }
 
   private getEntityTypeOfPropertyPath(): schema.EntityType {
-    let currentType = this.entityType;
-    let i = 0;
-    if (this.properties.length >= 1) {
-      if (this.filterContext.lambdaExpressions[this.properties[0]] !== undefined) {
-        currentType = this.filterContext.lambdaExpressions[this.properties[0]].entityType;
-        ++i;
-      }
-    }
-    for (; i < this.properties.length; ++i) {
-      currentType = currentType.getProperty(this.properties[i]).getEntityType();
+    let currentType = this.getEntityTypeAfterLambdaPrefix();
+    let propertiesWithoutLambdaPrefix = this.getPathWithoutLambdaPrefix();
+    for (let i = 0; i < propertiesWithoutLambdaPrefix.length; ++i) {
+      currentType = currentType.getProperty(propertiesWithoutLambdaPrefix[i]).getEntityType();
     }
     return currentType;
+  }
+
+  private pathStartsWithLambdaPrefix() {
+    return this.getLambdaExpression() !== undefined;
+  }
+
+  private getEntityTypeAfterLambdaPrefix() {
+    if (this.pathStartsWithLambdaPrefix()) {
+      return this.getLambdaExpression().entityType;
+    }
+    else {
+      return this.filterContext.entityType;
+    }
+  }
+
+  private getMappingAfterLambdaPrefix() {
+    if (this.pathStartsWithLambdaPrefix()) {
+      return this.filterContext.mapping.getLambdaNamespace(this.properties[0]);
+    }
+    else {
+      return this.filterContext.mapping;
+    }
+  }
+
+  private getLambdaExpression() {
+    return this.properties[0] && this.filterContext.lambdaExpressions[this.properties[0]];
+  }
+
+  private getFilterContextAfterLambdaPrefix(): FilterContext {
+    return {
+      entityType: this.getEntityTypeAfterLambdaPrefix(),
+      mapping: this.getMappingAfterLambdaPrefix(),
+      lambdaExpressions: {},
+    };
+  }
+
+  private getPathWithoutLambdaPrefix() {
+    return this.pathStartsWithLambdaPrefix() ?
+      this.properties.slice(1) : this.properties;
   }
 
   private cloneLambdaExpressionDictionary(lambdaExpressions: { [id: string]: LambdaExpression }
