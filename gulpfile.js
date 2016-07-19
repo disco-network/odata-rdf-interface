@@ -1,7 +1,7 @@
 var gulp = require('gulp'),
   jasmine = require('gulp-jasmine'),
-  tslint = require('gulp-tslint');
-tslint = require('gulp-tslint'),
+  tslint = require('gulp-tslint'),
+  tslint = require('gulp-tslint'),
   tsc = require('gulp-typescript'),
   sourcemaps = require('gulp-sourcemaps');
 
@@ -27,6 +27,7 @@ gulp.task('build', function () {
     .pipe(sourcemaps.write('.', {
       includeContent: false,
       sourceRoot: function (file) {
+        // needed to fix relative path in sourceMaps
         var path = '../'.repeat((file.relative.match(/\//g) || []).length + 1);
         return path;
       }
