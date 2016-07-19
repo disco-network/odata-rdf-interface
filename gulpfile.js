@@ -24,7 +24,7 @@ gulp.task('build', function () {
     .pipe(sourcemaps.init())
     .pipe(tsc(tsProject))
     .js
-    .pipe(sourcemaps.write('.', {
+    .pipe(sourcemaps.write('../maps', {
       includeContent: false,
       sourceRoot: function (file) {
         // needed to fix relative path in sourceMaps
