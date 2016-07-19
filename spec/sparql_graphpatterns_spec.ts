@@ -179,14 +179,14 @@ describe("complex-property expand tree graph patterns", function() {
 
 describe("A filter graph pattern", () => {
   it("should expand elementary properties of the first depth level", () => {
-    let expandTree = { Id: {} };
+    let expandTree = new filters.ScopedPropertyTree({ Id: {} });
     let mapping = mhelper.createStructuredMapping("?post");
     let filterContext: filters.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
-      lambdaExpressions: {},
+      lambdaVariableScope: {},
     };
-    let gp = filterPatterns.FilterGraphPatternFactory.create(filterContext, expandTree);
+    let gp = filterPatterns.FilterGraphPatternFactory.createFromPropertyTree(filterContext, expandTree);
 
     expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns().length).toEqual(0);
@@ -196,19 +196,19 @@ describe("A filter graph pattern", () => {
     );
   });
   it("should work in a lambda environment", () => {
-    let expandTree = { Id: {}, it: { Id: {} } };
+    let expandTree = new filters.ScopedPropertyTree({ Id: {} }, { it: { Id: {} } });
     let mapping = mhelper.createStructuredMapping("?post");
     let filterContext: filters.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
-      lambdaExpressions: {
+      lambdaVariableScope: {
         it: {
           variable: "it",
           entityType: schema.getEntityType("Post"),
         },
       },
     };
-    let filterPattern = filterPatterns.FilterGraphPatternFactory.create(filterContext, expandTree);
+    let filterPattern = filterPatterns.FilterGraphPatternFactory.createFromPropertyTree(filterContext, expandTree);
 
     expect(filterPattern.getConjunctivePatterns().length).toBe(1);
     expect(filterPattern.getConjunctivePatterns()[0].getOptionalPatterns()[0].name())

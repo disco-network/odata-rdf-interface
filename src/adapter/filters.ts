@@ -4,7 +4,7 @@ import propertyExpr = require("./filters/propertyexpression");
 
 export interface FilterExpression {
   getSubExpressions(): FilterExpression[];
-  getPropertyTree(): PropertyTree;
+  getPropertyTree(): ScopedPropertyTree;
   toSparql(): string;
 }
 
@@ -21,7 +21,16 @@ export interface FilterExpressionArgs {
 export interface FilterContext {
   mapping: mappings.StructuredSparqlVariableMapping;
   entityType: schema.EntityType;
-  lambdaExpressions: { [id: string]: LambdaExpression };
+  lambdaVariableScope: { [id: string]: LambdaExpression };
+}
+
+export function cloneLambdaVariableScope(lambdaExpressions: { [id: string]: LambdaExpression }
+                                         ): { [id: string]: LambdaExpression } {
+  let result: { [id: string]: LambdaExpression } = {};
+  Object.keys(lambdaExpressions).forEach(key => {
+    result[key] = lambdaExpressions[key];
+  });
+  return result;
 }
 
 export interface LambdaExpression {
@@ -99,7 +108,7 @@ export class FilterExpressionFactory {
     return filterContext !== undefined &&
       filterContext.entityType !== undefined &&
       filterContext.mapping !== undefined &&
-      filterContext.lambdaExpressions !== undefined;
+      filterContext.lambdaVariableScope !== undefined;
   }
 
   private validateFactory(factory: FilterExpressionFactory) {
@@ -108,6 +117,9 @@ export class FilterExpressionFactory {
 }
 
 export let PropertyExpression = propertyExpr.PropertyExpression;
+export type PropertyExpression = propertyExpr.PropertyExpression;
+export let PropertyPath = propertyExpr.PropertyPath;
+export type PropertyPath = propertyExpr.PropertyPath;
 
 export let StringLiteralExpression = literalExpression<string>({
   typeName: "string",
@@ -174,8 +186,8 @@ function literalExpression<ValueType>(config: {
       return [];
     }
 
-    public getPropertyTree(): PropertyTree {
-      return {};
+    public getPropertyTree(): ScopedPropertyTree {
+      return new ScopedPropertyTree();
     }
 
     public toSparql(): string {
@@ -209,7 +221,7 @@ function binaryOperator(config: { opName: string; sparql: string }) {
       return [ this.lhs, this.rhs ];
     }
 
-    public getPropertyTree(): PropertyTree {
+    public getPropertyTree(): ScopedPropertyTree {
       return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
     }
 
@@ -220,18 +232,28 @@ function binaryOperator(config: { opName: string; sparql: string }) {
   return GeneratedClass;
 }
 
-export interface PropertyTree {
-  [id: string]: PropertyTree;
+export class ScopedPropertyTree {
+  public root: FlatPropertyTree;
+  public inScopeVariables: FlatPropertyTree;
+
+  constructor(root: FlatPropertyTree = {}, inScopeVariables: FlatPropertyTree = {}) {
+    this.root = root;
+    this.inScopeVariables = inScopeVariables;
+  }
+}
+
+export interface FlatPropertyTree {
+  [id: string]: FlatPropertyTree;
 }
 
 export class PropertyTreeBuilder {
-  public tree: PropertyTree = {};
+  public tree = new ScopedPropertyTree();
 
-  public merge(other: PropertyTree) {
+  public merge(other: ScopedPropertyTree) {
     this.mergeRecursive(this.tree, other);
   }
 
-  private mergeRecursive(baseBranch: PropertyTree, mergeBranch: PropertyTree) {
+  private mergeRecursive(baseBranch: ScopedPropertyTree, mergeBranch: ScopedPropertyTree) {
     Object.keys(mergeBranch).forEach(propertyName => {
       if (baseBranch[propertyName] === undefined) {
         baseBranch[propertyName] = {};
@@ -242,7 +264,7 @@ export class PropertyTreeBuilder {
 }
 
 export class FilterExpressionHelper {
-  public static getPropertyTree(subExpressions: FilterExpression[]): PropertyTree {
+  public static getPropertyTree(subExpressions: FilterExpression[]): ScopedPropertyTree {
     let propertyTrees = subExpressions.map(se => se.getPropertyTree());
     let returnTreeBuilder = new PropertyTreeBuilder();
     propertyTrees.forEach(tree => {

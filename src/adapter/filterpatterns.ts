@@ -6,57 +6,60 @@ import filters = require("./filters");
 
 export class FilterGraphPatternFactory {
 
-  public static create(filterContext: filters.FilterContext, propertyTree: any): gpatterns.TreeGraphPattern {
+  public static createFromPropertyTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree
+                                      ): gpatterns.TreeGraphPattern {
     let mapping = filterContext.mapping;
     let entityType = filterContext.entityType;
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
 
-    Object.keys(propertyTree).forEach(propertyName => {
-      if (filterContext.lambdaExpressions[propertyName] === undefined) {
-        let property = entityType.getProperty(propertyName);
-        this.createAndInsertBranch(result, property, filterContext, propertyTree);
-      }
-      else {
-        let lambdaExpression = filterContext.lambdaExpressions[propertyName];
-        let subMapping = mapping.getLambdaNamespace(propertyName);
-        let subPropertyTree = propertyTree[propertyName];
-        let subEntityType = lambdaExpression.entityType;
-        let subContext: filters.FilterContext = {
-          entityType: subEntityType,
-          mapping: subMapping,
-          lambdaExpressions: {},
-        };
-        result.newConjunctivePattern(this.create(subContext, subPropertyTree));
-      }
+    Object.keys(propertyTree.root).forEach(propertyName => {
+      let property = entityType.getProperty(propertyName);
+      this.createAndInsertBranch(result, property, filterContext, propertyTree.root);
+    });
+
+    Object.keys(propertyTree.inScopeVariables).forEach(inScopeVar => {
+      let lambdaExpression = filterContext.lambdaVariableScope[inScopeVar];
+      let flatTree = propertyTree.inScopeVariables[inScopeVar];
+      let subPropertyTree = new filters.ScopedPropertyTree();
+      subPropertyTree.root = flatTree;
+      let subMapping = mapping.getLambdaNamespace(inScopeVar);
+      let subEntityType = lambdaExpression.entityType;
+      let subContext: filters.FilterContext = {
+        entityType: subEntityType,
+        mapping: subMapping,
+        lambdaVariableScope: {},
+      };
+      result.newConjunctivePattern(this.createFromPropertyTree(subContext, subPropertyTree));
     });
 
     return result;
   }
 
-  public static createAnyExpressionPattern(filterContext: filters.FilterContext, propertyTree: any,
-                                           lambdaExpression: filters.LambdaExpression, pathToAny: string[]) {
-    let ret = this.create(filterContext, propertyTree);
-
-    if (pathToAny.length === 0) throw new Error("pathToAny is empty");
+  public static createAnyExpressionPattern(outerFilterContext: filters.FilterContext,
+                                           propertyTree: filters.ScopedPropertyTree,
+                                           belongingLambdaExpression: filters.LambdaExpression,
+                                           propertyPath: filters.PropertyPath) {
+    let innerFilterContext = {
+      mapping: outerFilterContext.mapping,
+      entityType: outerFilterContext.entityType,
+      lambdaVariableScope: filters.cloneLambdaVariableScope(outerFilterContext.lambdaVariableScope),
+    };
+    /* @smell replace data structure VariableScope with own class */
+    innerFilterContext.lambdaVariableScope[belongingLambdaExpression.variable] = belongingLambdaExpression;
+    let ret = this.createFromPropertyTree(innerFilterContext, propertyTree);
 
     let conjunctivePattern: gpatterns.TreeGraphPattern;
-    let currentPropertyType: schema.EntityType;
-    let currentMapping: mappings.StructuredSparqlVariableMapping;
-    let nextPropertyIndex: number;
-    if (pathToAny.length === 1 || filterContext.lambdaExpressions[pathToAny[0]] === undefined) {
+    let currentPropertyType = propertyPath.getEntityTypeAfterLambdaPrefix();
+    let currentMapping = propertyPath.getMappingAfterLambdaPrefix();
+    if (propertyPath.getPrefixLambdaExpression() === undefined) {
       conjunctivePattern = ret.newConjunctivePattern();
-      currentPropertyType = filterContext.entityType;
-      currentMapping = filterContext.mapping;
-      nextPropertyIndex = 0;
     }
     else {
-      let firstPropertyInPath = pathToAny[0];
-      nextPropertyIndex = 1;
       // adopt the root variable of the lambda expression
       conjunctivePattern = ret.newConjunctivePattern(
-        new gpatterns.TreeGraphPattern(filterContext.mapping.getLambdaNamespace(firstPropertyInPath).getVariable()));
-      currentPropertyType = filterContext.lambdaExpressions[firstPropertyInPath].entityType;
-      currentMapping = filterContext.mapping.getLambdaNamespace(firstPropertyInPath);
+        new gpatterns.TreeGraphPattern(outerFilterContext.mapping.getLambdaNamespace(
+          propertyPath.getPrefixLambdaExpression().variable
+        ).getVariable()));
     }
     // create a branch path to the property
     let branchingContext = {
@@ -64,10 +67,13 @@ export class FilterGraphPatternFactory {
       entityType: currentPropertyType,
       pattern: conjunctivePattern,
     };
-    branchingContext = this.branchAlongPropertyChain(branchingContext, pathToAny.slice(nextPropertyIndex, -1));
-    let lastPropertyName = pathToAny[pathToAny.length - 1];
-    this.singleBranch(branchingContext, lastPropertyName,
-      new gpatterns.TreeGraphPattern(branchingContext.mapping.getLambdaNamespace(lambdaExpression.variable).getVariable()));
+
+    let allPropertyNames = propertyPath.getPropertyNamesWithoutLambdaPrefix();
+    let propertiesExceptLast = allPropertyNames.slice(0, -1);
+    let lastPropertyName = allPropertyNames[allPropertyNames.length - 1];
+    branchingContext = this.branchAlongPropertyChain(branchingContext, propertiesExceptLast);
+    this.singleBranch(branchingContext, lastPropertyName, new gpatterns.TreeGraphPattern(
+      branchingContext.mapping.getLambdaNamespace(belongingLambdaExpression.variable).getVariable()));
 
     return ret;
   }
@@ -100,7 +106,7 @@ export class FilterGraphPatternFactory {
   }
 
   private static createAndInsertBranch(pattern: gpatterns.TreeGraphPattern, property: schema.Property,
-                                       filterContext: filters.FilterContext, propertyTree: any) {
+                                       filterContext: filters.FilterContext, propertyTree: filters.FlatPropertyTree) {
     let mapping = filterContext.mapping;
     switch (property.getEntityKind()) {
       case schema.EntityKind.Elementary:
@@ -115,10 +121,11 @@ export class FilterGraphPatternFactory {
         let subQueryContext: filters.FilterContext = {
           mapping: mapping.getComplexProperty(property.getName()),
           entityType: property.getEntityType(),
-          lambdaExpressions: {},
+          lambdaVariableScope: {},
         };
-        let branchedPattern = this.create(subQueryContext,
-          propertyTree[property.getName()]);
+        let scopedPropertyTree = new filters.ScopedPropertyTree();
+        scopedPropertyTree.root = propertyTree[property.getName()];
+        let branchedPattern = this.createFromPropertyTree(subQueryContext, scopedPropertyTree);
         new gpatternInsertions.ComplexBranchInsertionBuilderForFiltering()
           .setComplexProperty(property)
           .setMapping(mapping)

@@ -61,7 +61,7 @@ describe("A NumberLiteralExpression", () => {
     expect(() => {
       filters.NumberLiteralExpression.create({
         type: "decimalValue", value: "cat",
-      }, { factory: null, filterContext: { entityType: null, mapping: null, lambdaExpressions: {} } });
+      }, { factory: null, filterContext: { entityType: null, mapping: null, lambdaVariableScope: {} } });
     }).toThrow();
   });
 });
@@ -110,7 +110,7 @@ describe("A PropertyExpression", () => {
       filterContext: {
         mapping: mapping,
         entityType: schema.getEntityType("Post"),
-        lambdaExpressions: {},
+        lambdaVariableScope: {},
       },
     });
 
@@ -128,11 +128,12 @@ describe("A PropertyExpression", () => {
       filterContext: {
         mapping: null,
         entityType: null,
-        lambdaExpressions: {},
+        lambdaVariableScope: {},
       },
     });
 
-    expect(expr.getPropertyTree()).toEqual({ A: { B: {} } });
+    expect(expr.getPropertyTree().root).toEqual({ A: { B: {} } });
+    expect(expr.getPropertyTree().inScopeVariables).toEqual({});
   });
 
   it("should process properties of the root entity in 'any' expessions", () => {
@@ -141,7 +142,7 @@ describe("A PropertyExpression", () => {
       .setFilterContext({
         mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
         entityType: schema.getEntityType("Post"),
-        lambdaExpressions: {},
+        lambdaVariableScope: {},
       });
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -161,7 +162,7 @@ describe("A PropertyExpression", () => {
       .setFilterContext({
         mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
         entityType: schema.getEntityType("Post"),
-        lambdaExpressions: {},
+        lambdaVariableScope: {},
       });
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -184,7 +185,7 @@ function createTestFilterExpressionFactory() {
     .setFilterContext({
       mapping: null,
       entityType: null,
-      lambdaExpressions: {},
+      lambdaVariableScope: {},
     });
   return factory;
 }
@@ -199,6 +200,6 @@ class TestFilterExpression implements filters.FilterExpression {
 
   constructor(public value, public args: filters.FilterExpressionArgs) {}
   public getSubExpressions(): filters.FilterExpression[] { return []; }
-  public getPropertyTree(): filters.PropertyTree { return {}; }
+  public getPropertyTree(): filters.ScopedPropertyTree { return new filters.ScopedPropertyTree(); }
   public toSparql(): string { return this.value.toString(); }
 }
