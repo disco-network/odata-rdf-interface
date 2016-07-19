@@ -19,7 +19,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/lib/src"
+            "outDir": "${workspaceRoot}/lib"
         },
         {
             "name": "Debug Tests",
@@ -39,7 +39,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/lib/spec"
+            "outDir": "${workspaceRoot}/lib"
         },
         {
             "name": "Attach",
