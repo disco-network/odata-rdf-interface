@@ -3,8 +3,9 @@
         "emitDecoratorMetadata": true,
         "target": "ES5",
         "module": "commonjs",
+        "removeComments": true,
         "moduleResolution": "node",
-        "outDir": "bin",
+        "outDir": "lib/",
         "sourceMap": true
     }
 }

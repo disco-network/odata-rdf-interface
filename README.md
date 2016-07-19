@@ -16,7 +16,7 @@ To install them in your working directory, please use NPM:
 # how to use
 To start the server, run:
 
-    $ node dist/src/server.js
+    $ node lib/src/server.js
 
 ... or - if you already installed gulp -
 
