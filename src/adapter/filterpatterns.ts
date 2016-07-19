@@ -4,21 +4,9 @@ import schema = require("../odata/schema");
 import gpatterns = require("../odata/graphpatterns");
 import filters = require("./filters");
 
-export interface FilterContext {
-  mapping: mappings.StructuredSparqlVariableMapping;
-  entityType: schema.EntityType;
-  lambdaExpressions: { [id: string]: LambdaExpression };
-}
-
-export interface LambdaExpression {
-  variable: string;
-  expression?: filters.FilterExpression;
-  entityType: schema.EntityType;
-}
-
 export class FilterGraphPatternFactory {
 
-  public static create(filterContext: FilterContext, propertyTree: any): gpatterns.TreeGraphPattern {
+  public static create(filterContext: filters.FilterContext, propertyTree: any): gpatterns.TreeGraphPattern {
     let mapping = filterContext.mapping;
     let entityType = filterContext.entityType;
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
@@ -33,7 +21,7 @@ export class FilterGraphPatternFactory {
         let subMapping = mapping.getLambdaNamespace(propertyName);
         let subPropertyTree = propertyTree[propertyName];
         let subEntityType = lambdaExpression.entityType;
-        let subContext: FilterContext = {
+        let subContext: filters.FilterContext = {
           entityType: subEntityType,
           mapping: subMapping,
           lambdaExpressions: {},
@@ -45,8 +33,8 @@ export class FilterGraphPatternFactory {
     return result;
   }
 
-  public static createAnyExpressionPattern(filterContext: FilterContext, propertyTree: any,
-                                           lambdaExpression: LambdaExpression, pathToAny: string[]) {
+  public static createAnyExpressionPattern(filterContext: filters.FilterContext, propertyTree: any,
+                                           lambdaExpression: filters.LambdaExpression, pathToAny: string[]) {
     let ret = this.create(filterContext, propertyTree);
 
     if (pathToAny.length === 0) throw new Error("pathToAny is empty");
@@ -112,7 +100,7 @@ export class FilterGraphPatternFactory {
   }
 
   private static createAndInsertBranch(pattern: gpatterns.TreeGraphPattern, property: schema.Property,
-                                       filterContext: FilterContext, propertyTree: any) {
+                                       filterContext: filters.FilterContext, propertyTree: any) {
     let mapping = filterContext.mapping;
     switch (property.getEntityKind()) {
       case schema.EntityKind.Elementary:
@@ -124,7 +112,7 @@ export class FilterGraphPatternFactory {
         break;
       case schema.EntityKind.Complex:
         if (!property.isCardinalityOne()) throw new Error("Properties of higher cardinality are not allowed.");
-        let subQueryContext: FilterContext = {
+        let subQueryContext: filters.FilterContext = {
           mapping: mapping.getComplexProperty(property.getName()),
           entityType: property.getEntityType(),
           lambdaExpressions: {},

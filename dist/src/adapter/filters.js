@@ -6,8 +6,7 @@ var FilterExpressionFactory = (function () {
         this.registeredFilterExpressions = [];
         this.creationArgs = {
             factory: this,
-            entityType: undefined,
-            mapping: undefined,
+            filterContext: undefined,
         };
     }
     FilterExpressionFactory.prototype.fromRaw = function (raw) {
@@ -23,12 +22,8 @@ var FilterExpressionFactory = (function () {
             throw new Error("Can't create filter expressions with incomplete creation args.");
         }
     };
-    FilterExpressionFactory.prototype.setSparqlVariableMapping = function (mapping) {
-        this.creationArgs.mapping = mapping;
-        return this;
-    };
-    FilterExpressionFactory.prototype.setEntityType = function (entityType) {
-        this.creationArgs.entityType = entityType;
+    FilterExpressionFactory.prototype.setFilterContext = function (filterContext) {
+        this.creationArgs.filterContext = filterContext;
         return this;
     };
     FilterExpressionFactory.prototype.registerDefaultFilterExpressions = function () {
@@ -53,9 +48,17 @@ var FilterExpressionFactory = (function () {
         return this;
     };
     FilterExpressionFactory.prototype.validateCreationArgs = function () {
-        return this.creationArgs.entityType !== undefined &&
-            this.creationArgs.mapping !== undefined &&
-            this.creationArgs.factory !== undefined;
+        return this.validateFilterContext(this.creationArgs.filterContext) &&
+            this.validateFactory(this.creationArgs.factory);
+    };
+    FilterExpressionFactory.prototype.validateFilterContext = function (filterContext) {
+        return filterContext !== undefined &&
+            filterContext.entityType !== undefined &&
+            filterContext.mapping !== undefined &&
+            filterContext.lambdaExpressions !== undefined;
+    };
+    FilterExpressionFactory.prototype.validateFactory = function (factory) {
+        return factory !== undefined;
     };
     return FilterExpressionFactory;
 }());
@@ -92,8 +95,8 @@ var PropertyExpression = (function () {
         ret.factory = args.factory;
         ret.properties = raw.path;
         ret.operation = this.operationFromRaw(raw.operation);
-        ret.mapping = args.mapping;
-        ret.entityType = args.entityType;
+        ret.mapping = args.filterContext.mapping;
+        ret.entityType = args.filterContext.entityType;
         return ret;
     };
     PropertyExpression.operationFromRaw = function (raw) {
@@ -150,6 +153,7 @@ var PropertyExpression = (function () {
         var rawLambdaExpression = this.raw.lambdaExpression;
         var lambdaExpression = {
             variable: rawLambdaExpression.variable,
+            /* @todo expression should be processed in the newly created lambda environment */
             expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
             entityType: this.getEntityTypeOfPropertyPath(),
         };

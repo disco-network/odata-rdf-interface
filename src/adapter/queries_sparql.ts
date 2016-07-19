@@ -66,8 +66,7 @@ export class EntitySetQuery implements ODataQueries.Query {
   private initializeFilterExpressionFactory() {
     this.filterExpressionFactory = new filters.FilterExpressionFactory()
       .registerDefaultFilterExpressions()
-      .setSparqlVariableMapping(this.getOrInitMapping())
-      .setEntityType(this.getTypeOfEntitySet());
+      .setFilterContext(this.createFilterContext());
   }
 
   private initializeQueryString() {
@@ -79,7 +78,6 @@ export class EntitySetQuery implements ODataQueries.Query {
       filterExpression: filterExpression,
       filterPattern: filterGraphPattern,
     });
-    console.log(this.queryString); /* @debug */
   }
 
   private createGraphPattern(): gpatterns.TreeGraphPattern {
@@ -104,7 +102,7 @@ export class EntitySetQuery implements ODataQueries.Query {
     return queryStringBuilder;
   }
 
-  private createFilterContext(): filterPatterns.FilterContext {
+  private createFilterContext(): filters.FilterContext {
     return {
       mapping: this.getOrInitMapping(),
       entityType: this.getTypeOfEntitySet(),

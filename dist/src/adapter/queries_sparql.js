@@ -60,8 +60,7 @@ var EntitySetQuery = (function () {
     EntitySetQuery.prototype.initializeFilterExpressionFactory = function () {
         this.filterExpressionFactory = new filters.FilterExpressionFactory()
             .registerDefaultFilterExpressions()
-            .setSparqlVariableMapping(this.getOrInitMapping())
-            .setEntityType(this.getTypeOfEntitySet());
+            .setFilterContext(this.createFilterContext());
     };
     EntitySetQuery.prototype.initializeQueryString = function () {
         var expandGraphPattern = this.createGraphPattern();
@@ -72,7 +71,6 @@ var EntitySetQuery = (function () {
             filterExpression: filterExpression,
             filterPattern: filterGraphPattern,
         });
-        console.log(this.queryString); /* @debug */
     };
     EntitySetQuery.prototype.createGraphPattern = function () {
         return expandTreePatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(), this.getExpandTree(), this.getOrInitMapping());

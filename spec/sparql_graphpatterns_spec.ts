@@ -2,6 +2,7 @@ import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
 import gpatterns = require("../src/odata/graphpatterns");
 import filterPatterns = require("../src/adapter/filterpatterns");
+import filters = require("../src/adapter/filters");
 import expandTreePatterns = require("../src/adapter/expandtree");
 import mhelper = require("./helpers/sparql_mappings");
 
@@ -180,7 +181,7 @@ describe("A filter graph pattern", () => {
   it("should expand elementary properties of the first depth level", () => {
     let expandTree = { Id: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let filterContext: filterPatterns.FilterContext = {
+    let filterContext: filters.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
       lambdaExpressions: {},
@@ -197,7 +198,7 @@ describe("A filter graph pattern", () => {
   it("should work in a lambda environment", () => {
     let expandTree = { Id: {}, it: { Id: {} } };
     let mapping = mhelper.createStructuredMapping("?post");
-    let filterContext: filterPatterns.FilterContext = {
+    let filterContext: filters.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
       lambdaExpressions: {

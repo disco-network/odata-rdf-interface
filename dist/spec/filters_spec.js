@@ -49,7 +49,7 @@ describe("A NumberLiteralExpression", function () {
         expect(function () {
             filters.NumberLiteralExpression.create({
                 type: "decimalValue", value: "cat",
-            }, { mapping: null, entityType: null, factory: null });
+            }, { factory: null, filterContext: { entityType: null, mapping: null, lambdaExpressions: {} } });
         }).toThrow();
     });
 });
@@ -88,9 +88,12 @@ describe("A PropertyExpression", function () {
                 variable: "it", predicateExpression: { type: "test", value: "{test}" },
             },
         }, {
-            mapping: mapping,
             factory: createTestFilterExpressionFactory(),
-            entityType: schema.getEntityType("Post"),
+            filterContext: {
+                mapping: mapping,
+                entityType: schema.getEntityType("Post"),
+                lambdaExpressions: {},
+            },
         });
         expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . FILTER({test}) }");
     });
@@ -101,9 +104,12 @@ describe("A PropertyExpression", function () {
                 variable: "it", predicateExpression: { type: "test", value: "{test}" },
             },
         }, {
-            mapping: null,
             factory: createTestFilterExpressionFactory(),
-            entityType: null,
+            filterContext: {
+                mapping: null,
+                entityType: null,
+                lambdaExpressions: {},
+            },
         });
         expect(expr.getPropertyTree()).toEqual({ A: { B: {} } });
     });
@@ -112,8 +118,11 @@ function createTestFilterExpressionFactory() {
     var factory = new filters.FilterExpressionFactory()
         .registerDefaultFilterExpressions()
         .registerFilterExpression(TestFilterExpression)
-        .setEntityType(null)
-        .setSparqlVariableMapping(null);
+        .setFilterContext({
+        mapping: null,
+        entityType: null,
+        lambdaExpressions: {},
+    });
     return factory;
 }
 function createNullArgs() {

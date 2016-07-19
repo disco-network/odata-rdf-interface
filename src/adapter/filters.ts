@@ -16,8 +16,19 @@ export interface FilterExpressionStaticMembers {
 
 export interface FilterExpressionArgs {
   factory: FilterExpressionFactory;
-  entityType?: schema.EntityType;
-  mapping?: mappings.StructuredSparqlVariableMapping;
+  filterContext?: FilterContext;
+}
+
+export interface FilterContext {
+  mapping: mappings.StructuredSparqlVariableMapping;
+  entityType: schema.EntityType;
+  lambdaExpressions: { [id: string]: LambdaExpression };
+}
+
+export interface LambdaExpression {
+  variable: string;
+  expression?: FilterExpression;
+  entityType: schema.EntityType;
 }
 
 export class FilterExpressionFactory {
@@ -27,8 +38,7 @@ export class FilterExpressionFactory {
   constructor() {
     this.creationArgs = {
       factory: this,
-      entityType: undefined,
-      mapping: undefined,
+      filterContext: undefined,
     };
   }
 
@@ -46,13 +56,8 @@ export class FilterExpressionFactory {
     }
   }
 
-  public setSparqlVariableMapping(mapping: mappings.StructuredSparqlVariableMapping) {
-    this.creationArgs.mapping = mapping;
-    return this;
-  }
-
-  public setEntityType(entityType: schema.EntityType) {
-    this.creationArgs.entityType = entityType;
+  public setFilterContext(filterContext: FilterContext) {
+    this.creationArgs.filterContext = filterContext;
     return this;
   }
 
@@ -81,9 +86,19 @@ export class FilterExpressionFactory {
   }
 
   private validateCreationArgs(): boolean {
-    return this.creationArgs.entityType !== undefined &&
-      this.creationArgs.mapping !== undefined &&
-      this.creationArgs.factory !== undefined;
+    return this.validateFilterContext(this.creationArgs.filterContext) &&
+      this.validateFactory(this.creationArgs.factory);
+  }
+
+  private validateFilterContext(filterContext: FilterContext) {
+    return filterContext !== undefined &&
+      filterContext.entityType !== undefined &&
+      filterContext.mapping !== undefined &&
+      filterContext.lambdaExpressions !== undefined;
+  }
+
+  private validateFactory(factory: FilterExpressionFactory) {
+    return factory !== undefined;
   }
 }
 
@@ -127,8 +142,8 @@ export class PropertyExpression implements FilterExpression {
     ret.factory = args.factory;
     ret.properties = raw.path;
     ret.operation = this.operationFromRaw(raw.operation);
-    ret.mapping = args.mapping;
-    ret.entityType = args.entityType;
+    ret.mapping = args.filterContext.mapping;
+    ret.entityType = args.filterContext.entityType;
     return ret;
   }
 
@@ -198,12 +213,13 @@ export class PropertyExpression implements FilterExpression {
 
   private anyExpressionToSparql(): string {
     let rawLambdaExpression = this.raw.lambdaExpression;
-    let lambdaExpression: filterPatterns.LambdaExpression = {
+    let lambdaExpression: LambdaExpression = {
       variable: rawLambdaExpression.variable,
+      /* @todo expression should be processed in the newly created lambda environment */
       expression: this.factory.fromRaw(rawLambdaExpression.predicateExpression),
       entityType: this.getEntityTypeOfPropertyPath(),
     };
-    let filterContext: filterPatterns.FilterContext = {
+    let filterContext: FilterContext = {
       mapping: this.mapping,
       entityType: this.entityType,
       lambdaExpressions: {},
