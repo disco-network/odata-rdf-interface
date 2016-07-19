@@ -133,6 +133,44 @@ describe("A PropertyExpression", () => {
 
     expect(expr.getPropertyTree()).toEqual({ A: { B: {} } });
   });
+
+  it("should process properties of the root entity in 'any' expessions", () => {
+    let factory = new filters.FilterExpressionFactory()
+      .registerDefaultFilterExpressions()
+      .setFilterContext({
+        mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
+        entityType: schema.getEntityType("Post"),
+        lambdaExpressions: {},
+      });
+    let expr = factory.fromRaw({
+      type: "member-expression", operation: "any", path: [ "Children" ],
+      lambdaExpression: {
+        variable: "it", predicateExpression: { type: "member-expression", operation: "property-value",
+          path: [ "Id" ] },
+      },
+    });
+
+    expect(expr.toSparql()).toBe("EXISTS { OPTIONAL { ?root disco:id ?x0 } . { OPTIONAL { ?x1 disco:parent ?root } } . FILTER(?x0) }");
+  });
+
+  xit("should process properties of the lambda entity in 'any' expessions", () => {
+    let factory = new filters.FilterExpressionFactory()
+      .registerDefaultFilterExpressions()
+      .setFilterContext({
+        mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
+        entityType: schema.getEntityType("Post"),
+        lambdaExpressions: {},
+      });
+    let expr = factory.fromRaw({
+      type: "member-expression", operation: "any", path: [ "Children" ],
+      lambdaExpression: {
+        variable: "it", predicateExpression: { type: "member-expression", operation: "property-value",
+          path: [ "it", "Id" ] },
+      },
+    });
+
+    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:id ?x1 } } . { OPTIONAL { ?x1 disco:parent ?root } } . FILTER(?x0) }");
+  });
 });
 
 function createTestFilterExpressionFactory() {

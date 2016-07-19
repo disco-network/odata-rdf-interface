@@ -67,7 +67,7 @@ export class FilterGraphPatternFactory {
     branchingContext = this.branchAlongPropertyChain(branchingContext, pathToAny.slice(nextPropertyIndex, -1));
     let lastPropertyName = pathToAny[pathToAny.length - 1];
     this.singleBranch(branchingContext, lastPropertyName,
-      new gpatterns.TreeGraphPattern(branchingContext.mapping.getLambdaNamespace(lastPropertyName).getVariable()));
+      new gpatterns.TreeGraphPattern(branchingContext.mapping.getLambdaNamespace(lambdaExpression.variable).getVariable()));
 
     return ret;
   }
