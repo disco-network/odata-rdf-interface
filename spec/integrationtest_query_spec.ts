@@ -4,6 +4,7 @@ import rdfstore = require("rdfstore");
 
 describe("The query engine should evaluate", () => {
 
+  /* @todo get test queries from array */
   createQuerySpec("/Posts", answer => {
     let result = answer.result;
     expectSuccess(answer);

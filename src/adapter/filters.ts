@@ -81,7 +81,7 @@ export class FilterExpressionFactory {
       ParenthesesExpressionFactory,
       AndExpression, OrExpression,
       EqExpression,
-      PropertyExpression,
+      PropertyExpressionFactory,
     ]);
     return this;
   }
@@ -116,8 +116,9 @@ export class FilterExpressionFactory {
   }
 }
 
-export let PropertyExpression = propertyExpr.PropertyExpression;
-export type PropertyExpression = propertyExpr.PropertyExpression;
+export let PropertyExpressionFactory = propertyExpr.PropertyExpressionFactory;
+
+/* @smell decide where to move PropertyPath */
 export let PropertyPath = propertyExpr.PropertyPath;
 export type PropertyPath = propertyExpr.PropertyPath;
 

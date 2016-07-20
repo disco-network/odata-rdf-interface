@@ -3,21 +3,23 @@ import qsBuilder = require("../querystring_builder");
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 
-/* @smell create two classes: PropertyValueExpression and AnyExpression */
-export class PropertyExpression implements filters.FilterExpression {
+export class PropertyExpressionFactory {
 
   public static doesApplyToRaw(raw) {
     return raw.type === "member-expression";
   }
 
-  public static create(raw, args: filters.FilterExpressionArgs): PropertyExpression {
-    let ret = new PropertyExpression();
-    ret.raw = raw;
-    ret.filterContext = args.filterContext;
-    ret.factory = args.factory;
-    ret.propertyPath = new PropertyPath(raw.path, args.filterContext);
-    ret.operation = this.operationFromRaw(raw.operation);
-    return ret;
+  public static create(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
+    let op = this.operationFromRaw(raw.operation);
+    let propertyPath = new PropertyPath(raw.path, args.filterContext);
+    switch (op) {
+      case PropertyExpressionOperation.PropertyValue:
+        return new PropertyValueExpression(propertyPath, args);
+      case PropertyExpressionOperation.Any:
+        return new AnyExpression(raw, propertyPath, args);
+      default:
+        throw new Error("invalid operation: " + op);
+    }
   }
 
   private static operationFromRaw(raw: string) {
@@ -30,14 +32,18 @@ export class PropertyExpression implements filters.FilterExpression {
         throw new Error("invalid operation string: " + raw);
     }
   }
+}
 
-  // ===
-
-  private raw: any;
+export class PropertyValueExpression implements filters.FilterExpression {
   private filterContext: filters.FilterContext;
   private factory: filters.FilterExpressionFactory;
   private propertyPath: PropertyPath;
-  private operation: PropertyExpressionOperation;
+
+  constructor(propertyPath: PropertyPath, args: filters.FilterExpressionArgs) {
+    this.propertyPath = propertyPath;
+    this.filterContext = args.filterContext;
+    this.factory = args.factory;
+  }
 
   public getSubExpressions(): filters.FilterExpression[] {
     return [];
@@ -49,37 +55,37 @@ export class PropertyExpression implements filters.FilterExpression {
   }
 
   public toSparql(): string {
-    switch (this.operation) {
-      case PropertyExpressionOperation.PropertyValue:
-        return this.propertyValueExpressionToSparql();
-      case PropertyExpressionOperation.Any:
-        return this.anyExpressionToSparql();
-      default:
-        throw new Error("Huh? this.operation has an invalid value");
-    }
-  }
-
-  private getPropertyPathSegmentRelevantForPropertyTree() {
-
-    switch (this.operation) {
-
-      case PropertyExpressionOperation.PropertyValue:
-        return this.propertyPath.getPropertyPathWithoutFinalSegments(0);
-
-      case PropertyExpressionOperation.Any:
-        // don't include the collection property in the property tree
-        return this.propertyPath.getPropertyPathWithoutFinalSegments(1);
-
-      default:
-        throw new Error("this.operation has an invalid value");
-    }
-  }
-
-  private propertyValueExpressionToSparql(): string {
     return this.propertyPath.getFinalElementaryPropertyVariable();
   }
 
-  private anyExpressionToSparql(): string {
+  private getPropertyPathSegmentRelevantForPropertyTree() {
+    return this.propertyPath.getPropertyPathWithoutFinalSegments(0);
+  }
+}
+
+export class AnyExpression {
+  private raw: any;
+  private filterContext: filters.FilterContext;
+  private factory: filters.FilterExpressionFactory;
+  private propertyPath: PropertyPath;
+
+  constructor(raw: any, propertyPath: PropertyPath, args: filters.FilterExpressionArgs) {
+    this.raw = raw;
+    this.filterContext = args.filterContext;
+    this.factory = args.factory;
+    this.propertyPath = propertyPath;
+  }
+
+  public getSubExpressions(): filters.FilterExpression[] {
+    return [];
+  }
+
+  public getPropertyTree(): filters.ScopedPropertyTree {
+    return this.getPropertyPathSegmentRelevantForPropertyTree()
+      .toScopedPropertyTree();
+  }
+
+  public toSparql(): string {
     let lambdaExpressionFilterContext = {
       mapping: this.filterContext.mapping,
       entityType: this.filterContext.entityType,
@@ -103,6 +109,11 @@ export class PropertyExpression implements filters.FilterExpression {
     let patternContentString = queryStringBuilder.buildGraphPatternContentString(filterPattern);
     let filterString = " . FILTER(" + lambdaFilterExpression.toSparql() + ")";
     return "EXISTS { " + patternContentString + filterString + " }";
+  }
+
+  private getPropertyPathSegmentRelevantForPropertyTree() {
+    // don't include the collection property in the property tree
+    return this.propertyPath.getPropertyPathWithoutFinalSegments(1);
   }
 }
 

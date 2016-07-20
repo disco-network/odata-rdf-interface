@@ -92,7 +92,7 @@ describe("An OrExpression", () => {
 
 describe("A PropertyExpression", () => {
   it("should apply to OData member expressions", () => {
-    expect(filters.PropertyExpression.doesApplyToRaw({
+    expect(filters.PropertyExpressionFactory.doesApplyToRaw({
       type: "member-expression",
     })).toBe(true);
   });
@@ -100,7 +100,7 @@ describe("A PropertyExpression", () => {
   it("should handle simple 'any' expressions", () => {
     let vargen = new mappings.SparqlVariableGenerator();
     let mapping = new mappings.StructuredSparqlVariableMapping("?root", vargen);
-    let expr = filters.PropertyExpression.create({
+    let expr = filters.PropertyExpressionFactory.create({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
@@ -118,7 +118,7 @@ describe("A PropertyExpression", () => {
   });
 
   it("should not insert the collection property of 'any' operations into the property tree", () => {
-    let expr = filters.PropertyExpression.create({
+    let expr = filters.PropertyExpressionFactory.create({
       type: "member-expression", operation: "any", path: [ "A", "B", "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
