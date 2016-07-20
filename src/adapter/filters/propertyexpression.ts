@@ -44,22 +44,8 @@ export class PropertyExpression implements filters.FilterExpression {
   }
 
   public getPropertyTree(): filters.ScopedPropertyTree {
-    let tree = filters.ScopedPropertyTree.create();
-    let branch: filters.FlatPropertyTree;
-
-    if (this.propertyPath.pathStartsWithLambdaPrefix()) {
-      let inScopeVar = this.propertyPath.getPrefixLambdaExpression().variable;
-      branch = tree.inScopeVariables.createBranch(inScopeVar);
-    }
-    else
-      branch = tree.root;
-
-    let propertiesToInclude = this.getPropertyPathSegmentOfCardinalityOne();
-    for (let i = 0; i < propertiesToInclude.length; ++i) {
-      let property = propertiesToInclude[i];
-      branch = branch.createBranch(property);
-    }
-    return tree;
+    return this.getPropertyPathSegmentRelevantForPropertyTree()
+      .toScopedPropertyTree();
   }
 
   public toSparql(): string {
@@ -73,25 +59,24 @@ export class PropertyExpression implements filters.FilterExpression {
     }
   }
 
-  private getPropertyPathSegmentOfCardinalityOne() {
+  private getPropertyPathSegmentRelevantForPropertyTree() {
+
     switch (this.operation) {
+
       case PropertyExpressionOperation.PropertyValue:
-        return this.propertyPath.getPropertyNamesWithoutLambdaPrefix();
+        return this.propertyPath.getPropertyPathWithoutFinalSegments(0);
+
       case PropertyExpressionOperation.Any:
-        return this.propertyPath.getPropertyNamesWithoutLambdaPrefix().slice(0, -1);
+        // don't include the collection property in the property tree
+        return this.propertyPath.getPropertyPathWithoutFinalSegments(1);
+
       default:
         throw new Error("this.operation has an invalid value");
     }
   }
 
   private propertyValueExpressionToSparql(): string {
-    let currentMapping = this.propertyPath.getMappingAfterLambdaPrefix();
-    let propertiesWithoutLambdaPrefix = this.propertyPath.getPropertyNamesWithoutLambdaPrefix();
-    for (let i = 0; i < (propertiesWithoutLambdaPrefix.length - 1); ++i) {
-        currentMapping = currentMapping.getComplexProperty(propertiesWithoutLambdaPrefix[i]);
-    }
-    return currentMapping.getElementaryPropertyVariable(
-      propertiesWithoutLambdaPrefix[propertiesWithoutLambdaPrefix.length - 1]);
+    return this.propertyPath.getFinalElementaryPropertyVariable();
   }
 
   private anyExpressionToSparql(): string {
@@ -124,6 +109,46 @@ export class PropertyExpression implements filters.FilterExpression {
 export class PropertyPath {
 
   constructor(private propertyNames?: string[], private filterContext?: filters.FilterContext) {}
+
+  public getFinalElementaryPropertyVariable() {
+    let mapping = this.getMappingAfterLambdaPrefix();
+    let entityType = this.getEntityTypeAfterLambdaPrefix();
+
+    let properties = this.getPropertyNamesWithoutLambdaPrefix();
+    for (let i = 0; i < (properties.length - 1); ++i) {
+      let property = entityType.getProperty(properties[i]);
+      entityType = property.getEntityType();
+      if (property.getEntityKind() === schema.EntityKind.Complex) {
+        mapping = mapping.getComplexProperty(property.getName());
+      }
+      else {
+        throw new Error("All intermediate properties have to be complex.");
+      }
+    }
+
+    let property = entityType.getProperty(properties[properties.length - 1]);
+    if (property.getEntityKind() === schema.EntityKind.Elementary)
+      return mapping.getElementaryPropertyVariable(property.getName());
+    else
+      throw new Error("The last property has to be elementary.");
+  }
+
+  public getPropertyPathWithoutFinalSegments(howMany: number) {
+    if (howMany === 0) return this;
+    else if (howMany > 0) return new PropertyPath(this.propertyNames.slice(0, -howMany), this.filterContext);
+    else throw new Error("howMany has to be >= 0");
+  }
+
+  public toScopedPropertyTree() {
+    let tree = filters.ScopedPropertyTree.create();
+    let branch = this.createAndReturnPropertyTreeBranchOfLambdaPrefix(tree);
+    let propertiesToInclude = this.getPropertyNamesWithoutLambdaPrefix();
+    for (let i = 0; i < propertiesToInclude.length; ++i) {
+      let property = propertiesToInclude[i];
+      branch = branch.createBranch(property);
+    }
+    return tree;
+  }
 
   public getFinalEntityType(): schema.EntityType {
     let currentType = this.getEntityTypeAfterLambdaPrefix();
@@ -171,6 +196,16 @@ export class PropertyPath {
 
   public getPrefixLambdaExpression() {
     return this.propertyNames[0] && this.getLambdaVariableScope()[this.propertyNames[0]];
+  }
+
+  private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: filters.ScopedPropertyTree) {
+    if (this.pathStartsWithLambdaPrefix()) {
+      let inScopeVar = this.getPrefixLambdaExpression().variable;
+      return tree.inScopeVariables.createBranch(inScopeVar);
+    }
+    else {
+      return tree.root;
+    }
   }
 
   private getLambdaVariableScope() {
