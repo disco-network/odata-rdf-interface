@@ -132,8 +132,8 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.getPropertyTree().root).toEqual({ A: { B: {} } });
-    expect(expr.getPropertyTree().inScopeVariables).toEqual({});
+    expect(expr.getPropertyTree().root.toDataObject()).toEqual({ A: { B: {} } });
+    expect(expr.getPropertyTree().inScopeVariables.toDataObject()).toEqual({});
   });
 
   it("should process properties of the root entity in 'any' expessions", () => {
@@ -175,6 +175,38 @@ describe("A PropertyExpression", () => {
     /* @todo is it a good idea to use _OPTIONAL_ { ?x0 disco:parent ?root } ? */
     expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:id ?x1 } } . "
       + "{ OPTIONAL { ?x0 disco:parent ?root } } . FILTER(?x1) }");
+  });
+});
+
+describe("A flat property tree", () => {
+  it("should recall saved entries", () => {
+    let tree = filters.FlatPropertyTree.empty();
+    tree.createBranch("PropertyName").createBranch("SubProperty");
+    expect(tree.branchExists("PropertyName")).toBe(true);
+    expect(tree.branchExists("AsdfGhjk")).toBe(false);
+    expect(tree.branchExists("undefined")).toBe(false);
+    expect(tree.getBranch("PropertyName").branchExists("SubProperty")).toBe(true);
+    expect(tree.getIterator().current()).toBe("PropertyName");
+  });
+
+  xit("should be cloneable", () => {
+    let tree = filters.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
+
+    expect(tree.clone().branchExists("Content")).toBe(true);
+    expect(tree.clone().branchExists("Id")).toBe(true);
+    expect(tree.clone().branchExists("undefined")).toBe(true);
+    expect(tree.clone().getBranch("Content").branchExists("Id")).toBe(true);
+  });
+
+  it("should be mergeable", () => {
+    let treeA = filters.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
+    let treeB = filters.FlatPropertyTree.fromDataObject({ "Content": { "Title": {} } });
+    treeA.merge(treeB);
+
+    expect(treeA.branchExists("Content"));
+    expect(treeA.getBranch("Content").branchExists("Id"));
+    expect(treeA.getBranch("Content").branchExists("Title"));
+    expect(treeA.branchExists("Id"));
   });
 });
 

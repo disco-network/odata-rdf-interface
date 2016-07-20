@@ -12,16 +12,17 @@ export class FilterGraphPatternFactory {
     let entityType = filterContext.entityType;
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
 
-    Object.keys(propertyTree.root).forEach(propertyName => {
+    for (let it = propertyTree.root.getIterator(); it.hasValue(); it.next()) {
+      let propertyName = it.current();
       let property = entityType.getProperty(propertyName);
       this.createAndInsertBranch(result, property, filterContext, propertyTree.root);
-    });
+    }
 
-    Object.keys(propertyTree.inScopeVariables).forEach(inScopeVar => {
+    for (let it = propertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
+      let inScopeVar = it.current();
       let lambdaExpression = filterContext.lambdaVariableScope[inScopeVar];
-      let flatTree = propertyTree.inScopeVariables[inScopeVar];
-      let subPropertyTree = new filters.ScopedPropertyTree();
-      subPropertyTree.root = flatTree;
+      let flatTree = propertyTree.inScopeVariables.getBranch(inScopeVar);
+      let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
       let subMapping = mapping.getLambdaNamespace(inScopeVar);
       let subEntityType = lambdaExpression.entityType;
       let subContext: filters.FilterContext = {
@@ -30,7 +31,7 @@ export class FilterGraphPatternFactory {
         lambdaVariableScope: {},
       };
       result.newConjunctivePattern(this.createFromPropertyTree(subContext, subPropertyTree));
-    });
+    }
 
     return result;
   }
@@ -123,8 +124,8 @@ export class FilterGraphPatternFactory {
           entityType: property.getEntityType(),
           lambdaVariableScope: {},
         };
-        let scopedPropertyTree = new filters.ScopedPropertyTree();
-        scopedPropertyTree.root = propertyTree[property.getName()];
+        let scopedPropertyTree = filters.ScopedPropertyTree.create();
+        scopedPropertyTree.root = propertyTree.getBranch(property.getName());
         let branchedPattern = this.createFromPropertyTree(subQueryContext, scopedPropertyTree);
         new gpatternInsertions.ComplexBranchInsertionBuilderForFiltering()
           .setComplexProperty(property)

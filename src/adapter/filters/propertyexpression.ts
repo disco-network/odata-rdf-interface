@@ -44,22 +44,20 @@ export class PropertyExpression implements filters.FilterExpression {
   }
 
   public getPropertyTree(): filters.ScopedPropertyTree {
-    let tree = new filters.ScopedPropertyTree();
+    let tree = filters.ScopedPropertyTree.create();
     let branch: filters.FlatPropertyTree;
 
     if (this.propertyPath.pathStartsWithLambdaPrefix()) {
-      branch = tree.inScopeVariables = tree.inScopeVariables || {};
       let inScopeVar = this.propertyPath.getPrefixLambdaExpression().variable;
-      /* @smell replace data structure FlatPropertyTree with an abstraction */
-      branch = branch[inScopeVar] = branch[inScopeVar] || {};
+      branch = tree.inScopeVariables.createBranch(inScopeVar);
     }
     else
-      branch = tree.root = tree.root || {};
+      branch = tree.root;
 
     let propertiesToInclude = this.getPropertyPathSegmentOfCardinalityOne();
     for (let i = 0; i < propertiesToInclude.length; ++i) {
       let property = propertiesToInclude[i];
-      branch = branch[property] = branch[property] || {};
+      branch = branch.createBranch(property);
     }
     return tree;
   }

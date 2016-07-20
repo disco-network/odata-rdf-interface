@@ -159,6 +159,8 @@ describe("The query engine should evaluate", () => {
     expectSuccess(answer);
     expect(answer.result.length).toBe(1);
     expect(answer.result[0].ContentId).toBe("1");
+  }, () => {
+    "before spec";
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: 1 eq 1)", answer => {

@@ -179,7 +179,7 @@ describe("complex-property expand tree graph patterns", function() {
 
 describe("A filter graph pattern", () => {
   it("should expand elementary properties of the first depth level", () => {
-    let expandTree = new filters.ScopedPropertyTree({ Id: {} });
+    let expandTree = filters.ScopedPropertyTree.fromDataObjects({ Id: {} });
     let mapping = mhelper.createStructuredMapping("?post");
     let filterContext: filters.FilterContext = {
       mapping: mapping,
@@ -196,7 +196,7 @@ describe("A filter graph pattern", () => {
     );
   });
   it("should work in a lambda environment", () => {
-    let expandTree = new filters.ScopedPropertyTree({ Id: {} }, { it: { Id: {} } });
+    let expandTree = filters.ScopedPropertyTree.fromDataObjects({ Id: {} }, { it: { Id: {} } });
     let mapping = mhelper.createStructuredMapping("?post");
     let filterContext: filters.FilterContext = {
       mapping: mapping,
