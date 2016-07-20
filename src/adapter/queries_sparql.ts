@@ -24,7 +24,7 @@ export class QueryFactory {
 export class EntitySetQuery implements ODataQueries.Query {
   private mapping: mappings.StructuredSparqlVariableMapping;
   private queryString: string;
-  private filterExpressionFactory: filters.FilterExpressionFactory;
+  private filterExpressionFactory: filters.FilterExpressionIoCContainer;
 
   constructor(private model: ODataQueries.QueryModel, private schema: Schema.Schema) {
     this.prepareSparqlQuery();
@@ -64,9 +64,9 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 
   private initializeFilterExpressionFactory() {
-    this.filterExpressionFactory = new filters.FilterExpressionFactory()
+    this.filterExpressionFactory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
-      .setFilterContext(this.createFilterContext());
+      .setStandardFilterContext(this.createFilterContext());
   }
 
   private initializeQueryString() {

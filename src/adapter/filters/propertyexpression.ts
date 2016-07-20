@@ -9,7 +9,7 @@ export class PropertyExpressionFactory {
     return raw.type === "member-expression";
   }
 
-  public static create(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
+  public static fromRaw(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
     let op = this.operationFromRaw(raw.operation);
     let propertyPath = new PropertyPath(raw.path, args.filterContext);
     switch (op) {
@@ -91,15 +91,14 @@ export class AnyExpression {
       entityType: this.filterContext.entityType,
       lambdaVariableScope: filters.cloneLambdaVariableScope(this.filterContext.lambdaVariableScope),
     };
-    let lambdaExpressionFactory = this.factory.clone();
-    lambdaExpressionFactory.setFilterContext(lambdaExpressionFilterContext);
     let rawLambdaExpression = this.raw.lambdaExpression;
     let lambdaExpression: filters.LambdaExpression = {
       variable: rawLambdaExpression.variable,
       entityType: this.propertyPath.getFinalEntityType(),
     };
     lambdaExpressionFilterContext.lambdaVariableScope[lambdaExpression.variable] = lambdaExpression;
-    let lambdaFilterExpression = lambdaExpressionFactory.fromRaw(rawLambdaExpression.predicateExpression);
+    let lambdaFilterExpression = this.factory.fromRaw(rawLambdaExpression.predicateExpression,
+      lambdaExpressionFilterContext);
 
     let filterPattern = filterPatterns.FilterGraphPatternFactory.createAnyExpressionPattern(
       this.filterContext, lambdaFilterExpression.getPropertyTree(), lambdaExpression,

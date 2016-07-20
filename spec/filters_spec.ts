@@ -15,9 +15,9 @@ describe("A filter factory", () => {
     let factory = createTestFilterExpressionFactory();
     let filter = factory.fromRaw(raw);
 
-    expect(filter instanceof filters.EqExpression).toBe(true);
-    expect((filter as filters.EqExpression)["lhs"] instanceof filters.StringLiteralExpression).toBe(true);
-    expect((filter as filters.EqExpression)["rhs"] instanceof filters.StringLiteralExpression).toBe(true);
+    expect(filter instanceof filters.BinaryOperatorExpression).toBe(true);
+    expect(filter["lhs"] instanceof filters.LiteralExpression).toBe(true);
+    expect(filter["rhs"] instanceof filters.LiteralExpression).toBe(true);
   });
   it("should throw if there's no matching expression", () => {
     let raw = { type: "is-42", value: "4*2" };
@@ -25,20 +25,19 @@ describe("A filter factory", () => {
 
     expect(() => factory.fromRaw(raw)).toThrow();
   });
-  it("should pass the factory to the FilterExpression", () => {
+  it("should pass a factory to the FilterExpression", () => {
     let raw = { type: "test" };
     let factory = createTestFilterExpressionFactory();
     let args = (factory.fromRaw(raw) as TestFilterExpression).args;
 
     expect(args.factory).toBeDefined();
-    expect(args.factory).toBe(factory);
   });
   xit("should be clonable", () => undefined);
 });
 
 describe("A StringLiteralExpression", () => {
   it("should render to a SPARQL string", () => {
-    let expr = filters.StringLiteralExpression.create({ type: "string", value: "cat" }, createNullArgs());
+    let expr = filters.StringLiteralExpressionFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
     expect(expr.toSparql()).toBe("'cat'");
   });
 
@@ -47,19 +46,19 @@ describe("A StringLiteralExpression", () => {
 
 describe("A NumberLiteralExpression", () => {
   it("should apply to numbers", () => {
-    expect(filters.NumberLiteralExpression.doesApplyToRaw(
+    expect(filters.NumberLiteralExpressionFactory.doesApplyToRaw(
       { type: "decimalValue", value: "1" }
     )).toBe(true);
   });
 
   it("should render to a SPARQL string", () => {
-    let expr = filters.NumberLiteralExpression.create({ type: "decimalValue", value: "1" }, createNullArgs());
+    let expr = filters.NumberLiteralExpressionFactory.fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
     expect(expr.toSparql()).toBe("'1'");
   });
 
   it("should disallow non-number values", () => {
     expect(() => {
-      filters.NumberLiteralExpression.create({
+      filters.NumberLiteralExpressionFactory.fromRaw({
         type: "decimalValue", value: "cat",
       }, { factory: null, filterContext: { entityType: null, mapping: null, lambdaVariableScope: {} } });
     }).toThrow();
@@ -100,7 +99,7 @@ describe("A PropertyExpression", () => {
   it("should handle simple 'any' expressions", () => {
     let vargen = new mappings.SparqlVariableGenerator();
     let mapping = new mappings.StructuredSparqlVariableMapping("?root", vargen);
-    let expr = filters.PropertyExpressionFactory.create({
+    let expr = filters.PropertyExpressionFactory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
@@ -118,7 +117,7 @@ describe("A PropertyExpression", () => {
   });
 
   it("should not insert the collection property of 'any' operations into the property tree", () => {
-    let expr = filters.PropertyExpressionFactory.create({
+    let expr = filters.PropertyExpressionFactory.fromRaw({
       type: "member-expression", operation: "any", path: [ "A", "B", "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
@@ -137,9 +136,9 @@ describe("A PropertyExpression", () => {
   });
 
   it("should process properties of the root entity in 'any' expessions", () => {
-    let factory = new filters.FilterExpressionFactory()
+    let factory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
-      .setFilterContext({
+      .setStandardFilterContext({
         mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
         entityType: schema.getEntityType("Post"),
         lambdaVariableScope: {},
@@ -157,9 +156,9 @@ describe("A PropertyExpression", () => {
   });
 
   it("should process properties of the lambda entity in 'any' expessions", () => {
-    let factory = new filters.FilterExpressionFactory()
+    let factory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
-      .setFilterContext({
+      .setStandardFilterContext({
         mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
         entityType: schema.getEntityType("Post"),
         lambdaVariableScope: {},
@@ -211,10 +210,10 @@ describe("A flat property tree", () => {
 });
 
 function createTestFilterExpressionFactory() {
-  let factory = new filters.FilterExpressionFactory()
+  let factory = new filters.FilterExpressionIoCContainer()
     .registerDefaultFilterExpressions()
     .registerFilterExpression(TestFilterExpression)
-    .setFilterContext({
+    .setStandardFilterContext({
       mapping: null,
       entityType: null,
       lambdaVariableScope: {},
@@ -228,7 +227,7 @@ function createNullArgs() {
 
 class TestFilterExpression implements filters.FilterExpression {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
-  public static create(raw, args: filters.FilterExpressionArgs) { return new TestFilterExpression(raw.value, args); }
+  public static fromRaw(raw, args: filters.FilterExpressionArgs) { return new TestFilterExpression(raw.value, args); }
 
   constructor(public value, public args: filters.FilterExpressionArgs) {}
   public getSubExpressions(): filters.FilterExpression[] { return []; }
