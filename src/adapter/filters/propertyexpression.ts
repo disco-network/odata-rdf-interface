@@ -10,26 +10,14 @@ export class PropertyExpressionFactory {
   }
 
   public static fromRaw(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
-    let op = this.operationFromRaw(raw.operation);
     let propertyPath = new PropertyPath(raw.path, args.filterContext);
-    switch (op) {
-      case PropertyExpressionOperation.PropertyValue:
+    switch (raw.operation) {
+      case "property-value":
         return new PropertyValueExpression(propertyPath, args);
-      case PropertyExpressionOperation.Any:
+      case "any":
         return new AnyExpression(raw, propertyPath, args);
       default:
-        throw new Error("invalid operation: " + op);
-    }
-  }
-
-  private static operationFromRaw(raw: string) {
-    switch (raw) {
-      case "property-value":
-        return PropertyExpressionOperation.PropertyValue;
-      case "any":
-        return PropertyExpressionOperation.Any;
-      default:
-        throw new Error("invalid operation string: " + raw);
+        throw new Error("invalid operation: " + raw.operation);
     }
   }
 }
@@ -221,8 +209,4 @@ export class PropertyPath {
   private getLambdaVariableScope() {
     return this.filterContext.lambdaVariableScope;
   }
-}
-
-export enum PropertyExpressionOperation {
-  PropertyValue, Any
 }

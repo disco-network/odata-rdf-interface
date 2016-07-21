@@ -19,6 +19,15 @@ export interface FilterContext {
   lambdaVariableScope: { [id: string]: LambdaExpression };
 }
 
+export interface LambdaExpression {
+  variable: string;
+  entityType: schema.EntityType;
+}
+
+export interface FilterExpressionFactory {
+  fromRaw(raw, context?: FilterContext): FilterExpression;
+}
+
 /* @smell extract class LambdaVariableScope */
 export function cloneLambdaVariableScope(lambdaExpressions: { [id: string]: LambdaExpression }
                                          ): { [id: string]: LambdaExpression } {
@@ -27,15 +36,6 @@ export function cloneLambdaVariableScope(lambdaExpressions: { [id: string]: Lamb
     result[key] = lambdaExpressions[key];
   });
   return result;
-}
-
-export interface LambdaExpression {
-  variable: string;
-  entityType: schema.EntityType;
-}
-
-export interface FilterExpressionFactory {
-  fromRaw(raw, context?: FilterContext): FilterExpression;
 }
 
 /**
