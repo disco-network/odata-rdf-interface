@@ -1,4 +1,4 @@
-import gpatterns = require("../odata/graphpatterns");
+import gpatterns = require("../sparql/graphpatterns");
 import filters = require("./filters");
 
 export class QueryStringBuilder {

@@ -1,7 +1,7 @@
 import mappings = require("./mappings");
 import gpatternInsertions = require("./graphpatterninsertions");
 import schema = require("../odata/schema");
-import gpatterns = require("../odata/graphpatterns");
+import gpatterns = require("../sparql/graphpatterns");
 import filters = require("./filters");
 
 export class FilterGraphPatternFactory {
@@ -9,9 +9,9 @@ export class FilterGraphPatternFactory {
   public static createFromPropertyTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree
                                       ): gpatterns.TreeGraphPattern {
     let mapping = filterContext.mapping;
-    let entityType = filterContext.entityType;
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
 
+    let entityType = filterContext.entityType;
     for (let it = propertyTree.root.getIterator(); it.hasValue(); it.next()) {
       let propertyName = it.current();
       let property = entityType.getProperty(propertyName);

@@ -1,6 +1,6 @@
 import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
-import gpatterns = require("../src/odata/graphpatterns");
+import gpatterns = require("../src/sparql/graphpatterns");
 import filterPatterns = require("../src/adapter/filterpatterns");
 import filters = require("../src/adapter/filters");
 import expandTreePatterns = require("../src/adapter/expandtree");

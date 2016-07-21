@@ -1,4 +1,4 @@
-import gpatterns = require("../odata/graphpatterns");
+import gpatterns = require("../sparql/graphpatterns");
 import schema = require("../odata/schema");
 import mappings = require("./mappings");
 

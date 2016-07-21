@@ -1,6 +1,6 @@
 /** @module */
 import mappings = require("./mappings");
-import gpatterns = require("../odata/graphpatterns");
+import gpatterns = require("../sparql/graphpatterns");
 import filterPatterns = require("./filterpatterns");
 import expandTreePatterns = require("./expandtree");
 import filters = require("./filters");
