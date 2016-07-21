@@ -16,7 +16,7 @@ export interface FilterExpressionArgs {
 export interface FilterContext {
   mapping: mappings.StructuredSparqlVariableMapping;
   entityType: schema.EntityType;
-  lambdaVariableScope: { [id: string]: LambdaExpression };
+  lambdaVariableScope: LambdaVariableScope;
 }
 
 export interface LambdaExpression {
@@ -28,14 +28,32 @@ export interface FilterExpressionFactory {
   fromRaw(raw, context?: FilterContext): FilterExpression;
 }
 
-/* @smell extract class LambdaVariableScope */
-export function cloneLambdaVariableScope(lambdaExpressions: { [id: string]: LambdaExpression }
-                                         ): { [id: string]: LambdaExpression } {
-  let result: { [id: string]: LambdaExpression } = {};
-  Object.keys(lambdaExpressions).forEach(key => {
-    result[key] = lambdaExpressions[key];
-  });
-  return result;
+export class LambdaVariableScope {
+  private data: { [id: string]: LambdaExpression } = {};
+
+  public add(lambdaExpression: LambdaExpression) {
+    if (this.exists(lambdaExpression.variable) === false) {
+      this.data[lambdaExpression.variable] = lambdaExpression;
+      return this;
+    }
+    else throw new Error("Variable " + lambdaExpression.variable + " was assigned twice");
+  }
+
+  public exists(variable: string): boolean {
+    return this.data[variable] !== undefined;
+  }
+
+  public get(variable: string): LambdaExpression {
+    return this.data[variable];
+  }
+
+  public clone(): LambdaVariableScope {
+    let cloned = new LambdaVariableScope();
+    Object.keys(this.data).forEach(key => {
+      cloned.add(this.get(key));
+    });
+    return cloned;
+  }
 }
 
 /**

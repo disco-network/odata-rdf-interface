@@ -167,6 +167,8 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts?$filter=Children/any(it: 1 eq 1)", answer => {
     expectSuccess(answer);
     expect(answer.result.length).toBe(1);
+  }, () => {
+    "before spec";
   });
 
   // problem in filter.ts: PropertyExpressions need information about LambdaExpression context

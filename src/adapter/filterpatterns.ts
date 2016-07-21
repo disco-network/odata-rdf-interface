@@ -20,7 +20,7 @@ export class FilterGraphPatternFactory {
 
     for (let it = propertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
       let inScopeVar = it.current();
-      let lambdaExpression = filterContext.lambdaVariableScope[inScopeVar];
+      let lambdaExpression = filterContext.lambdaVariableScope.get(inScopeVar);
       let flatTree = propertyTree.inScopeVariables.getBranch(inScopeVar);
       let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
       let subMapping = mapping.getLambdaNamespace(inScopeVar);
@@ -28,7 +28,7 @@ export class FilterGraphPatternFactory {
       let subContext: filters.FilterContext = {
         entityType: subEntityType,
         mapping: subMapping,
-        lambdaVariableScope: {},
+        lambdaVariableScope: new filters.LambdaVariableScope(),
       };
       result.newConjunctivePattern(this.createFromPropertyTree(subContext, subPropertyTree));
     }
@@ -43,10 +43,8 @@ export class FilterGraphPatternFactory {
     let innerFilterContext = {
       mapping: outerFilterContext.mapping,
       entityType: outerFilterContext.entityType,
-      lambdaVariableScope: filters.cloneLambdaVariableScope(outerFilterContext.lambdaVariableScope),
+      lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(belongingLambdaExpression),
     };
-    /* @smell replace data structure VariableScope with own class */
-    innerFilterContext.lambdaVariableScope[belongingLambdaExpression.variable] = belongingLambdaExpression;
     let ret = this.createFromPropertyTree(innerFilterContext, propertyTree);
 
     let conjunctivePattern: gpatterns.TreeGraphPattern;
@@ -122,7 +120,7 @@ export class FilterGraphPatternFactory {
         let subQueryContext: filters.FilterContext = {
           mapping: mapping.getComplexProperty(property.getName()),
           entityType: property.getEntityType(),
-          lambdaVariableScope: {},
+          lambdaVariableScope: new filters.LambdaVariableScope(),
         };
         let scopedPropertyTree = filters.ScopedPropertyTree.create();
         scopedPropertyTree.root = propertyTree.getBranch(property.getName());

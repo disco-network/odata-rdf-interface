@@ -106,7 +106,7 @@ export class EntitySetQuery implements ODataQueries.Query {
     return {
       mapping: this.getOrInitMapping(),
       entityType: this.getTypeOfEntitySet(),
-      lambdaVariableScope: {},
+      lambdaVariableScope: new filters.LambdaVariableScope(),
     };
   }
 

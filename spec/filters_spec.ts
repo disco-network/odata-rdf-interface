@@ -60,7 +60,9 @@ describe("A NumberLiteralExpression", () => {
     expect(() => {
       filters.NumberLiteralExpressionFactory.fromRaw({
         type: "decimalValue", value: "cat",
-      }, { factory: null, filterContext: { entityType: null, mapping: null, lambdaVariableScope: {} } });
+      },
+      { factory: null, filterContext: { entityType: null, mapping: null,
+        lambdaVariableScope: new filters.LambdaVariableScope() } });
     }).toThrow();
   });
 });
@@ -109,7 +111,7 @@ describe("A PropertyExpression", () => {
       filterContext: {
         mapping: mapping,
         entityType: schema.getEntityType("Post"),
-        lambdaVariableScope: {},
+        lambdaVariableScope: new filters.LambdaVariableScope(),
       },
     });
 
@@ -127,7 +129,7 @@ describe("A PropertyExpression", () => {
       filterContext: {
         mapping: null,
         entityType: null,
-        lambdaVariableScope: {},
+        lambdaVariableScope: new filters.LambdaVariableScope(),
       },
     });
 
@@ -141,7 +143,7 @@ describe("A PropertyExpression", () => {
       .setStandardFilterContext({
         mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
         entityType: schema.getEntityType("Post"),
-        lambdaVariableScope: {},
+        lambdaVariableScope: new filters.LambdaVariableScope(),
       });
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -161,7 +163,7 @@ describe("A PropertyExpression", () => {
       .setStandardFilterContext({
         mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
         entityType: schema.getEntityType("Post"),
-        lambdaVariableScope: {},
+        lambdaVariableScope: new filters.LambdaVariableScope(),
       });
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -209,6 +211,55 @@ describe("A flat property tree", () => {
   });
 });
 
+describe("A lambda variable scope", () => {
+  it("should recall lambda expressions", () => {
+    let lambda: filters.LambdaExpression = {
+      variable: "it",
+      entityType: null,
+    };
+    let scope = new filters.LambdaVariableScope();
+    scope.add(lambda);
+
+    expect(scope.exists("it")).toBe(true);
+    expect(scope.exists("undefined")).toBe(false);
+    expect(scope.get("it")).toBe(lambda);
+  });
+
+  it("should be cloneable", () => {
+    let scope = new filters.LambdaVariableScope();
+    scope.add({
+      variable: "it",
+      entityType: null,
+    });
+    let cloned = scope.clone();
+
+    expect(scope.get("it")).toEqual(cloned.get("it"));
+  });
+
+  it("should make clones independently changeable", () => {
+    let scope = new filters.LambdaVariableScope();
+    let cloned = scope.clone();
+
+    scope.add({ variable: "a", entityType: null });
+    cloned.add({ variable: "b", entityType: null });
+
+    expect(cloned.exists("a")).toBe(false);
+    expect(scope.exists("b")).toBe(false);
+  });
+
+  it("should have chainable write methods", () => {
+    expect(new filters.LambdaVariableScope()
+      .add({ variable: "a", entityType: null })
+      .exists("a")).toBe(true);
+  });
+
+  it("should throw when assigning a variable twice", () => {
+    expect(() => new filters.LambdaVariableScope()
+      .add({ variable: "it", entityType: null })
+      .add({ variable: "it", entityType: null })).toThrow();
+  });
+});
+
 function createTestFilterExpressionFactory() {
   let factory = new filters.FilterExpressionIoCContainer()
     .registerDefaultFilterExpressions()
@@ -216,7 +267,7 @@ function createTestFilterExpressionFactory() {
     .setStandardFilterContext({
       mapping: null,
       entityType: null,
-      lambdaVariableScope: {},
+      lambdaVariableScope: new filters.LambdaVariableScope(),
     });
   return factory;
 }

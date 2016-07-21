@@ -74,15 +74,15 @@ export class AnyExpression {
   }
 
   public toSparql(): string {
-    let lambdaExpressionFilterContext = {
-      mapping: this.filterContext.mapping,
-      entityType: this.filterContext.entityType,
-      lambdaVariableScope: filters.cloneLambdaVariableScope(this.filterContext.lambdaVariableScope),
-    };
     let rawLambdaExpression = this.raw.lambdaExpression;
     let lambdaExpression: filters.LambdaExpression = {
       variable: rawLambdaExpression.variable,
       entityType: this.propertyPath.getFinalEntityType(),
+    };
+    let lambdaExpressionFilterContext: filters.FilterContext = {
+      mapping: this.filterContext.mapping,
+      entityType: this.filterContext.entityType,
+      lambdaVariableScope: this.filterContext.lambdaVariableScope.clone().add(lambdaExpression),
     };
     lambdaExpressionFilterContext.lambdaVariableScope[lambdaExpression.variable] = lambdaExpression;
     let lambdaFilterExpression = this.factory.fromRaw(rawLambdaExpression.predicateExpression,
@@ -166,7 +166,7 @@ export class PropertyPath {
     return {
       entityType: this.getEntityTypeAfterLambdaPrefix(),
       mapping: this.getMappingAfterLambdaPrefix(),
-      lambdaVariableScope: {},
+      lambdaVariableScope: new filters.LambdaVariableScope(),
     };
   }
 

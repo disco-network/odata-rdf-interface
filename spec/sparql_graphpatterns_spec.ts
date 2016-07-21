@@ -184,7 +184,7 @@ describe("A filter graph pattern", () => {
     let filterContext: filters.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
-      lambdaVariableScope: {},
+      lambdaVariableScope: new filters.LambdaVariableScope(),
     };
     let gp = filterPatterns.FilterGraphPatternFactory.createFromPropertyTree(filterContext, expandTree);
 
@@ -201,12 +201,10 @@ describe("A filter graph pattern", () => {
     let filterContext: filters.FilterContext = {
       mapping: mapping,
       entityType: schema.getEntityType("Post"),
-      lambdaVariableScope: {
-        it: {
+      lambdaVariableScope: new filters.LambdaVariableScope().add({
           variable: "it",
           entityType: schema.getEntityType("Post"),
-        },
-      },
+      }),
     };
     let filterPattern = filterPatterns.FilterGraphPatternFactory.createFromPropertyTree(filterContext, expandTree);
 
