@@ -74,28 +74,42 @@ export class AnyExpression {
   }
 
   public toSparql(): string {
-    let rawLambdaExpression = this.raw.lambdaExpression;
-    let lambdaExpression: filters.LambdaExpression = {
-      variable: rawLambdaExpression.variable,
-      entityType: this.propertyPath.getFinalEntityType(),
-    };
-    let lambdaExpressionFilterContext: filters.FilterContext = {
+    /* @smell inner filter context is created twice: here and in filterpatterns.ts */
+    let innerFilterExpression = this.factory.fromRaw(this.raw.lambdaExpression.predicateExpression,
+      this.createFilterContextInsideLambda());
+
+    return "EXISTS { "
+      + this.buildFilterPatternContentString(innerFilterExpression)
+      + this.buildFilterExpressionAmendmentString(innerFilterExpression)
+      + " }";
+  }
+
+  private buildFilterPatternContentString(innerFilterExpression: filters.FilterExpression) {
+    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
+    let filterPattern = filterPatterns.FilterGraphPatternFactory.createAnyExpressionPattern(
+      this.filterContext, innerFilterExpression.getPropertyTree(), this.createLambdaExpression(),
+        this.propertyPath);
+    return queryStringBuilder.buildGraphPatternContentString(filterPattern);
+  }
+
+  private buildFilterExpressionAmendmentString(innerFilterExpression: filters.FilterExpression) {
+    return " . FILTER(" + innerFilterExpression.toSparql() + ")";
+  }
+
+  private createFilterContextInsideLambda(): filters.FilterContext {
+    let lambdaExpression = this.createLambdaExpression();
+    return {
       mapping: this.filterContext.mapping,
       entityType: this.filterContext.entityType,
       lambdaVariableScope: this.filterContext.lambdaVariableScope.clone().add(lambdaExpression),
     };
-    lambdaExpressionFilterContext.lambdaVariableScope[lambdaExpression.variable] = lambdaExpression;
-    let lambdaFilterExpression = this.factory.fromRaw(rawLambdaExpression.predicateExpression,
-      lambdaExpressionFilterContext);
+  }
 
-    let filterPattern = filterPatterns.FilterGraphPatternFactory.createAnyExpressionPattern(
-      this.filterContext, lambdaFilterExpression.getPropertyTree(), lambdaExpression,
-        this.propertyPath
-    );
-    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
-    let patternContentString = queryStringBuilder.buildGraphPatternContentString(filterPattern);
-    let filterString = " . FILTER(" + lambdaFilterExpression.toSparql() + ")";
-    return "EXISTS { " + patternContentString + filterString + " }";
+  private createLambdaExpression(): filters.LambdaExpression {
+    return {
+      variable: this.raw.lambdaExpression.variable,
+      entityType: this.propertyPath.getFinalEntityType(),
+    };
   }
 
   private getPropertyPathSegmentRelevantForPropertyTree() {
@@ -193,7 +207,7 @@ export class PropertyPath {
   }
 
   public getPrefixLambdaExpression() {
-    return this.propertyNames[0] && this.getLambdaVariableScope()[this.propertyNames[0]];
+    return this.propertyNames[0] && this.getLambdaVariableScope().get(this.propertyNames[0]);
   }
 
   private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: filters.ScopedPropertyTree) {

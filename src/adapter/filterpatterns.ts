@@ -23,11 +23,9 @@ export class FilterGraphPatternFactory {
       let lambdaExpression = filterContext.lambdaVariableScope.get(inScopeVar);
       let flatTree = propertyTree.inScopeVariables.getBranch(inScopeVar);
       let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
-      let subMapping = mapping.getLambdaNamespace(inScopeVar);
-      let subEntityType = lambdaExpression.entityType;
       let subContext: filters.FilterContext = {
-        entityType: subEntityType,
-        mapping: subMapping,
+        entityType: lambdaExpression.entityType,
+        mapping: mapping.getLambdaNamespace(inScopeVar),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       };
       result.newConjunctivePattern(this.createFromPropertyTree(subContext, subPropertyTree));

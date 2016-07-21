@@ -260,6 +260,20 @@ describe("A lambda variable scope", () => {
   });
 });
 
+describe("A property path", () => {
+  it("should detect the in-scope variable prefix", () => {
+    let path = new filters.PropertyPath([ "it" ], {
+      mapping: null,
+      entityType: null,
+      lambdaVariableScope: new filters.LambdaVariableScope().add({
+        variable: "it", entityType: null,
+      }),
+    });
+
+    expect(path.pathStartsWithLambdaPrefix()).toBe(true);
+  });
+});
+
 function createTestFilterExpressionFactory() {
   let factory = new filters.FilterExpressionIoCContainer()
     .registerDefaultFilterExpressions()
