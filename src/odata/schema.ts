@@ -78,6 +78,7 @@ export class RdfBasedSchemaResource {
     this.rdfName = rawSchemaBranch && rawSchemaBranch.rdfName;
   }
 
+  /* @smell this is Sparql, not OData */
   public getUri(): string {
     return this.completeSchema.raw.defaultNamespace.uri + this.rdfName;
   }
@@ -113,7 +114,7 @@ export class EntityType extends RdfBasedSchemaResource {
   public getNamespacedUri(): string {
     if (this.isElementary())
       throw new Error("elementary types don\'t have a URI representation [" + this.getName() + "]");
-    return super.getUri();
+    return super.getNamespacedUri();
   }
 
   public isElementary(): boolean {
@@ -152,7 +153,12 @@ export class Property extends RdfBasedSchemaResource {
   }
 
   public isOptional(): boolean {
-    return this.getRaw().optional === true;
+    if (this.mirroredFromProperty() === undefined) {
+      return this.getRaw().optional === true;
+    }
+    else {
+      return this.mirroredFromProperty().isOptional();
+    }
   }
 
   public hasInverseProperty(): boolean {

@@ -4,7 +4,7 @@ import mappings = require("./mappings");
 
 export class AbstractBranchInsertionBuilder {
 
-  protected mapping: mappings.StructuredSparqlVariableMapping;
+  protected mapping: mappings.Mapping;
 
   public buildCommand(): BranchInsertionCommand {
     if (this.validateParameters()) {
@@ -13,7 +13,7 @@ export class AbstractBranchInsertionBuilder {
     else throw new Error("Don't forget to set property and mapping before building the branch insertion command!");
   }
 
-  public setMapping(mapping: mappings.StructuredSparqlVariableMapping) {
+  public setMapping(mapping: mappings.Mapping) {
     this.mapping = mapping;
     return this;
   }
@@ -29,16 +29,12 @@ export class AbstractBranchInsertionBuilder {
 
 export class AbstractComplexBranchInsertionBuilder extends AbstractBranchInsertionBuilder {
 
-  protected property: schema.Property;
+  protected property: string;
   protected value: gpatterns.TreeGraphPattern;
 
-  public setComplexProperty(property: schema.Property) {
-    if (property.getEntityKind() === schema.EntityKind.Complex) {
-      this.property = property;
-      return this;
-    }
-    else
-      throw new Error("property should be complex");
+  public setComplexProperty(property: string) {
+    this.property = property;
+    return this;
   }
 
   public setValue(value: gpatterns.TreeGraphPattern) {
@@ -70,14 +66,19 @@ export class AbstractElementaryBranchInsertionBuilder extends AbstractBranchInse
 export class ComplexBranchInsertionBuilderForFiltering extends AbstractComplexBranchInsertionBuilder {
 
   public buildCommandNoValidityChecks(): BranchInsertionCommand {
-    if (this.property.hasDirectRdfRepresentation()) {
-      return new OptionalBranchInsertionCommand()
-        .branch(this.property.getNamespacedUri(), this.value);
-    }
-    else {
-      let inverseProperty = this.property.getInverseProperty();
-      return new OptionalInverseBranchInsertionCommand()
-        .branch(inverseProperty.getNamespacedUri(), this.value);
+    let propertyUri = this.mapping.properties.getNamespacedUriOfProperty(this.property);
+    switch (this.mapping.properties.getDirectionOfProperty(this.property)) {
+
+      case mappings.PropertyDirection.Direct:
+        return new OptionalBranchInsertionCommand()
+          .branch(propertyUri, this.value);
+
+      case mappings.PropertyDirection.Inverse:
+        return new OptionalInverseBranchInsertionCommand()
+          .branch(propertyUri, this.value);
+
+      default:
+        throw new Error("invalid direction of property " + this.property);
     }
   }
 }
@@ -95,19 +96,21 @@ export class ElementaryBranchInsertionBuilderForFiltering extends AbstractElemen
 
   private buildMirroringPropertyNoValidityChecks() {
     let mirroringProperty = this.property.mirroredFromProperty();
-    let mirroringPropertyVariable = this.mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
+    let mirroringPropertyVariable = this.mapping.variables.getComplexProperty(mirroringProperty.getName())
+                                    .getVariable();
 
     let insertionCommand = this.createCommand(mirroringProperty);
     insertionCommand
       .branch(mirroringProperty.getNamespacedUri(), mirroringPropertyVariable)
-      .branch("disco:id", this.mapping.getElementaryPropertyVariable(this.property.getName()));
+      .branch("disco:id", this.mapping.variables.getElementaryPropertyVariable(this.property.getName()));
     return insertionCommand;
   }
 
   private buildNotMirroringPropertyNoValidityChecks() {
     let insertionCommand = this.createCommand(this.property);
     insertionCommand
-      .branch(this.property.getNamespacedUri(), this.mapping.getElementaryPropertyVariable(this.property.getName()));
+      .branch(this.property.getNamespacedUri(),
+              this.mapping.variables.getElementaryPropertyVariable(this.property.getName()));
     return insertionCommand;
   }
 

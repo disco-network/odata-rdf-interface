@@ -14,7 +14,7 @@ export interface FilterExpressionArgs {
 }
 
 export interface FilterContext {
-  mapping: mappings.StructuredSparqlVariableMapping;
+  mapping: mappings.Mapping;
   entityType: schema.EntityType;
   lambdaVariableScope: LambdaVariableScope;
 }

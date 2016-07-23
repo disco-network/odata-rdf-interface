@@ -11,6 +11,8 @@ describe("The query engine should evaluate", () => {
     expect(result.length).toBe(2);
     expect(result[0].Id).toBe("1");
     expect(result[1].Id).toBe("2");
+  }, () => {
+    "before spec";
   });
 
   createQuerySpec("/Posts?$expand=Content", answer => {
@@ -36,6 +38,8 @@ describe("The query engine should evaluate", () => {
         },
       },
     ]);
+  }, () => {
+    "before spec";
   });
 
   createQuerySpec("/Posts?$expand=Parent", answer => {
@@ -84,6 +88,8 @@ describe("The query engine should evaluate", () => {
         Children: [],
       },
     ]);
+  }, () => {
+    "before spec";
   });
 
   createQuerySpec("/Posts?$expand=Children/Parent", answer => {
@@ -114,6 +120,8 @@ describe("The query engine should evaluate", () => {
         Children: [],
       },
     ]);
+  }, () => {
+    "before spec";
   });
 
   createQuerySpec("/Posts?$filter='0' eq '1'", answer => {

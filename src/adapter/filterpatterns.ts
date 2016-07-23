@@ -9,7 +9,7 @@ export class FilterGraphPatternFactory {
   public static createFromPropertyTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree
                                       ): gpatterns.TreeGraphPattern {
     let mapping = filterContext.mapping;
-    let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
+    let result = new gpatterns.TreeGraphPattern(mapping.variables.getVariable());
 
     let entityType = filterContext.entityType;
     for (let it = propertyTree.root.getIterator(); it.hasValue(); it.next()) {
@@ -25,7 +25,7 @@ export class FilterGraphPatternFactory {
       let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
       let subContext: filters.FilterContext = {
         entityType: lambdaExpression.entityType,
-        mapping: mapping.getLambdaNamespace(inScopeVar),
+        mapping: mapping.getSubMappingByLambdaVariable(inScopeVar, lambdaExpression.entityType),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       };
       result.newConjunctivePattern(this.createFromPropertyTree(subContext, subPropertyTree));
@@ -54,7 +54,7 @@ export class FilterGraphPatternFactory {
     else {
       // adopt the root variable of the lambda expression
       conjunctivePattern = ret.newConjunctivePattern(
-        new gpatterns.TreeGraphPattern(outerFilterContext.mapping.getLambdaNamespace(
+        new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getLambdaNamespace(
           propertyPath.getPrefixLambdaExpression().variable
         ).getVariable()));
     }
@@ -70,7 +70,7 @@ export class FilterGraphPatternFactory {
     let lastPropertyName = allPropertyNames[allPropertyNames.length - 1];
     branchingContext = this.branchAlongPropertyChain(branchingContext, propertiesExceptLast);
     this.singleBranch(branchingContext, lastPropertyName, new gpatterns.TreeGraphPattern(
-      branchingContext.mapping.getLambdaNamespace(belongingLambdaExpression.variable).getVariable()));
+      branchingContext.mapping.variables.getLambdaNamespace(belongingLambdaExpression.variable).getVariable()));
 
     return ret;
   }
@@ -80,7 +80,7 @@ export class FilterGraphPatternFactory {
     let branchingContext = baseBranchingContext;
     for (let i = 0; i < propertyChain.length; ++i) {
       let value = new gpatterns.TreeGraphPattern(
-        branchingContext.mapping.getComplexProperty(propertyChain[i]).getVariable());
+        branchingContext.mapping.variables.getComplexProperty(propertyChain[i]).getVariable());
       branchingContext = this.singleBranch(branchingContext, propertyChain[i], value);
     }
     return branchingContext;
@@ -91,12 +91,12 @@ export class FilterGraphPatternFactory {
     let result = value;
     new gpatternInsertions.ComplexBranchInsertionBuilderForFiltering()
       .setMapping(context.mapping)
-      .setComplexProperty(context.entityType.getProperty(property))
+      .setComplexProperty(property)
       .setValue(result)
       .buildCommand()
       .applyTo(context.pattern);
     return {
-      mapping: context.mapping.getComplexProperty(property),
+      mapping: context.mapping.getSubMappingByComplexProperty(property),
       entityType: context.entityType.getProperty(property).getEntityType(),
       pattern: result,
     };
@@ -116,7 +116,7 @@ export class FilterGraphPatternFactory {
       case schema.EntityKind.Complex:
         if (!property.isCardinalityOne()) throw new Error("Properties of higher cardinality are not allowed.");
         let subQueryContext: filters.FilterContext = {
-          mapping: mapping.getComplexProperty(property.getName()),
+          mapping: mapping.getSubMappingByComplexProperty(property.getName()),
           entityType: property.getEntityType(),
           lambdaVariableScope: new filters.LambdaVariableScope(),
         };
@@ -124,7 +124,7 @@ export class FilterGraphPatternFactory {
         scopedPropertyTree.root = propertyTree.getBranch(property.getName());
         let branchedPattern = this.createFromPropertyTree(subQueryContext, scopedPropertyTree);
         new gpatternInsertions.ComplexBranchInsertionBuilderForFiltering()
-          .setComplexProperty(property)
+          .setComplexProperty(property.getName())
           .setMapping(mapping)
           .setValue(branchedPattern)
           .buildCommand()
@@ -138,6 +138,6 @@ export class FilterGraphPatternFactory {
 
 interface BranchingContext {
   pattern: gpatterns.TreeGraphPattern;
-  mapping: mappings.StructuredSparqlVariableMapping;
+  mapping: mappings.Mapping;
   entityType: schema.EntityType;
 }

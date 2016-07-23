@@ -22,7 +22,7 @@ export class QueryFactory {
  * Handles read-only OData queries.
  */
 export class EntitySetQuery implements ODataQueries.Query {
-  private mapping: mappings.StructuredSparqlVariableMapping;
+  private mapping: mappings.Mapping;
   private queryString: string;
   private filterExpressionFactory: filters.FilterExpressionIoCContainer;
 
@@ -43,7 +43,7 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private translateResponseToOData(response: { error?: any, result?: any }): { error?: any, result?: any } {
     if (!response.error) {
-      let queryContext = new SparqlQueryContext(this.getOrInitMapping(),
+      let queryContext = new SparqlQueryContext(this.getOrInitMapping().variables,
         this.getTypeOfEntitySet(), this.getExpandTree());
       let resultBuilder = new ODataQueries.JsonResultBuilder();
       return { result: resultBuilder.run(response.result, queryContext) };
@@ -60,7 +60,9 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private initializeVariableMapping() {
     let vargen = new mappings.SparqlVariableGenerator();
-    this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+    let varMapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+    let propMapping = new mappings.PropertyMapping(this.getTypeOfEntitySet());
+    this.mapping = new mappings.Mapping(propMapping, varMapping);
   }
 
   private initializeFilterExpressionFactory() {
@@ -82,7 +84,7 @@ export class EntitySetQuery implements ODataQueries.Query {
 
   private createGraphPattern(): gpatterns.TreeGraphPattern {
     return expandTreePatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(),
-      this.getExpandTree(), this.getOrInitMapping());
+      this.getExpandTree(), this.getOrInitMapping().variables);
   }
 
   private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
@@ -130,11 +132,11 @@ export class EntitySetQuery implements ODataQueries.Query {
  * This class provides methods to interpret a SPARQL query result as OData.
  */
 export class SparqlQueryContext implements ODataQueries.QueryContext {
-  private mapping: mappings.StructuredSparqlVariableMapping;
+  private mapping: mappings.IStructuredSparqlVariableMapping;
   private rootTypeSchema: Schema.EntityType;
   private remainingExpandBranch: Object;
 
-  constructor(mapping: mappings.StructuredSparqlVariableMapping, rootTypeSchema: Schema.EntityType,
+  constructor(mapping: mappings.IStructuredSparqlVariableMapping, rootTypeSchema: Schema.EntityType,
               remainingExpandBranch) {
     this.mapping = mapping;
     this.rootTypeSchema = rootTypeSchema;

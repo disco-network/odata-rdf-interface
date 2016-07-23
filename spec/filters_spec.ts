@@ -100,7 +100,10 @@ describe("A PropertyExpression", () => {
 
   it("should handle simple 'any' expressions", () => {
     let vargen = new mappings.SparqlVariableGenerator();
-    let mapping = new mappings.StructuredSparqlVariableMapping("?root", vargen);
+    let mapping = new mappings.Mapping(
+      new mappings.PropertyMapping(schema.getEntityType("Post")),
+      new mappings.StructuredSparqlVariableMapping("?root", vargen)
+    );
     let expr = filters.PropertyExpressionFactory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
@@ -141,7 +144,10 @@ describe("A PropertyExpression", () => {
     let factory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
       .setStandardFilterContext({
-        mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
+        mapping: new mappings.Mapping(
+          new mappings.PropertyMapping(schema.getEntityType("Post")),
+          new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
+        ),
         entityType: schema.getEntityType("Post"),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       });
@@ -161,7 +167,10 @@ describe("A PropertyExpression", () => {
     let factory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
       .setStandardFilterContext({
-        mapping: new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator()),
+        mapping: new mappings.Mapping(
+          new mappings.PropertyMapping(schema.getEntityType("Post")),
+          new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
+        ),
         entityType: schema.getEntityType("Post"),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       });

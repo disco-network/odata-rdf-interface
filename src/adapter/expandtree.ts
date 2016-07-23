@@ -1,7 +1,8 @@
 import gpatterns = require("../sparql/graphpatterns");
-import gpatternInsertions = require("./graphpatterninsertions");
 import mappings = require("./mappings");
 import schema = require("../odata/schema");
+import propertyTree = require("./propertytree");
+import propertyTreeImpl = require("./propertytree_impl");
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -10,9 +11,10 @@ import schema = require("../odata/schema");
  */
 export class DirectPropertiesGraphPatternFactory {
 
-  public static create(entityType: schema.EntityType,
-                       mapping: mappings.StructuredSparqlVariableMapping, options: string): gpatterns.TreeGraphPattern {
-    let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
+  public static create(entityType: schema.EntityType, branchFactory: propertyTree.BranchFactory,
+                       options: string): propertyTree.Tree {
+
+    let tree = new propertyTree.RootTree();
 
     let propertyNames = entityType.getPropertyNames();
     let properties = propertyNames.map(p => entityType.getProperty(p));
@@ -21,16 +23,27 @@ export class DirectPropertiesGraphPatternFactory {
       let property = properties[i];
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
-      if (property.isNavigationProperty() === false) {
+      /*if (property.isNavigationProperty() === false) {
         new ElementaryBranchInsertionBuilder()
           .setMapping(mapping)
           .setElementaryProperty(property)
           .buildCommand()
-          .applyTo(result);
+          .applyTo(rootPattern);
+      }*/
+      if (property.getEntityKind() === schema.EntityKind.Elementary) {
+        let args: propertyTree.BranchingArgs = {
+          property: property.getName(),
+          inverse: !property.mirroredFromProperty() && !property.hasDirectRdfRepresentation(),
+          mandatory: !property.isOptional(),
+          singleValued: property.isCardinalityOne(),
+          complex: false,
+          mirroredIdFrom: property.mirroredFromProperty() && property.mirroredFromProperty().getName(),
+        };
+        tree.branch(branchFactory.create(args));
       }
     }
 
-    return result;
+    return tree;
   }
 }
 
@@ -41,32 +54,70 @@ export class DirectPropertiesGraphPatternFactory {
  */
 export class ExpandTreeGraphPatternFactory {
 
-  public static create(entityType: schema.EntityType, expandTree, mapping: mappings.StructuredSparqlVariableMapping) {
+  public static create(entityType: schema.EntityType, expandTree, mapping: mappings.IStructuredSparqlVariableMapping) {
+    let branchFactory = new propertyTree.TreeDependencyInjector()
+      .registerFactoryCandidates(
+        new propertyTreeImpl.ElementarySingleValuedBranchFactory(),
+        new propertyTreeImpl.ElementarySingleValuedMirroredBranchFactory(),
+        new propertyTreeImpl.ComplexBranchFactory()
+      );
+    let tree = this.createTree(entityType, expandTree, branchFactory);
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
+    tree.traverse({
+      patternSelector: new propertyTreeImpl.GraphPatternSelectorForExpandedProperties(result),
+      mapping: new mappings.Mapping(
+        new mappings.PropertyMapping(entityType),
+        mapping
+      ),
+    });
+    return result;
+  }
 
-    result.branch(entityType.getProperty("Id").getNamespacedUri(), mapping.getElementaryPropertyVariable("Id"));
+  private static createTree(entityType: schema.EntityType, expandTree, branchFactory: propertyTree.BranchFactory) {
 
-    let directPropertyPattern = DirectPropertiesGraphPatternFactory.create(entityType, mapping, "no-id-property");
-    result.newUnionPattern(directPropertyPattern);
+    let tree = new propertyTree.RootTree();
+
+    tree.branch(branchFactory.create({
+      property: "Id",
+      inverse: false,
+      complex: false,
+      mirroredIdFrom: undefined,
+      singleValued: true,
+      mandatory: true,
+    }));
+
+    let directPropertyTree = DirectPropertiesGraphPatternFactory.create(entityType, branchFactory, "no-id-property");
+    directPropertyTree.copyTo(tree);
+
     Object.keys(expandTree).forEach(propertyName => {
       let property = entityType.getProperty(propertyName);
-      let baseGraphPattern = result.newUnionPattern();
-      let branch = ExpandTreeGraphPatternFactory.create(property.getEntityType(), expandTree[propertyName],
-        mapping.getComplexProperty(propertyName));
 
-      new ComplexBranchInsertionBuilder()
+      let branch = tree.branch(branchFactory.create({
+        property: property.getName(),
+        mirroredIdFrom: undefined,
+        complex: true,
+        mandatory: !property.isOptional(),
+        singleValued: property.isCardinalityOne(),
+        inverse: !property.hasDirectRdfRepresentation(),
+      }));
+
+      let recursive = ExpandTreeGraphPatternFactory.createTree(property.getEntityType(), expandTree[propertyName],
+        branchFactory);
+      recursive.copyTo(branch);
+
+      /*new ComplexBranchInsertionBuilder()
         .setComplexProperty(property)
         .setValue(branch)
         .setMapping(mapping)
         .buildCommand()
-        .applyTo(baseGraphPattern);
+        .applyTo(baseGraphPattern);*/
     });
 
-    return result;
+    return tree;
   }
 }
 
-export class ComplexBranchInsertionBuilder extends gpatternInsertions.AbstractComplexBranchInsertionBuilder {
+/*export class ComplexBranchInsertionBuilder extends gpatternInsertions.AbstractComplexBranchInsertionBuilder {
 
   public buildCommandNoValidityChecks(): gpatternInsertions.BranchInsertionCommand {
     if (this.property.hasDirectRdfRepresentation()) {
@@ -114,4 +165,4 @@ export class ElementaryBranchInsertionBuilder extends gpatternInsertions.Abstrac
     return property.isOptional() ?
       new gpatternInsertions.OptionalBranchInsertionCommand() : new gpatternInsertions.NormalBranchInsertionCommand();
   }
-}
+}*/

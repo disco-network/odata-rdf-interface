@@ -42,6 +42,26 @@
             "outDir": "${workspaceRoot}/lib"
         },
         {
+            "name": "Debug Tests Without Build",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceRoot}/node_modules/.bin/gulp",
+            "stopOnEntry": false,
+            "args": ["tests-no-build"],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": null,
+            "runtimeExecutable": null,
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "externalConsole": false,
+            "sourceMaps": true,
+            "outDir": "${workspaceRoot}/lib"
+        },
+        {
             "name": "Attach",
             "type": "node",
             "request": "attach",

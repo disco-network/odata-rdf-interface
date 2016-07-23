@@ -2,6 +2,7 @@ import filters = require("../filters");
 import qsBuilder = require("../querystring_builder");
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
+import mappings = require("../mappings");
 
 export class PropertyExpressionFactory {
 
@@ -123,7 +124,7 @@ export class PropertyPath {
   constructor(private propertyNames?: string[], private filterContext?: filters.FilterContext) {}
 
   public getFinalElementaryPropertyVariable() {
-    let mapping = this.getMappingAfterLambdaPrefix();
+    let mapping = this.getVariableMappingAfterLambdaPrefix();
     let entityType = this.getEntityTypeAfterLambdaPrefix();
 
     let properties = this.getPropertyNamesWithoutLambdaPrefix();
@@ -185,11 +186,28 @@ export class PropertyPath {
   }
 
   public getMappingAfterLambdaPrefix() {
+    return new mappings.Mapping(
+      this.getPropertyMappingAfterLambdaPrefix(),
+      this.getVariableMappingAfterLambdaPrefix()
+    );
+  }
+
+  public getVariableMappingAfterLambdaPrefix() {
     if (this.pathStartsWithLambdaPrefix()) {
-      return this.filterContext.mapping.getLambdaNamespace(this.propertyNames[0]);
+      return this.filterContext.mapping.variables.getLambdaNamespace(this.propertyNames[0]);
     }
     else {
-      return this.filterContext.mapping;
+      return this.filterContext.mapping.variables;
+    }
+  }
+
+  public getPropertyMappingAfterLambdaPrefix() {
+    if (this.pathStartsWithLambdaPrefix()) {
+      let type = this.getEntityTypeAfterLambdaPrefix();
+      return this.filterContext.mapping.properties.createMappingFromEntityType(type);
+    }
+    else {
+      return this.filterContext.mapping.properties;
     }
   }
 

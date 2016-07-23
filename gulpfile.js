@@ -34,10 +34,12 @@ gulp.task('build', function () {
     .pipe(gulp.dest('lib'));
 })
 
-gulp.task('tests', ['build'], function () {
+gulp.task('tests-no-build', function () {
   return gulp.src('./lib/spec/*.js')
     .pipe(jasmine({ includeStackTrace: true, verbose: true }));
 });
+
+gulp.task('tests', ['build', 'tests-no-build']);
 
 //alternative name for the 'tests' task
 gulp.task('specs', ['tests']);
