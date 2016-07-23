@@ -53,7 +53,6 @@ export class FilterGraphPatternFactory {
       };
       this.createTree(subContext, subPropertyTree, branchFactory)
         .copyTo(branch);
-      /*result.newConjunctivePattern(this.createFromPropertyTree(subContext, subPropertyTree));*/
     }
 
     return result;
@@ -97,80 +96,8 @@ export class FilterGraphPatternFactory {
         .optionalInverseBranch(finalProperty.getInverseProperty().getNamespacedUri(), finalVariableName);
     }
 
-    /*let args: propertyTrees.BranchingArgs = {
-      property: finalPropertyName,
-      environment: /* @smell * propertyTrees.BranchingEnvironment.Expand,
-      inScopeVariable: false,
-      complex: true,
-      inverse: !finalProperty.hasDirectRdfRepresentation(),
-      singleValued: false,
-      mirroredIdFrom: undefined,
-      mandatory: false,
-    };
-    let tree = branchFactory.create(args);
-    tree.traverse({
-      patternSelector: /* @smell * new propertyTreesImpl.GraphPatternSelectorForFiltering(ret),
-      mapping: pathWithoutCollectionProperty.getFinalMapping(),
-    });*/
-
     return ret;
-
-    /*let conjunctivePattern: gpatterns.TreeGraphPattern;
-    let currentPropertyType = propertyPath.getEntityTypeAfterLambdaPrefix();
-    let currentMapping = propertyPath.getMappingAfterLambdaPrefix();
-    if (propertyPath.getPrefixLambdaExpression() === undefined) {
-      conjunctivePattern = ret.newConjunctivePattern();
-    }
-    else {
-      // adopt the root variable of the lambda expression
-      conjunctivePattern = ret.newConjunctivePattern(
-        new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getLambdaNamespace(
-          propertyPath.getPrefixLambdaExpression().variable
-        ).getVariable()));
-    }
-    // create a branch path to the property
-    let branchingContext = {
-      mapping: currentMapping,
-      entityType: currentPropertyType,
-      pattern: conjunctivePattern,
-    };
-
-    let allPropertyNames = propertyPath.getPropertyNamesWithoutLambdaPrefix();
-    let propertiesExceptLast = allPropertyNames.slice(0, -1);
-    let lastPropertyName = allPropertyNames[allPropertyNames.length - 1];
-    branchingContext = this.branchAlongPropertyChain(branchingContext, propertiesExceptLast);
-    this.singleBranch(branchingContext, lastPropertyName, new gpatterns.TreeGraphPattern(
-      branchingContext.mapping.variables.getLambdaNamespace(belongingLambdaExpression.variable).getVariable()));
-
-    return ret;*/
   }
-
-  /*private branchAlongPropertyChain(baseBranchingContext: BranchingContext,
-                                          propertyChain: string[]): BranchingContext {
-    let branchingContext = baseBranchingContext;
-    for (let i = 0; i < propertyChain.length; ++i) {
-      let value = new gpatterns.TreeGraphPattern(
-        branchingContext.mapping.variables.getComplexProperty(propertyChain[i]).getVariable());
-      branchingContext = this.singleBranch(branchingContext, propertyChain[i], value);
-    }
-    return branchingContext;
-  }*/
-
-  /*private singleBranch(context: BranchingContext, property: string, value: gpatterns.TreeGraphPattern
-                             ): BranchingContext {
-    let result = value;
-    new gpatternInsertions.ComplexBranchInsertionBuilderForFiltering()
-      .setMapping(context.mapping)
-      .setComplexProperty(property)
-      .setValue(result)
-      .buildCommand()
-      .applyTo(context.pattern);
-    return {
-      mapping: context.mapping.getSubMappingByComplexProperty(property),
-      entityType: context.entityType.getProperty(property).getEntityType(),
-      pattern: result,
-    };
-  }*/
 
   private createAndInsertBranch(property: schema.Property,
                                 filterContext: filters.FilterContext, propertyTree: filters.FlatPropertyTree,
@@ -199,40 +126,5 @@ export class FilterGraphPatternFactory {
       .copyTo(branch);
 
     return result;
-
-    /*switch (property.getEntityKind()) {
-      case schema.EntityKind.Elementary:
-        new gpatternInsertions.ElementaryBranchInsertionBuilderForFiltering()
-          .setElementaryProperty(property)
-          .setMapping(mapping)
-          .buildCommand()
-          .applyTo(pattern);
-        break;
-      case schema.EntityKind.Complex:
-        if (!property.isCardinalityOne()) throw new Error("Properties of higher cardinality are not allowed.");
-        let subQueryContext: filters.FilterContext = {
-          mapping: mapping.getSubMappingByComplexProperty(property.getName()),
-          entityType: property.getEntityType(),
-          lambdaVariableScope: new filters.LambdaVariableScope(),
-        };
-        let scopedPropertyTree = filters.ScopedPropertyTree.create();
-        scopedPropertyTree.root = propertyTree.getBranch(property.getName());
-        let branchedPattern = this.createFromPropertyTree(subQueryContext, scopedPropertyTree);
-        new gpatternInsertions.ComplexBranchInsertionBuilderForFiltering()
-          .setComplexProperty(property.getName())
-          .setMapping(mapping)
-          .setValue(branchedPattern)
-          .buildCommand()
-          .applyTo(pattern);
-        break;
-      default:
-        throw new Error("invalid entity kind " + property.getEntityKind());
-    }*/
   }
 }
-
-/*interface BranchingContext {
-  pattern: gpatterns.TreeGraphPattern;
-  mapping: mappings.Mapping;
-  entityType: schema.EntityType;
-}*/

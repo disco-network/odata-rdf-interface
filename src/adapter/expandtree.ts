@@ -23,13 +23,6 @@ export class DirectPropertiesGraphPatternFactory {
       let property = properties[i];
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
-      /*if (property.isNavigationProperty() === false) {
-        new ElementaryBranchInsertionBuilder()
-          .setMapping(mapping)
-          .setElementaryProperty(property)
-          .buildCommand()
-          .applyTo(rootPattern);
-      }*/
       if (property.getEntityKind() === schema.EntityKind.Elementary) {
         let args: propertyTree.BranchingArgs = {
           property: property.getName(),
@@ -107,65 +100,8 @@ export class ExpandTreeGraphPatternFactory {
       let recursive = ExpandTreeGraphPatternFactory.createTree(property.getEntityType(), expandTree[propertyName],
         branchFactory);
       recursive.copyTo(branch);
-
-      /*new ComplexBranchInsertionBuilder()
-        .setComplexProperty(property)
-        .setValue(branch)
-        .setMapping(mapping)
-        .buildCommand()
-        .applyTo(baseGraphPattern);*/
     });
 
     return tree;
   }
 }
-
-/*export class ComplexBranchInsertionBuilder extends gpatternInsertions.AbstractComplexBranchInsertionBuilder {
-
-  public buildCommandNoValidityChecks(): gpatternInsertions.BranchInsertionCommand {
-    if (this.property.hasDirectRdfRepresentation()) {
-      return new gpatternInsertions.NormalBranchInsertionCommand()
-        .branch(this.property.getNamespacedUri(), this.value);
-    }
-    else {
-      let inverseProperty = this.property.getInverseProperty();
-      return new gpatternInsertions.InverseBranchInsertionCommand()
-        .branch(inverseProperty.getNamespacedUri(), this.value);
-    }
-  }
-}
-
-export class ElementaryBranchInsertionBuilder extends gpatternInsertions.AbstractElementaryBranchInsertionBuilder {
-
-  protected buildCommandNoValidityChecks(): gpatternInsertions.BranchInsertionCommand {
-    if (this.property.mirroredFromProperty()) {
-      return this.buildMirroringPropertyNoValidityChecks();
-    }
-    else {
-      return this.buildNotMirroringPropertyNoValidityChecks();
-    }
-  }
-
-  private buildMirroringPropertyNoValidityChecks() {
-    let mirroringProperty = this.property.mirroredFromProperty();
-    let mirroringPropertyVariable = this.mapping.getComplexProperty(mirroringProperty.getName()).getVariable();
-
-    let insertionCommand = this.createMandatoryOrOptionalCommand(mirroringProperty);
-    insertionCommand
-      .branch(mirroringProperty.getNamespacedUri(), mirroringPropertyVariable)
-      .branch("disco:id", this.mapping.getElementaryPropertyVariable(this.property.getName()));
-    return insertionCommand;
-  }
-
-  private buildNotMirroringPropertyNoValidityChecks() {
-    let insertionCommand = this.createMandatoryOrOptionalCommand(this.property);
-    insertionCommand
-      .branch(this.property.getNamespacedUri(), this.mapping.getElementaryPropertyVariable(this.property.getName()));
-    return insertionCommand;
-  }
-
-  private createMandatoryOrOptionalCommand(property: schema.Property): gpatternInsertions.BranchInsertionCommand {
-    return property.isOptional() ?
-      new gpatternInsertions.OptionalBranchInsertionCommand() : new gpatternInsertions.NormalBranchInsertionCommand();
-  }
-}*/
