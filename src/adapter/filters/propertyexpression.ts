@@ -3,6 +3,8 @@ import qsBuilder = require("../querystring_builder");
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 import mappings = require("../mappings");
+import propertyTree = require("../propertytree");
+import propertyTreeImpl = require("../propertytree_impl");
 
 export class PropertyExpressionFactory {
 
@@ -86,10 +88,16 @@ export class AnyExpression {
   }
 
   private buildFilterPatternContentString(innerFilterExpression: filters.FilterExpression) {
+    let branchFactory = new propertyTree.TreeDependencyInjector()
+      .registerFactoryCandidates(
+        new propertyTreeImpl.ComplexBranchFactoryForFiltering(),
+        new propertyTreeImpl.ElementaryBranchFactoryForFiltering(),
+        new propertyTreeImpl.InScopeVariableBranchFactory()
+      );
+    let filterPatternFactory = new filterPatterns.FilterGraphPatternFactory();
+    let filterPattern = filterPatternFactory.createAnyExpressionPattern(this.filterContext,
+      innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath, branchFactory);
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
-    let filterPattern = filterPatterns.FilterGraphPatternFactory.createAnyExpressionPattern(
-      this.filterContext, innerFilterExpression.getPropertyTree(), this.createLambdaExpression(),
-        this.propertyPath);
     return queryStringBuilder.buildGraphPatternContentString(filterPattern);
   }
 
@@ -161,6 +169,18 @@ export class PropertyPath {
       branch = branch.createBranch(property);
     }
     return tree;
+  }
+
+  public getFinalMapping(): mappings.Mapping {
+    let currentVariableMapping = this.getVariableMappingAfterLambdaPrefix();
+    let propertiesWithoutLambdaPrefix = this.getPropertyNamesWithoutLambdaPrefix();
+    for (let i = 0; i < propertiesWithoutLambdaPrefix.length; ++i) {
+      currentVariableMapping = currentVariableMapping.getComplexProperty(propertiesWithoutLambdaPrefix[i]);
+    }
+    return new mappings.Mapping(
+      new mappings.PropertyMapping(this.getFinalEntityType()),
+      currentVariableMapping
+    );
   }
 
   public getFinalEntityType(): schema.EntityType {

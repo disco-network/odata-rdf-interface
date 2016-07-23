@@ -33,6 +33,7 @@ export class DirectPropertiesGraphPatternFactory {
       if (property.getEntityKind() === schema.EntityKind.Elementary) {
         let args: propertyTree.BranchingArgs = {
           property: property.getName(),
+          inScopeVariable: false,
           inverse: !property.mirroredFromProperty() && !property.hasDirectRdfRepresentation(),
           mandatory: !property.isOptional(),
           singleValued: property.isCardinalityOne(),
@@ -79,6 +80,7 @@ export class ExpandTreeGraphPatternFactory {
 
     tree.branch(branchFactory.create({
       property: "Id",
+      inScopeVariable: false,
       inverse: false,
       complex: false,
       mirroredIdFrom: undefined,
@@ -94,6 +96,7 @@ export class ExpandTreeGraphPatternFactory {
 
       let branch = tree.branch(branchFactory.create({
         property: property.getName(),
+        inScopeVariable: false,
         mirroredIdFrom: undefined,
         complex: true,
         mandatory: !property.isOptional(),

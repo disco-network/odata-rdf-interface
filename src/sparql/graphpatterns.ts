@@ -12,6 +12,7 @@ export class TreeGraphPattern {
   private valueLeaves: { [id: string]: ValueLeaf[] } = {};
   private unionPatterns: TreeGraphPattern[] = [];
   private conjunctivePatterns: TreeGraphPattern[] = [];
+  private looseBranches: { [variable: string]: TreeGraphPattern };
 
   constructor(rootName: string) {
     let createTriple = (property: string, branch: TreeGraphPattern) => {
@@ -27,6 +28,7 @@ export class TreeGraphPattern {
     this.inverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
     this.optionalBranchPattern = new GraphPatternWithBranches(createTriple);
     this.optionalInverseBranchPattern = new GraphPatternWithBranches(createInverseTriple);
+    this.looseBranches = {};
   }
 
   public getDirectTriples(): any[][] {
@@ -74,7 +76,7 @@ export class TreeGraphPattern {
   }
 
   public getConjunctivePatterns(): TreeGraphPattern[] {
-    return this.conjunctivePatterns;
+    return this.conjunctivePatterns.concat(Object.keys(this.looseBranches).map(key => this.looseBranches[key]));
   }
 
   public name(): string {
@@ -148,6 +150,13 @@ export class TreeGraphPattern {
       default:
         throw new Error("branch argument is neither string nor object");
     }
+  }
+
+  public looseBranch(variable: string) {
+    if (this.looseBranches[variable] === undefined) {
+      this.looseBranches[variable] = new TreeGraphPattern(variable);
+    }
+    return this.looseBranches[variable];
   }
 
   public newUnionPattern(pattern?: TreeGraphPattern): TreeGraphPattern {

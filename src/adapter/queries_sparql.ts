@@ -7,6 +7,8 @@ import filters = require("./filters");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
+import propertyTrees = require("./propertytree");
+import propertyTreesImpl = require("./propertytree_impl");
 
 /**
  * Used to generate query objects which can be run to modify and/or retrieve data.
@@ -88,9 +90,16 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 
   private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
+    let filterPatternFactory = new filterPatterns.FilterGraphPatternFactory();
+    let branchFactory = new propertyTrees.TreeDependencyInjector()
+      .registerFactoryCandidates(
+        new propertyTreesImpl.ComplexBranchFactoryForFiltering(),
+        new propertyTreesImpl.ElementaryBranchFactoryForFiltering(),
+        new propertyTreesImpl.InScopeVariableBranchFactory()
+      );
     if (filterExpression !== undefined)
-      return filterPatterns.FilterGraphPatternFactory.createFromPropertyTree(this.createFilterContext(),
-        filterExpression.getPropertyTree());
+      return filterPatternFactory.createFromPropertyTree(this.createFilterContext(),
+        filterExpression.getPropertyTree(), branchFactory);
   }
 
   private createFilterExpression(): filters.FilterExpression {

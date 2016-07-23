@@ -1,5 +1,6 @@
 import mappings = require("./mappings");
 import gpatterns = require("../sparql/graphpatterns");
+import schema = require("../odata/schema");
 
 export class Tree {
   protected branches: Tree[] = [];
@@ -54,10 +55,13 @@ export interface GraphPatternSelector {
 
 export interface BranchingArgs {
   property: string;
-  inverse: boolean;
-  complex: boolean;
-  mandatory: boolean;
-  singleValued: boolean;
+  inScopeVariable: boolean;
+  inScopeVariableType?: schema.EntityType;
+  loose?: boolean;
+  inverse?: boolean;
+  complex?: boolean;
+  mandatory?: boolean;
+  singleValued?: boolean;
   mirroredIdFrom?: string;
 }
 
