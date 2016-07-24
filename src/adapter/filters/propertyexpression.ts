@@ -88,6 +88,7 @@ export class AnyExpression {
   }
 
   private buildFilterPatternContentString(innerFilterExpression: filters.FilterExpression) {
+    /* @smell this should be passed to PropertyExpression */
     let branchFactory = new propertyTree.TreeDependencyInjector()
       .registerFactoryCandidates(
         new propertyTreeImpl.ComplexBranchFactoryForFiltering(),

@@ -85,8 +85,14 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 
   private createGraphPattern(): gpatterns.TreeGraphPattern {
+    let branchFactory = new propertyTrees.TreeDependencyInjector()
+      .registerFactoryCandidates(
+        new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
+        new propertyTreesImpl.ElementarySingleValuedMirroredBranchFactory(),
+        new propertyTreesImpl.ComplexBranchFactory()
+      );
     return expandTreePatterns.ExpandTreeGraphPatternFactory.create(this.getTypeOfEntitySet(),
-      this.getExpandTree(), this.getOrInitMapping().variables);
+      this.getExpandTree(), this.getOrInitMapping().variables, branchFactory);
   }
 
   private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
@@ -98,7 +104,7 @@ export class EntitySetQuery implements ODataQueries.Query {
         new propertyTreesImpl.InScopeVariableBranchFactory()
       );
     if (filterExpression !== undefined)
-      return filterPatternFactory.createFromPropertyTree(this.createFilterContext(),
+      return filterPatternFactory.create(this.createFilterContext(),
         filterExpression.getPropertyTree(), branchFactory);
   }
 

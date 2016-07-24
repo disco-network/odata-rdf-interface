@@ -48,13 +48,8 @@ export class DirectPropertiesGraphPatternFactory {
  */
 export class ExpandTreeGraphPatternFactory {
 
-  public static create(entityType: schema.EntityType, expandTree, mapping: mappings.IStructuredSparqlVariableMapping) {
-    let branchFactory = new propertyTree.TreeDependencyInjector()
-      .registerFactoryCandidates(
-        new propertyTreeImpl.ElementarySingleValuedBranchFactory(),
-        new propertyTreeImpl.ElementarySingleValuedMirroredBranchFactory(),
-        new propertyTreeImpl.ComplexBranchFactory()
-      );
+  public static create(entityType: schema.EntityType, expandTree, mapping: mappings.IStructuredSparqlVariableMapping,
+                       branchFactory: propertyTree.BranchFactory) {
     let tree = this.createTree(entityType, expandTree, branchFactory);
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
     tree.traverse({

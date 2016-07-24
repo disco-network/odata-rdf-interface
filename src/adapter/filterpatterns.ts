@@ -1,4 +1,3 @@
-import mappings = require("./mappings");
 import schema = require("../odata/schema");
 import gpatterns = require("../sparql/graphpatterns");
 import filters = require("./filters");
@@ -8,12 +7,12 @@ import propertyTreesImpl = require("./propertytree_impl");
 export class FilterGraphPatternFactory {
 
   /* @smell there are two kinds of PropertyTrees */
-  public createFromPropertyTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
-                                branchFactory: propertyTrees.BranchFactory): gpatterns.TreeGraphPattern {
+  public create(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
+                branchFactory: propertyTrees.BranchFactory): gpatterns.TreeGraphPattern {
     let result = new gpatterns.TreeGraphPattern(filterContext.mapping.variables.getVariable());
     /* @smell pass selector as argument */
     let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelectorForFiltering(result);
-    this.createTree(filterContext, propertyTree, branchFactory).traverse({
+    this.createPropertyTree(filterContext, propertyTree, branchFactory).traverse({
       patternSelector: selector,
       mapping: filterContext.mapping,
     });
@@ -21,8 +20,8 @@ export class FilterGraphPatternFactory {
     return result;
   }
 
-  public createTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
-                    branchFactory: propertyTrees.BranchFactory): propertyTrees.Tree {
+  public createPropertyTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
+                            branchFactory: propertyTrees.BranchFactory): propertyTrees.Tree {
     let entityType = filterContext.entityType;
     let scope = filterContext.lambdaVariableScope;
     let result = new propertyTrees.RootTree();
@@ -51,7 +50,7 @@ export class FilterGraphPatternFactory {
         mapping: filterContext.mapping.getSubMappingByLambdaVariable(inScopeVar, lambdaExpression.entityType),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       };
-      this.createTree(subContext, subPropertyTree, branchFactory)
+      this.createPropertyTree(subContext, subPropertyTree, branchFactory)
         .copyTo(branch);
     }
 
@@ -68,7 +67,7 @@ export class FilterGraphPatternFactory {
       entityType: outerFilterContext.entityType,
       lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(belongingLambdaExpression),
     };
-    let innerTree = this.createTree(innerFilterContext, propertyTree, branchFactory);
+    let innerTree = this.createPropertyTree(innerFilterContext, propertyTree, branchFactory);
     let ret = new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getVariable());
     innerTree.traverse({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelectorForFiltering(ret),
@@ -122,7 +121,7 @@ export class FilterGraphPatternFactory {
     };
     let scopedPropertyTree = filters.ScopedPropertyTree.create();
     scopedPropertyTree.root = propertyTree.getBranch(property.getName());
-    this.createTree(subContext, scopedPropertyTree, branchFactory)
+    this.createPropertyTree(subContext, scopedPropertyTree, branchFactory)
       .copyTo(branch);
 
     return result;
