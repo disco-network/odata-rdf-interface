@@ -6,82 +6,31 @@ import propertyTreesImpl = require("./propertytree_impl");
 
 export class FilterGraphPatternFactory {
 
-  /* @smell there are two kinds of PropertyTrees */
-  public create(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
-                branchFactory: propertyTrees.BranchFactory): gpatterns.TreeGraphPattern {
-    let result = new gpatterns.TreeGraphPattern(filterContext.mapping.variables.getVariable());
-    /* @smell pass selector as argument */
-    let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelectorForFiltering(result);
-    this.createPropertyTree(filterContext, propertyTree, branchFactory).traverse({
-      patternSelector: selector,
-      mapping: filterContext.mapping,
-    });
-
-    return result;
-  }
-
-  public createPropertyTree(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
-                            branchFactory: propertyTrees.BranchFactory): propertyTrees.Tree {
-    let entityType = filterContext.entityType;
-    let scope = filterContext.lambdaVariableScope;
-    let result = new propertyTrees.RootTree();
-
-    for (let it = propertyTree.root.getIterator(); it.hasValue(); it.next()) {
-      let propertyName = it.current();
-      let property = entityType.getProperty(propertyName);
-      this.createAndInsertBranch(property, filterContext, propertyTree.root, branchFactory)
-        .copyTo(result);
-    }
-
-    for (let it = propertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
-      let inScopeVar = it.current();
-      let lambdaExpression = scope.get(inScopeVar);
-      let args: propertyTrees.BranchingArgs = {
-        property: inScopeVar,
-        inScopeVariable: true,
-        inScopeVariableType: lambdaExpression.entityType,
-      };
-      let branch = result.branch(branchFactory.create(args));
-
-      let flatTree = propertyTree.inScopeVariables.getBranch(inScopeVar);
-      let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
-      let subContext: filters.FilterContext = {
-        entityType: lambdaExpression.entityType,
-        mapping: filterContext.mapping.getSubMappingByLambdaVariable(inScopeVar, lambdaExpression.entityType),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
-      };
-      this.createPropertyTree(subContext, subPropertyTree, branchFactory)
-        .copyTo(branch);
-    }
-
-    return result;
-  }
-
   public createAnyExpressionPattern(outerFilterContext: filters.FilterContext,
-                                    propertyTree: filters.ScopedPropertyTree,
-                                    belongingLambdaExpression: filters.LambdaExpression,
-                                    propertyPath: filters.PropertyPath,
+                                    lowLevelPropertyTree: filters.ScopedPropertyTree,
+                                    innerLambdaExpression: filters.LambdaExpression,
+                                    propertyPathToExpr: filters.PropertyPath,
                                     branchFactory: propertyTrees.BranchFactory) {
     let innerFilterContext = {
       mapping: outerFilterContext.mapping,
       entityType: outerFilterContext.entityType,
-      lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(belongingLambdaExpression),
+      lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(innerLambdaExpression),
     };
-    let innerTree = this.createPropertyTree(innerFilterContext, propertyTree, branchFactory);
+    let innerTree = this.createPropertyTree(innerFilterContext, lowLevelPropertyTree, branchFactory);
     let ret = new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getVariable());
     innerTree.traverse({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelectorForFiltering(ret),
       mapping: outerFilterContext.mapping,
     });
 
-    let pathWithoutCollectionProperty = propertyPath.getPropertyPathWithoutFinalSegments(1);
+    let pathWithoutCollectionProperty = propertyPathToExpr.getPropertyPathWithoutFinalSegments(1);
 
-    let propertiesWithoutCollectionProperty = propertyPath.getPropertyNamesWithoutLambdaPrefix();
+    let propertiesWithoutCollectionProperty = propertyPathToExpr.getPropertyNamesWithoutLambdaPrefix();
     let finalPropertyName = propertiesWithoutCollectionProperty[propertiesWithoutCollectionProperty.length - 1];
     let entityType = pathWithoutCollectionProperty.getFinalEntityType();
     let finalProperty = entityType.getProperty(finalPropertyName);
     let finalVariableName = outerFilterContext.mapping
-      .variables.getLambdaNamespace(belongingLambdaExpression.variable).getVariable();
+      .variables.getLambdaNamespace(innerLambdaExpression.variable).getVariable();
 
     /* @smell */
     if (finalProperty.hasDirectRdfRepresentation()) {
@@ -98,8 +47,64 @@ export class FilterGraphPatternFactory {
     return ret;
   }
 
-  private createAndInsertBranch(property: schema.Property,
-                                filterContext: filters.FilterContext, propertyTree: filters.FlatPropertyTree,
+  /* @smell there are two kinds of PropertyTrees */
+  public create(filterContext: filters.FilterContext, propertyTree: filters.ScopedPropertyTree,
+                branchFactory: propertyTrees.BranchFactory): gpatterns.TreeGraphPattern {
+    let result = new gpatterns.TreeGraphPattern(filterContext.mapping.variables.getVariable());
+    /* @smell pass selector as argument */
+    let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelectorForFiltering(result);
+    this.createPropertyTree(filterContext, propertyTree, branchFactory).traverse({
+      patternSelector: selector,
+      mapping: filterContext.mapping,
+    });
+
+    return result;
+  }
+
+  public createPropertyTree(filterContext: filters.FilterContext, lowLevelPropertyTree: filters.ScopedPropertyTree,
+                            branchFactory: propertyTrees.BranchFactory): propertyTrees.Tree {
+    return this.createPropertyBranch(filterContext, filterContext, lowLevelPropertyTree, branchFactory);
+  }
+
+  private createPropertyBranch(filterContextOfRoot: filters.FilterContext, filterContextOfBranch: filters.FilterContext,
+                               lowLevelPropertyTree: filters.ScopedPropertyTree,
+                               branchFactory: propertyTrees.BranchFactory) {
+    let entityType = filterContextOfBranch.entityType;
+    let scope = filterContextOfBranch.lambdaVariableScope;
+    let result = new propertyTrees.RootTree();
+
+    for (let it = lowLevelPropertyTree.root.getIterator(); it.hasValue(); it.next()) {
+      let propertyName = it.current();
+      let property = entityType.getProperty(propertyName);
+      this.createAndInsertBranch(property, lowLevelPropertyTree.root, branchFactory)
+        .copyTo(result);
+    }
+
+    for (let it = lowLevelPropertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
+      let inScopeVar = it.current();
+      let lambdaExpression = scope.get(inScopeVar);
+      let args: propertyTrees.BranchingArgs = {
+        property: inScopeVar,
+        inScopeVariable: true,
+        inScopeVariableType: lambdaExpression.entityType,
+      };
+      let branch = result.branch(branchFactory.create(args));
+
+      let flatTree = lowLevelPropertyTree.inScopeVariables.getBranch(inScopeVar);
+      let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
+      let subContext: filters.FilterContext = {
+        entityType: lambdaExpression.entityType,
+        mapping: filterContextOfBranch.mapping.getSubMappingByLambdaVariable(inScopeVar, lambdaExpression.entityType),
+        lambdaVariableScope: new filters.LambdaVariableScope(),
+      };
+      this.createPropertyBranch(filterContextOfRoot, subContext, subPropertyTree, branchFactory)
+        .copyTo(branch);
+    }
+
+    return result;
+  }
+
+  private createAndInsertBranch(property: schema.Property, propertyTree: filters.FlatPropertyTree,
                                 branchFactory: propertyTrees.BranchFactory): propertyTrees.Tree {
     let args: propertyTrees.BranchingArgs = {
       property: property.getName(),

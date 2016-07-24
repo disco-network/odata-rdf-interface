@@ -53,7 +53,7 @@ export class ExpandTreeGraphPatternFactory {
     let tree = this.createTree(entityType, expandTree, branchFactory);
     let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
     tree.traverse({
-      patternSelector: new propertyTreeImpl.GraphPatternSelectorForExpandedProperties(result),
+      patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelectorForExpandedProperties(result),
       mapping: new mappings.Mapping(
         new mappings.PropertyMapping(entityType),
         mapping
