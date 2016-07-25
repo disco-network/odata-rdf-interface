@@ -1,20 +1,5 @@
-import propertyTrees = require("../src/adapter/propertytree");
-import gpatterns = require("../src/sparql/graphpatterns");
 import mappings = require("../src/adapter/mappings");
 import schema = require("../src/odata/schema");
-
-class TestPatternSelector implements propertyTrees.GraphPatternSelector {
-  constructor(private selectFn: (args: propertyTrees.BranchingArgs) => gpatterns.TreeGraphPattern) {
-  }
-
-  public select(args: propertyTrees.BranchingArgs) {
-    return this.selectFn(args);
-  }
-
-  public getOtherSelector(pattern: gpatterns.TreeGraphPattern) {
-    return notImplemented();
-  }
-}
 
 class TestMapping extends mappings.Mapping {
   public properties: TestPropertyMapping;

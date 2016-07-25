@@ -58,7 +58,7 @@ export class ExpandTreeGraphPatternFactory {
       variableMapping
     );
     tree.traverse({
-      patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelectorForExpandedProperties(result),
+      patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelector(result),
       mapping: mapping,
       scopedMapping: new mappings.ScopedMapping(mapping),
     });

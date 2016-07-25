@@ -21,7 +21,7 @@ export class FilterGraphPatternFactory {
     let innerTree = this.createPropertyTree(innerFilterContext, lowLevelPropertyTree, branchFactory);
     let ret = new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getVariable());
     innerTree.traverse({
-      patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelectorForFiltering(ret),
+      patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelector(ret),
       mapping: innerFilterContext.mapping,
       scopedMapping: innerFilterContext.scopedMapping,
     });
@@ -55,7 +55,7 @@ export class FilterGraphPatternFactory {
                 branchFactory: propertyTrees.BranchFactory): gpatterns.TreeGraphPattern {
     let result = new gpatterns.TreeGraphPattern(filterContext.mapping.variables.getVariable());
     /* @smell pass selector as argument */
-    let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelectorForFiltering(result);
+    let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
     this.createPropertyTree(filterContext, propertyTree, branchFactory).traverse({
       patternSelector: selector,
       mapping: filterContext.mapping,

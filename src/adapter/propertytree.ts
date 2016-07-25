@@ -49,7 +49,10 @@ export interface TreeFactoryCandidate {
 }
 
 export interface GraphPatternSelector {
-  select(args: BranchingArgs): gpatterns.TreeGraphPattern;
+  getRootPattern(): gpatterns.TreeGraphPattern;
+  getUnionPatternForSingleValuedBranches(): gpatterns.TreeGraphPattern;
+  getNewUnionPattern(): gpatterns.TreeGraphPattern;
+
   getOtherSelector(rootPattern: gpatterns.TreeGraphPattern): GraphPatternSelector;
 }
 

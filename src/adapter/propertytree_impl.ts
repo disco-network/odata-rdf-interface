@@ -2,71 +2,36 @@ import base = require("./propertytree");
 import gpatterns = require("../sparql/graphpatterns");
 
 /**
- * Always selects the specified graph pattern.
- */
-export class TrivialGraphPatternSelector implements base.GraphPatternSelector {
-
-  constructor(private patternToSelect: gpatterns.TreeGraphPattern) {
-  }
-
-  public select(args: base.BranchingArgs) {
-    return this.patternToSelect;
-  }
-
-  public getOtherSelector(rootPattern: gpatterns.TreeGraphPattern) {
-    return new TrivialGraphPatternSelector(rootPattern);
-  }
-}
-
-/**
  * Selects the graph patterns to branch on for those properties which are shown (expanded) in the query result.
  */
-export class GraphPatternSelectorForExpandedProperties implements base.GraphPatternSelector {
+export class GraphPatternSelector implements base.GraphPatternSelector {
 
   private patternForSingleValuedProperties: gpatterns.TreeGraphPattern;
 
   constructor(private rootPattern: gpatterns.TreeGraphPattern) {
   }
 
-  public select(args: base.BranchingArgs): gpatterns.TreeGraphPattern {
-    if (args.property === "Id") {
-      return this.rootPattern;
-    }
-    else if (args.singleValued) {
-      return this.getOrInitPatternForSingleValuedProperties();
-    }
-    else {
-      return this.createNewUnionPattern();
-    }
+  public getRootPattern() {
+    return this.rootPattern;
   }
 
-  public getOtherSelector(rootPattern: gpatterns.TreeGraphPattern) {
-    return new GraphPatternSelectorForExpandedProperties(rootPattern);
-  }
-
-  private getOrInitPatternForSingleValuedProperties() {
+  public getUnionPatternForSingleValuedBranches() {
     if (this.patternForSingleValuedProperties === undefined) {
       this.patternForSingleValuedProperties = this.createNewUnionPattern();
     }
     return this.patternForSingleValuedProperties;
   }
 
-  private createNewUnionPattern() {
-    return this.rootPattern.newUnionPattern();
-  }
-}
-
-export class GraphPatternSelectorForFiltering implements base.GraphPatternSelector {
-
-  constructor(private rootPattern: gpatterns.TreeGraphPattern) {
-  }
-
-  public select(args: base.BranchingArgs): gpatterns.TreeGraphPattern {
-    return this.rootPattern;
+  public getNewUnionPattern() {
+    return this.createNewUnionPattern();
   }
 
   public getOtherSelector(rootPattern: gpatterns.TreeGraphPattern) {
-    return new GraphPatternSelectorForFiltering(rootPattern);
+    return new GraphPatternSelector(rootPattern);
+  }
+
+  private createNewUnionPattern() {
+    return this.rootPattern.newUnionPattern();
   }
 }
 
@@ -89,7 +54,7 @@ export class ComplexBranch extends base.Branch {
   }
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = args.patternSelector.select(this.branchingArgs);
+    let basePattern = this.selectPattern(args.patternSelector);
     let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.property);
     let variableName = args.mapping.variables.getComplexProperty(this.branchingArgs.property).getVariable();
     let subPattern: gpatterns.TreeGraphPattern;
@@ -115,6 +80,13 @@ export class ComplexBranch extends base.Branch {
       scopedMapping: args.scopedMapping,
     };
   }
+
+  private selectPattern(patternSelector: base.GraphPatternSelector) {
+    if (this.branchingArgs.singleValued)
+      return patternSelector.getUnionPatternForSingleValuedBranches();
+    else
+      return patternSelector.getNewUnionPattern();
+  }
 }
 
 // ===
@@ -136,7 +108,7 @@ export class ElementarySingleValuedBranch extends base.Branch {
   }
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = args.patternSelector.select(this.branchingArgs);
+    let basePattern = this.selectPattern(args.patternSelector);
     let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.property);
     let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.property);
     let subPattern: gpatterns.TreeGraphPattern;
@@ -159,6 +131,13 @@ export class ElementarySingleValuedBranch extends base.Branch {
       mapping: undefined,
       scopedMapping: args.scopedMapping,
     };
+  }
+
+  private selectPattern(patternSelector: base.GraphPatternSelector) {
+    if (this.branchingArgs.property === "Id")
+      return patternSelector.getRootPattern();
+    else
+      return patternSelector.getUnionPatternForSingleValuedBranches();
   }
 }
 
@@ -190,7 +169,7 @@ export class ElementarySingleValuedMirroredBranch extends base.Branch {
       .getVariable();
     let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.property);
 
-    let basePattern = args.patternSelector.select(this.branchingArgs);
+    let basePattern = this.selectPattern(args.patternSelector);
     let subPattern = this.branchingArgs.mandatory === true ?
       basePattern
         .branch(complexPropertyUri, intermediateVariableName)
@@ -204,6 +183,10 @@ export class ElementarySingleValuedMirroredBranch extends base.Branch {
       mapping: undefined,
       scopedMapping: args.scopedMapping,
     };
+  }
+
+  private selectPattern(patternSelector: base.GraphPatternSelector) {
+    return patternSelector.getUnionPatternForSingleValuedBranches();
   }
 }
 
@@ -223,7 +206,7 @@ export class InScopeVariableBranchFactory implements base.TreeFactoryCandidate {
 export class InScopeVariableBranch extends base.Branch {
 
   public traverse(args: base.TraversingArgs) {
-    let basePattern = args.patternSelector.select(this.branchingArgs);
+    let basePattern = this.selectPattern(args.patternSelector);
     let innerPattern = basePattern.looseBranch(
       args.mapping.variables.getLambdaNamespace(this.branchingArgs.property).getVariable());
 
@@ -237,6 +220,10 @@ export class InScopeVariableBranch extends base.Branch {
     this.branches.forEach(branch => {
       branch.traverse(innerArgs);
     });
+  }
+
+  private selectPattern(patternSelector: base.GraphPatternSelector) {
+    return patternSelector.getRootPattern();
   }
 }
 
@@ -259,7 +246,7 @@ export class ComplexBranchForFiltering extends base.Branch {
   }
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = args.patternSelector.select(this.branchingArgs);
+    let basePattern = this.selectPattern(args.patternSelector);
     let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.property);
     let variableName = args.mapping.variables.getComplexProperty(this.branchingArgs.property).getVariable();
     let subPattern: gpatterns.TreeGraphPattern;
@@ -276,6 +263,10 @@ export class ComplexBranchForFiltering extends base.Branch {
       mapping: subMapping,
       scopedMapping: args.scopedMapping,
     };
+  }
+
+  private selectPattern(patternSelector: base.GraphPatternSelector) {
+    return patternSelector.getRootPattern();
   }
 }
 
@@ -298,7 +289,7 @@ export class ElementaryBranchForFiltering extends base.Branch {
   }
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = args.patternSelector.select(this.branchingArgs);
+    let basePattern = this.selectPattern(args.patternSelector);
     let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.property);
     let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.property);
     let subPattern: gpatterns.TreeGraphPattern;
@@ -313,5 +304,9 @@ export class ElementaryBranchForFiltering extends base.Branch {
       mapping: undefined,
       scopedMapping: args.scopedMapping,
     };
+  }
+
+  private selectPattern(patternSelector: base.GraphPatternSelector) {
+    return patternSelector.getRootPattern();
   }
 }
