@@ -3,33 +3,6 @@ import gpatterns = require("../src/sparql/graphpatterns");
 import mappings = require("../src/adapter/mappings");
 import schema = require("../src/odata/schema");
 
-/*describe("Property trees", () => {
-  it("should work", () => {
-    let treeDI = new propertyTrees.TreeDependencyInjector();
-    let tree = new propertyTrees.RootTree();
-    let branchingArgs: propertyTrees.BranchingArgs = {
-      property: "id",
-      inverse: false,
-      complex: false,
-    };
-    tree.branch(treeDI.create(branchingArgs));
-
-    let pattern = new gpatterns.TreeGraphPattern("?root");
-    let mapping = new TestMapping();
-    let selector = new TestPatternSelector(args => {
-      expect(args).toEqual(branchingArgs);
-      return pattern;
-    });
-
-    tree.traverse({
-      patternSelector: selector,
-      mapping: mapping,
-    });
-
-    expect(pattern.branchExists("id"));
-  });
-});*/
-
 class TestPatternSelector implements propertyTrees.GraphPatternSelector {
   constructor(private selectFn: (args: propertyTrees.BranchingArgs) => gpatterns.TreeGraphPattern) {
   }
@@ -53,6 +26,11 @@ class TestMapping extends mappings.Mapping {
 }
 
 class TestVariableMapping implements mappings.IStructuredSparqlVariableMapping {
+
+  public createNew() {
+    return new TestVariableMapping();
+  }
+
   public getVariable() {
     return "?root";
   }

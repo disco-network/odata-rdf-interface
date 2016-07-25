@@ -49,7 +49,7 @@ export class EntityCollection implements EntityValue {
   public applyResult(result: any): void {
 
     let id = this.context.getUniqueIdOfResult(result);
-    if (this.entities[id] === undefined) {
+    if (!Object.prototype.hasOwnProperty.call(this.entities, id)) {
 
       this.entities[id] = EntityFactory.fromEntityKind(this.kind, this.context);
     }

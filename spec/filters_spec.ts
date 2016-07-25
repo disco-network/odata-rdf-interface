@@ -61,8 +61,7 @@ describe("A NumberLiteralExpression", () => {
       filters.NumberLiteralExpressionFactory.fromRaw({
         type: "decimalValue", value: "cat",
       },
-      { factory: null, filterContext: { entityType: null, mapping: null,
-        lambdaVariableScope: new filters.LambdaVariableScope() } });
+      { factory: null, filterContext: null });
     }).toThrow();
   });
 });
@@ -114,6 +113,8 @@ describe("A PropertyExpression", () => {
       filterContext: {
         mapping: mapping,
         entityType: schema.getEntityType("Post"),
+        scopedMapping: new mappings.ScopedMapping(mapping),
+        unscopedEntityType: schema.getEntityType("Post"),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       },
     });
@@ -131,8 +132,10 @@ describe("A PropertyExpression", () => {
       factory: createTestFilterExpressionFactory(),
       filterContext: {
         mapping: null,
-        entityType: null,
+        scopedMapping: null,
         lambdaVariableScope: new filters.LambdaVariableScope(),
+        entityType: null,
+        unscopedEntityType: null,
       },
     });
 
@@ -141,14 +144,17 @@ describe("A PropertyExpression", () => {
   });
 
   it("should process properties of the root entity in 'any' expessions", () => {
+    let mapping = new mappings.Mapping(
+      new mappings.PropertyMapping(schema.getEntityType("Post")),
+      new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
+    );
     let factory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
       .setStandardFilterContext({
-        mapping: new mappings.Mapping(
-          new mappings.PropertyMapping(schema.getEntityType("Post")),
-          new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
-        ),
+        mapping: mapping,
         entityType: schema.getEntityType("Post"),
+        unscopedEntityType: schema.getEntityType("Post"),
+        scopedMapping: new mappings.ScopedMapping(mapping),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       });
     let expr = factory.fromRaw({
@@ -164,14 +170,17 @@ describe("A PropertyExpression", () => {
   });
 
   it("should process properties of the lambda entity in 'any' expessions", () => {
+    let mapping = new mappings.Mapping(
+      new mappings.PropertyMapping(schema.getEntityType("Post")),
+      new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
+    );
     let factory = new filters.FilterExpressionIoCContainer()
       .registerDefaultFilterExpressions()
       .setStandardFilterContext({
-        mapping: new mappings.Mapping(
-          new mappings.PropertyMapping(schema.getEntityType("Post")),
-          new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
-        ),
+        mapping: mapping,
         entityType: schema.getEntityType("Post"),
+        unscopedEntityType: schema.getEntityType("Post"),
+        scopedMapping: new mappings.ScopedMapping(mapping),
         lambdaVariableScope: new filters.LambdaVariableScope(),
       });
     let expr = factory.fromRaw({
@@ -274,6 +283,8 @@ describe("A property path", () => {
     let path = new filters.PropertyPath([ "it" ], {
       mapping: null,
       entityType: null,
+      unscopedEntityType: null,
+      scopedMapping: null,
       lambdaVariableScope: new filters.LambdaVariableScope().add({
         variable: "it", entityType: null,
       }),
@@ -289,7 +300,9 @@ function createTestFilterExpressionFactory() {
     .registerFilterExpression(TestFilterExpression)
     .setStandardFilterContext({
       mapping: null,
+      scopedMapping: null,
       entityType: null,
+      unscopedEntityType: null,
       lambdaVariableScope: new filters.LambdaVariableScope(),
     });
   return factory;

@@ -72,7 +72,7 @@ export class QueryStringBuilder {
 
   public buildPrefixString() {
     let parts: string[] = [ ];
-    for (let prefix in this.prefixes) {
+    for (let prefix of Object.keys(this.prefixes)) {
       parts.push("PREFIX " + prefix + ": <" + this.prefixes[prefix] + ">");
     }
     return parts.join(" ");

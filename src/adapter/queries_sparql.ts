@@ -122,7 +122,9 @@ export class EntitySetQuery implements ODataQueries.Query {
   private createFilterContext(): filters.FilterContext {
     return {
       mapping: this.getOrInitMapping(),
+      scopedMapping: new mappings.ScopedMapping(this.getOrInitMapping()),
       entityType: this.getTypeOfEntitySet(),
+      unscopedEntityType: this.getTypeOfEntitySet(),
       lambdaVariableScope: new filters.LambdaVariableScope(),
     };
   }
@@ -184,7 +186,7 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
 
   public forEachComplexPropertyOfResult(result, fn: (subResult, property: Schema.Property,
           hasValue: boolean) => void): void {
-    for (let propertyName in this.remainingExpandBranch) {
+    for (let propertyName of Object.keys(this.remainingExpandBranch)) {
       let propertyIdVar = this.mapping.getComplexProperty(propertyName).getElementaryPropertyVariable("Id");
       let hasValue = result[propertyIdVar.substr(1)] !== undefined;
       fn(result, this.rootTypeSchema.getProperty(propertyName), hasValue);
@@ -204,7 +206,7 @@ export class SparqlQueryContext implements ODataQueries.QueryContext {
   }
 
   public forEachComplexPropertySchema(fn: (property) => void): void {
-    for (let propertyName in this.remainingExpandBranch) {
+    for (let propertyName of Object.keys(this.remainingExpandBranch)) {
       fn(this.rootTypeSchema.getProperty(propertyName));
     }
   }

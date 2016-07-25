@@ -16,6 +16,8 @@ export interface FilterExpressionArgs {
 export interface FilterContext {
   mapping: mappings.Mapping;
   entityType: schema.EntityType;
+  scopedMapping: mappings.ScopedMapping;
+  unscopedEntityType: schema.EntityType;
   lambdaVariableScope: LambdaVariableScope;
 }
 
@@ -49,9 +51,9 @@ export class LambdaVariableScope {
 
   public clone(): LambdaVariableScope {
     let cloned = new LambdaVariableScope();
-    Object.keys(this.data).forEach(key => {
+    for (let key of Object.keys(this.data)) {
       cloned.add(this.get(key));
-    });
+    }
     return cloned;
   }
 }
@@ -293,8 +295,9 @@ export class FlatPropertyTree {
   public static fromDataObject(data: FlatPropertyTreeDataObject) {
     let tree = new FlatPropertyTree();
     tree.data = {};
-    Object.keys(data).forEach(property =>
-      tree.data[property] = FlatPropertyTree.fromDataObject(data[property]));
+    for (let property of Object.keys(data)) {
+      tree.data[property] = FlatPropertyTree.fromDataObject(data[property]);
+    }
     return tree;
   }
 

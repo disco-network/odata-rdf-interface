@@ -68,17 +68,14 @@ export interface BranchingArgs {
 export interface TraversingArgs {
   patternSelector: GraphPatternSelector;
   mapping: mappings.Mapping;
+  scopedMapping: mappings.ScopedMapping;
 }
 
 export class RootTree extends Tree {
 
   public traverse(args: TraversingArgs): void {
-    let innerArgs: TraversingArgs = {
-      patternSelector: args.patternSelector,
-      mapping: args.mapping,
-    };
     this.branches.forEach(branch => {
-      branch.traverse(innerArgs);
+      branch.traverse(args);
     });
   }
 }
@@ -96,6 +93,7 @@ export class Branch extends Tree {
       branch.traverse({
         patternSelector: subSelector,
         mapping: result.mapping,
+        scopedMapping: result.scopedMapping,
       });
     });
   }
@@ -107,5 +105,6 @@ export class Branch extends Tree {
 
 export interface BranchingResult {
   mapping: mappings.Mapping;
+  scopedMapping: mappings.ScopedMapping;
   pattern: gpatterns.TreeGraphPattern;
 }

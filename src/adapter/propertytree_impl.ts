@@ -112,6 +112,7 @@ export class ComplexBranch extends base.Branch {
     return {
       pattern: subPattern,
       mapping: subMapping,
+      scopedMapping: args.scopedMapping,
     };
   }
 }
@@ -156,6 +157,7 @@ export class ElementarySingleValuedBranch extends base.Branch {
     return {
       pattern: subPattern,
       mapping: undefined,
+      scopedMapping: args.scopedMapping,
     };
   }
 }
@@ -200,6 +202,7 @@ export class ElementarySingleValuedMirroredBranch extends base.Branch {
     return {
       pattern: subPattern,
       mapping: undefined,
+      scopedMapping: args.scopedMapping,
     };
   }
 }
@@ -228,6 +231,7 @@ export class InScopeVariableBranch extends base.Branch {
     let innerArgs: base.TraversingArgs = {
       mapping: args.mapping.getSubMappingByLambdaVariable(this.branchingArgs.property,
                                                           this.branchingArgs.inScopeVariableType),
+      scopedMapping: args.scopedMapping,
       patternSelector: innerPatternSelector,
     };
     this.branches.forEach(branch => {
@@ -270,6 +274,7 @@ export class ComplexBranchForFiltering extends base.Branch {
     return {
       pattern: subPattern,
       mapping: subMapping,
+      scopedMapping: args.scopedMapping,
     };
   }
 }
@@ -306,6 +311,7 @@ export class ElementaryBranchForFiltering extends base.Branch {
     return {
       pattern: subPattern,
       mapping: undefined,
+      scopedMapping: args.scopedMapping,
     };
   }
 }

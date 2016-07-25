@@ -48,16 +48,19 @@ export class DirectPropertiesGraphPatternFactory {
  */
 export class ExpandTreeGraphPatternFactory {
 
-  public static create(entityType: schema.EntityType, expandTree, mapping: mappings.IStructuredSparqlVariableMapping,
+  public static create(entityType: schema.EntityType, expandTree,
+                       variableMapping: mappings.IStructuredSparqlVariableMapping,
                        branchFactory: propertyTree.BranchFactory) {
     let tree = this.createTree(entityType, expandTree, branchFactory);
-    let result = new gpatterns.TreeGraphPattern(mapping.getVariable());
+    let result = new gpatterns.TreeGraphPattern(variableMapping.getVariable());
+    let mapping = new mappings.Mapping(
+      new mappings.PropertyMapping(entityType),
+      variableMapping
+    );
     tree.traverse({
       patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelectorForExpandedProperties(result),
-      mapping: new mappings.Mapping(
-        new mappings.PropertyMapping(entityType),
-        mapping
-      ),
+      mapping: mapping,
+      scopedMapping: new mappings.ScopedMapping(mapping),
     });
     return result;
   }
@@ -79,7 +82,7 @@ export class ExpandTreeGraphPatternFactory {
     let directPropertyTree = DirectPropertiesGraphPatternFactory.create(entityType, branchFactory, "no-id-property");
     directPropertyTree.copyTo(tree);
 
-    Object.keys(expandTree).forEach(propertyName => {
+    for (let propertyName of Object.keys(expandTree)) {
       let property = entityType.getProperty(propertyName);
 
       let branch = tree.branch(branchFactory.create({
@@ -95,7 +98,7 @@ export class ExpandTreeGraphPatternFactory {
       let recursive = ExpandTreeGraphPatternFactory.createTree(property.getEntityType(), expandTree[propertyName],
         branchFactory);
       recursive.copyTo(branch);
-    });
+    }
 
     return tree;
   }

@@ -18,3 +18,7 @@ export function createMapping(entityType: schema.EntityType, rootVariableName?: 
     createStructuredMapping(rootVariableName)
   );
 }
+
+export function createScopedMapping(entityType: schema.EntityType, rootVariableName?: string) {
+  return new mappings.ScopedMapping(createMapping(entityType, rootVariableName));
+}

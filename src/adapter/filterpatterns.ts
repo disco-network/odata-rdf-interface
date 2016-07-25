@@ -11,16 +11,19 @@ export class FilterGraphPatternFactory {
                                     innerLambdaExpression: filters.LambdaExpression,
                                     propertyPathToExpr: filters.PropertyPath,
                                     branchFactory: propertyTrees.BranchFactory) {
-    let innerFilterContext = {
+    let innerFilterContext: filters.FilterContext = {
       mapping: outerFilterContext.mapping,
+      scopedMapping: outerFilterContext.scopedMapping,
       entityType: outerFilterContext.entityType,
+      unscopedEntityType: outerFilterContext.unscopedEntityType,
       lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(innerLambdaExpression),
     };
     let innerTree = this.createPropertyTree(innerFilterContext, lowLevelPropertyTree, branchFactory);
     let ret = new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getVariable());
     innerTree.traverse({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelectorForFiltering(ret),
-      mapping: outerFilterContext.mapping,
+      mapping: innerFilterContext.mapping,
+      scopedMapping: innerFilterContext.scopedMapping,
     });
 
     let pathWithoutCollectionProperty = propertyPathToExpr.getPropertyPathWithoutFinalSegments(1);
@@ -56,6 +59,7 @@ export class FilterGraphPatternFactory {
     this.createPropertyTree(filterContext, propertyTree, branchFactory).traverse({
       patternSelector: selector,
       mapping: filterContext.mapping,
+      scopedMapping: filterContext.scopedMapping,
     });
 
     return result;
@@ -94,7 +98,9 @@ export class FilterGraphPatternFactory {
       let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
       let subContext: filters.FilterContext = {
         entityType: lambdaExpression.entityType,
+        unscopedEntityType: filterContextOfBranch.unscopedEntityType,
         mapping: filterContextOfBranch.mapping.getSubMappingByLambdaVariable(inScopeVar, lambdaExpression.entityType),
+        scopedMapping: filterContextOfBranch.scopedMapping,
         lambdaVariableScope: new filters.LambdaVariableScope(),
       };
       this.createPropertyBranch(filterContextOfRoot, subContext, subPropertyTree, branchFactory)
@@ -121,7 +127,9 @@ export class FilterGraphPatternFactory {
 
     let subContext: filters.FilterContext = {
       mapping: null,
+      scopedMapping: /* @todo */ null,
       entityType: property.getEntityType(),
+      unscopedEntityType: /* @todo */ null,
       lambdaVariableScope: new filters.LambdaVariableScope(),
     };
     let scopedPropertyTree = filters.ScopedPropertyTree.create();

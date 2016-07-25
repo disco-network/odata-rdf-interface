@@ -110,7 +110,9 @@ export class AnyExpression {
     let lambdaExpression = this.createLambdaExpression();
     return {
       mapping: this.filterContext.mapping,
+      scopedMapping: this.filterContext.scopedMapping,
       entityType: this.filterContext.entityType,
+      unscopedEntityType: this.filterContext.unscopedEntityType,
       lambdaVariableScope: this.filterContext.lambdaVariableScope.clone().add(lambdaExpression),
     };
   }
@@ -201,7 +203,9 @@ export class PropertyPath {
   public getFilterContextAfterLambdaPrefix(): filters.FilterContext {
     return {
       entityType: this.getEntityTypeAfterLambdaPrefix(),
+      unscopedEntityType: this.filterContext.unscopedEntityType,
       mapping: this.getMappingAfterLambdaPrefix(),
+      scopedMapping: this.filterContext.scopedMapping,
       lambdaVariableScope: new filters.LambdaVariableScope(),
     };
   }

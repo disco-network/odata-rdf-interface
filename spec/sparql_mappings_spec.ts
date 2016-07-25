@@ -1,4 +1,6 @@
 import helper = require("./helpers/sparql_mappings");
+import schemaModule = require("../src/odata/schema");
+let schema = new schemaModule.Schema();
 
 describe("unstructured odata to sparql mappings", function() {
   it("should not exist entries until they were accessed", function() {
@@ -73,5 +75,26 @@ describe("structured odata to sparql mappings", function() {
     expect(mapping.elementaryPropertyExists("Id")).toEqual(false);
     mapping.getElementaryPropertyVariable("Id");
     expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
+  });
+});
+
+describe("property mappings", () => {
+  /* @todo */
+});
+
+describe("scoped mappings", () => {
+  it("should work", () => {
+    let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
+
+    expect(mapping.scope("any2").unscoped() === mapping.unscoped());
+    expect(() => mapping.getNamespace("it")).toThrow();
+  });
+
+  it("should access namespaces of parents", () => {
+    let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
+
+    mapping.setNamespace("it", schema.getEntityType("Post"));
+
+    expect(mapping.scope("any1").getNamespace("it")).toBeDefined();
   });
 });

@@ -1,5 +1,42 @@
 import schema = require("../odata/schema");
 
+export class ScopedMapping {
+  private root: Mapping;
+  private parent: ScopedMapping;
+  private namespaces: { [id: string]: Mapping };
+  private scopes: { [id: string]: ScopedMapping };
+
+  constructor(root: Mapping, parent?: ScopedMapping) {
+    this.root = root;
+    this.parent = parent;
+    this.namespaces = {};
+    this.scopes = {};
+  }
+
+  public unscoped(): Mapping {
+    return this.root;
+  }
+
+  public getNamespace(name: string) {
+    if (!Object.prototype.hasOwnProperty.call(this.namespaces, name)) {
+      if (this.parent !== undefined) return this.parent.getNamespace(name);
+      else throw new Error("namespace not found");
+    }
+    return this.namespaces[name];
+  }
+
+  public setNamespace(name: string, entityType: schema.EntityType) {
+    this.namespaces[name] = new Mapping(
+      this.root.properties.createMappingFromEntityType(entityType),
+      this.root.variables.createNew()
+    );
+  }
+
+  public scope(name: string) {
+    return this.scopes[name] = this.scopes[name] || new ScopedMapping(this.root, this);
+  }
+}
+
 /**
  * Maps OData structure to Sparql structure.
  * See PropertyMapping and StructuredSparqlVariableMapping.
@@ -90,6 +127,7 @@ export enum PropertyDirection {
 }
 
 export interface IStructuredSparqlVariableMapping {
+  createNew(): IStructuredSparqlVariableMapping;
   getVariable(): string;
   getElementaryPropertyVariable(name: string): string;
   getComplexProperty(name: string): IStructuredSparqlVariableMapping;
@@ -111,11 +149,15 @@ export class StructuredSparqlVariableMapping implements IStructuredSparqlVariabl
   private complexProperties: SparqlVariableMapping<StructuredSparqlVariableMapping>;
   private lambdaNamespaces: SparqlVariableMapping<StructuredSparqlVariableMapping>;
 
-  constructor(private variableName: string, vargen: SparqlVariableGenerator) {
+  constructor(private variableName: string, private vargen: SparqlVariableGenerator) {
     let complexVargen = new ComplexSparqlVariableGenerator(vargen);
     this.elementaryProperties = new SparqlVariableMapping(vargen);
     this.complexProperties = new SparqlVariableMapping(complexVargen);
     this.lambdaNamespaces = new SparqlVariableMapping(complexVargen);
+  }
+
+  public createNew(): IStructuredSparqlVariableMapping {
+    return new StructuredSparqlVariableMapping(this.vargen.next(), this.vargen);
   }
 
   public getVariable(): string {
@@ -184,7 +226,7 @@ export class SparqlVariableMapping<Variable> {
   }
 
   public forEach(fn: (prop: string, variable: Variable) => void): void {
-    for (let key in this.map) {
+    for (let key of Object.keys(this.map)) {
       fn(key, this.map[key]);
     }
   }

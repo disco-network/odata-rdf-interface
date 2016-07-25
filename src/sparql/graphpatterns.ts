@@ -34,7 +34,7 @@ export class TreeGraphPattern {
   public getDirectTriples(): any[][] {
     let triples: any[][] = [];
 
-    for (let property in this.valueLeaves) {
+    for (let property of Object.keys(this.valueLeaves)) {
       let leaves = this.valueLeaves[property];
       leaves.forEach(leaf => {
         triples.push([ this.name(), property, "\"" + leaf.value + "\"" ]);
@@ -153,7 +153,7 @@ export class TreeGraphPattern {
   }
 
   public looseBranch(variable: string) {
-    if (this.looseBranches[variable] === undefined) {
+    if (!Object.prototype.hasOwnProperty.call(this.looseBranches, variable)) {
       this.looseBranches[variable] = new TreeGraphPattern(variable);
     }
     return this.looseBranches[variable];
@@ -225,7 +225,7 @@ export class GraphPatternWithBranches {
   }
 
   public enumerateBranches(fn: (property: string, branch: TreeGraphPattern) => void) {
-    for (let property in this.branches) {
+    for (let property of Object.keys(this.branches)) {
       let branches = this.branches[property];
       branches.forEach(branch => fn(property, branch));
     }
