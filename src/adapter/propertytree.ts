@@ -3,21 +3,27 @@ import gpatterns = require("../sparql/graphpatterns");
 import schema = require("../odata/schema");
 
 export class Tree {
-  protected branches: Tree[] = [];
+  protected branches: { [id: string]: Tree } = {};
 
   public traverse(args: TraversingArgs): void {
     throw new Error("abstract method - not implemented");
   }
 
+  public hash(): string {
+    throw new Error("abstract method - not implemented");
+  }
+
   public branch(branch: Tree): Tree {
-    this.branches.push(branch);
-    return branch;
+    if (!Object.prototype.hasOwnProperty.call(this.branches, branch.hash())) {
+      this.branches[branch.hash()] = branch;
+    }
+    return this.branches[branch.hash()];
   }
 
   public copyTo(tree: Tree) {
-    this.branches.forEach(branch => {
-      tree.branch(branch);
-    });
+    for (let hash of Object.keys(this.branches)) {
+      tree.branch(this.branches[hash]);
+    }
   }
 }
 
@@ -68,6 +74,15 @@ export interface BranchingArgs {
   mirroredIdFrom?: string;
 }
 
+export class BranchingArgsHasher {
+  public hash(args: BranchingArgs): string {
+    return JSON.stringify({
+      property: args.property,
+      inScopeVariable: args.property,
+    });
+  }
+}
+
 export interface TraversingArgs {
   patternSelector: GraphPatternSelector;
   mapping: mappings.Mapping;
@@ -77,9 +92,9 @@ export interface TraversingArgs {
 export class RootTree extends Tree {
 
   public traverse(args: TraversingArgs): void {
-    this.branches.forEach(branch => {
-      branch.traverse(args);
-    });
+    for (let hash of Object.keys(this.branches)) {
+      this.branches[hash].traverse(args);
+    }
   }
 }
 
@@ -92,13 +107,18 @@ export class Branch extends Tree {
   public traverse(args: TraversingArgs): void {
     let result = this.applyBranch(args);
     let subSelector = args.patternSelector.getOtherSelector(result.pattern);
-    this.branches.forEach(branch => {
+    for (let hash of Object.keys(this.branches)) {
+      let branch = this.branches[hash];
       branch.traverse({
         patternSelector: subSelector,
         mapping: result.mapping,
         scopedMapping: result.scopedMapping,
       });
-    });
+    }
+  }
+
+  public hash() {
+    return new BranchingArgsHasher().hash(this.branchingArgs);
   }
 
   protected applyBranch(args: TraversingArgs): BranchingResult {

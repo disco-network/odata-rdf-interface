@@ -217,9 +217,9 @@ export class InScopeVariableBranch extends base.Branch {
       scopedMapping: args.scopedMapping,
       patternSelector: innerPatternSelector,
     };
-    this.branches.forEach(branch => {
-      branch.traverse(innerArgs);
-    });
+    for (let key of Object.keys(this.branches)) {
+      this.branches[key].traverse(innerArgs);
+    }
   }
 
   private selectPattern(patternSelector: base.GraphPatternSelector) {
