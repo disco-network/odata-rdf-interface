@@ -24,6 +24,7 @@ export interface FilterContext {
 export interface LambdaExpression {
   variable: string;
   entityType: schema.EntityType;
+  scopeId: mappings.UniqueScopeIdentifier;
 }
 
 export interface FilterExpressionFactory {

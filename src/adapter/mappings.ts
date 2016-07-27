@@ -1,23 +1,27 @@
 import schema = require("../odata/schema");
+declare class Map<Key, Value> {
+  public set(key: Key, value: Value);
+  public get(key: Key): Value;
+  public has(key: Key): boolean;
+};
 
 export class ScopedMapping {
   private root: Mapping;
   private parent: ScopedMapping;
   private namespaces: { [id: string]: Mapping };
-  private scopes: { [id: string]: ScopedMapping };
+  private scopes = new Map<UniqueScopeIdentifier, ScopedMapping>();
 
   constructor(root: Mapping, parent?: ScopedMapping) {
     this.root = root;
     this.parent = parent;
     this.namespaces = {};
-    this.scopes = {};
   }
 
   public unscoped(): Mapping {
     return this.root;
   }
 
-  public getNamespace(name: string) {
+  public getNamespace(name: string): Mapping {
     if (!Object.prototype.hasOwnProperty.call(this.namespaces, name)) {
       if (this.parent !== undefined) return this.parent.getNamespace(name);
       else throw new Error("namespace not found");
@@ -32,8 +36,16 @@ export class ScopedMapping {
     );
   }
 
-  public scope(name: string) {
-    return this.scopes[name] = this.scopes[name] || new ScopedMapping(this.root, this);
+  public scope(id: UniqueScopeIdentifier) {
+    if (!this.scopes.has(id)) this.scopes.set(id, new ScopedMapping(this.root, this));
+    return this.scopes.get(id);
+  }
+}
+
+export class UniqueScopeIdentifier {
+  constructor(public debugString: string) {}
+  public toString() {
+    return "UniqueScopeIdentifier(" + this.debugString + ")";
   }
 }
 
@@ -54,13 +66,6 @@ export class Mapping {
     return new Mapping(
       this.properties.getSubMappingByComplexProperty(property),
       this.variables.getComplexProperty(property)
-    );
-  }
-
-  public getSubMappingByLambdaVariable(variable: string, type: schema.EntityType) {
-    return new Mapping(
-      this.properties.createMappingFromEntityType(type),
-      this.variables.getLambdaNamespace(variable)
     );
   }
 }
@@ -131,7 +136,6 @@ export interface IStructuredSparqlVariableMapping {
   getVariable(): string;
   getElementaryPropertyVariable(name: string): string;
   getComplexProperty(name: string): IStructuredSparqlVariableMapping;
-  getLambdaNamespace(namespaceIdentifier: string): IStructuredSparqlVariableMapping;
   elementaryPropertyExists(name: string): boolean;
   complexPropertyExists(name: string): boolean;
   forEachElementaryProperty(fn: (prop: string, variable: string) => void): void;
@@ -147,13 +151,11 @@ export interface IStructuredSparqlVariableMapping {
 export class StructuredSparqlVariableMapping implements IStructuredSparqlVariableMapping {
   private elementaryProperties: SparqlVariableMapping<string>;
   private complexProperties: SparqlVariableMapping<StructuredSparqlVariableMapping>;
-  private lambdaNamespaces: SparqlVariableMapping<StructuredSparqlVariableMapping>;
 
   constructor(private variableName: string, private vargen: SparqlVariableGenerator) {
     let complexVargen = new ComplexSparqlVariableGenerator(vargen);
     this.elementaryProperties = new SparqlVariableMapping(vargen);
     this.complexProperties = new SparqlVariableMapping(complexVargen);
-    this.lambdaNamespaces = new SparqlVariableMapping(complexVargen);
   }
 
   public createNew(): IStructuredSparqlVariableMapping {
@@ -178,14 +180,6 @@ export class StructuredSparqlVariableMapping implements IStructuredSparqlVariabl
    */
   public getComplexProperty(name: string): StructuredSparqlVariableMapping {
     return this.complexProperties.getPropertyVariable(name);
-  }
-
-  /**
-   * Registers a lambda namespace whose identifier is the name of the argument
-   * passed to the lambda function. Each namespace is another structured mapping.
-   */
-  public getLambdaNamespace(namespaceIdentifier: string): StructuredSparqlVariableMapping {
-    return this.lambdaNamespaces.getPropertyVariable(namespaceIdentifier);
   }
 
   public elementaryPropertyExists(name: string): boolean {

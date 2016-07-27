@@ -104,7 +104,7 @@ export class EntitySetQuery implements ODataQueries.Query {
         new propertyTreesImpl.InScopeVariableBranchFactory()
       );
     if (filterExpression !== undefined)
-      return filterPatternFactory.create(this.createFilterContext(),
+      return filterPatternFactory.createPattern(this.createFilterContext(),
         filterExpression.getPropertyTree(), branchFactory);
   }
 

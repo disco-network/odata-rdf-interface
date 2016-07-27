@@ -57,6 +57,7 @@ export class PropertyValueExpression implements filters.FilterExpression {
 export class AnyExpression {
   private raw: any;
   private filterContext: filters.FilterContext;
+  private innerScopeId = new mappings.UniqueScopeIdentifier("any");
   private factory: filters.FilterExpressionFactory;
   private propertyPath: PropertyPath;
 
@@ -110,7 +111,7 @@ export class AnyExpression {
     let lambdaExpression = this.createLambdaExpression();
     return {
       mapping: this.filterContext.mapping,
-      scopedMapping: this.filterContext.scopedMapping,
+      scopedMapping: this.filterContext.scopedMapping.scope(this.innerScopeId),
       entityType: this.filterContext.entityType,
       unscopedEntityType: this.filterContext.unscopedEntityType,
       lambdaVariableScope: this.filterContext.lambdaVariableScope.clone().add(lambdaExpression),
@@ -121,6 +122,7 @@ export class AnyExpression {
     return {
       variable: this.raw.lambdaExpression.variable,
       entityType: this.propertyPath.getFinalEntityType(),
+      scopeId: this.innerScopeId,
     };
   }
 
@@ -219,7 +221,7 @@ export class PropertyPath {
 
   public getVariableMappingAfterLambdaPrefix() {
     if (this.pathStartsWithLambdaPrefix()) {
-      return this.filterContext.mapping.variables.getLambdaNamespace(this.propertyNames[0]);
+      return this.filterContext.scopedMapping.getNamespace(this.propertyNames[0]).variables;
     }
     else {
       return this.filterContext.mapping.variables;

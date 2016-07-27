@@ -208,12 +208,11 @@ export class InScopeVariableBranch extends base.Branch {
   public traverse(args: base.TraversingArgs) {
     let basePattern = this.selectPattern(args.patternSelector);
     let innerPattern = basePattern.looseBranch(
-      args.mapping.variables.getLambdaNamespace(this.branchingArgs.property).getVariable());
+      args.scopedMapping.getNamespace(this.branchingArgs.property).variables.getVariable());
 
     let innerPatternSelector = args.patternSelector.getOtherSelector(innerPattern);
     let innerArgs: base.TraversingArgs = {
-      mapping: args.mapping.getSubMappingByLambdaVariable(this.branchingArgs.property,
-                                                          this.branchingArgs.inScopeVariableType),
+      mapping: args.scopedMapping.getNamespace(this.branchingArgs.property),
       scopedMapping: args.scopedMapping,
       patternSelector: innerPatternSelector,
     };

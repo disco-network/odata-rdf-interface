@@ -165,8 +165,8 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { OPTIONAL { ?root disco:id ?x0 } . "
-      + "{ OPTIONAL { ?x1 disco:parent ?root } } . FILTER(?x0) }");
+    expect(expr.toSparql()).toBe("EXISTS { OPTIONAL { ?root disco:id ?x1 } . "
+      + "{ OPTIONAL { ?x0 disco:parent ?root } } . FILTER(?x1) }");
   });
 
   it("should process properties of the lambda entity in 'any' expessions", () => {
@@ -192,8 +192,8 @@ describe("A PropertyExpression", () => {
     });
 
     /* @todo is it a good idea to use _OPTIONAL_ { ?x0 disco:parent ?root } ? */
-    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:id ?x1 } } . "
-      + "{ OPTIONAL { ?x0 disco:parent ?root } } . FILTER(?x1) }");
+    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . "
+      + "{ OPTIONAL { ?x0 disco:id ?x1 } } . FILTER(?x1) }");
   });
 });
 
@@ -234,6 +234,7 @@ describe("A lambda variable scope", () => {
     let lambda: filters.LambdaExpression = {
       variable: "it",
       entityType: null,
+      scopeId: null,
     };
     let scope = new filters.LambdaVariableScope();
     scope.add(lambda);
@@ -248,6 +249,7 @@ describe("A lambda variable scope", () => {
     scope.add({
       variable: "it",
       entityType: null,
+      scopeId: null,
     });
     let cloned = scope.clone();
 
@@ -258,8 +260,8 @@ describe("A lambda variable scope", () => {
     let scope = new filters.LambdaVariableScope();
     let cloned = scope.clone();
 
-    scope.add({ variable: "a", entityType: null });
-    cloned.add({ variable: "b", entityType: null });
+    scope.add({ variable: "a", entityType: null, scopeId: null });
+    cloned.add({ variable: "b", entityType: null, scopeId: null });
 
     expect(cloned.exists("a")).toBe(false);
     expect(scope.exists("b")).toBe(false);
@@ -267,14 +269,14 @@ describe("A lambda variable scope", () => {
 
   it("should have chainable write methods", () => {
     expect(new filters.LambdaVariableScope()
-      .add({ variable: "a", entityType: null })
+      .add({ variable: "a", entityType: null, scopeId: null })
       .exists("a")).toBe(true);
   });
 
   it("should throw when assigning a variable twice", () => {
     expect(() => new filters.LambdaVariableScope()
-      .add({ variable: "it", entityType: null })
-      .add({ variable: "it", entityType: null })).toThrow();
+      .add({ variable: "it", entityType: null, scopeId: null })
+      .add({ variable: "it", entityType: null, scopeId: null })).toThrow();
   });
 });
 
@@ -286,7 +288,7 @@ describe("A property path", () => {
       unscopedEntityType: null,
       scopedMapping: null,
       lambdaVariableScope: new filters.LambdaVariableScope().add({
-        variable: "it", entityType: null,
+        variable: "it", entityType: null, scopeId: null,
       }),
     });
 

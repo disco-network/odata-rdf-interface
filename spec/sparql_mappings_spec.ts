@@ -1,4 +1,5 @@
 import helper = require("./helpers/sparql_mappings");
+import mappings = require("../src/adapter/mappings");
 import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
 
@@ -86,15 +87,17 @@ describe("scoped mappings", () => {
   it("should work", () => {
     let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
 
-    expect(mapping.scope("any2").unscoped() === mapping.unscoped());
+    let id = new mappings.UniqueScopeIdentifier("any");
+    expect(mapping.scope(id).unscoped() === mapping.unscoped());
     expect(() => mapping.getNamespace("it")).toThrow();
   });
 
   it("should access namespaces of parents", () => {
     let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
+    let scopeId = new mappings.UniqueScopeIdentifier("any");
 
     mapping.setNamespace("it", schema.getEntityType("Post"));
 
-    expect(mapping.scope("any1").getNamespace("it")).toBeDefined();
+    expect(mapping.scope(scopeId).getNamespace("it")).toBeDefined();
   });
 });
