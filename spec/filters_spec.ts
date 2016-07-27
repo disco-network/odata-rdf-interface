@@ -119,7 +119,7 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . FILTER({test}) }");
+    expect(expr.toSparql()).toBe("EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
   });
 
   it("should not insert the collection property of 'any' operations into the property tree", () => {
@@ -165,8 +165,8 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { OPTIONAL { ?root disco:id ?x1 } . "
-      + "{ OPTIONAL { ?x0 disco:parent ?root } } . FILTER(?x1) }");
+    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?root disco:id ?x1 } . "
+      + "{ OPTIONAL { ?x0 disco:parent ?root } } } . FILTER(?x1) }");
   });
 
   it("should process properties of the lambda entity in 'any' expessions", () => {
@@ -192,8 +192,8 @@ describe("A PropertyExpression", () => {
     });
 
     /* @todo is it a good idea to use _OPTIONAL_ { ?x0 disco:parent ?root } ? */
-    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?x0 disco:parent ?root } } . "
-      + "{ OPTIONAL { ?x0 disco:id ?x1 } } . FILTER(?x1) }");
+    expect(expr.toSparql()).toBe("EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } . "
+      + "{ OPTIONAL { ?x0 disco:id ?x1 } } } . FILTER(?x1) }");
   });
 });
 

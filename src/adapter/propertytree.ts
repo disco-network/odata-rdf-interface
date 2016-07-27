@@ -63,6 +63,7 @@ export interface GraphPatternSelector {
   getOtherSelector(rootPattern: gpatterns.TreeGraphPattern): GraphPatternSelector;
 }
 
+/* @smell create three different interfaces for the different types */
 export interface BranchingArgs {
   type: "any" | "property" | "inScopeVariable";
   name: string;

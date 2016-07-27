@@ -331,11 +331,10 @@ export class AnyBranch extends base.Branch {
 
   /**
    * args.mapping should be the last property before the any-ed collection property, say X.
-   * args.patternSelector should be based on the root pattern of the query,
-   *   not the branch of property X. <- @smell
+   * args.patternSelector should be based on the branch on top of X.
    */
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = this.selectPattern(args.patternSelector);
+    let basePattern = this.selectQueryRootPattern(args);
     let rootVariableName = args.mapping.variables.getVariable();
     let collectionPropertyOData = this.branchingArgs.name;
     let collectionPropertyUri = args.mapping.properties.getNamespacedUriOfProperty(collectionPropertyOData);
@@ -363,7 +362,9 @@ export class AnyBranch extends base.Branch {
     };
   }
 
-  private selectPattern(patternSelector: base.GraphPatternSelector) {
-    return patternSelector.getRootPattern();
+  private selectQueryRootPattern(args: base.TraversingArgs) {
+    let knownPattern = args.patternSelector.getRootPattern();
+    let rootVariable = args.scopedMapping.unscoped().variables.getVariable();
+    return knownPattern.looseBranch(rootVariable);
   }
 }
