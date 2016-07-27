@@ -101,7 +101,8 @@ export class EntitySetQuery implements ODataQueries.Query {
       .registerFactoryCandidates(
         new propertyTreesImpl.ComplexBranchFactoryForFiltering(),
         new propertyTreesImpl.ElementaryBranchFactoryForFiltering(),
-        new propertyTreesImpl.InScopeVariableBranchFactory()
+        new propertyTreesImpl.InScopeVariableBranchFactory(),
+        new propertyTreesImpl.AnyBranchFactory()
       );
     if (filterExpression !== undefined)
       return filterPatternFactory.createPattern(this.createFilterContext(),

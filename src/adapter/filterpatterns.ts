@@ -3,40 +3,30 @@ import gpatterns = require("../sparql/graphpatterns");
 import filters = require("./filters");
 import propertyTrees = require("./propertytree");
 import propertyTreesImpl = require("./propertytree_impl");
-import mappings = require("./mappings");
 
 export class FilterGraphPatternFactory {
 
   public createAnyExpressionPattern(outerFilterContext: filters.FilterContext,
-                                    lowLevelPropertyTree: filters.ScopedPropertyTree,
+                                    innerLowLevelPropertyTree: filters.ScopedPropertyTree,
                                     innerLambdaExpression: filters.LambdaExpression,
                                     propertyPathToExpr: filters.PropertyPath,
                                     branchFactory: propertyTrees.BranchFactory) {
 
     let ret = new gpatterns.TreeGraphPattern(outerFilterContext.mapping.variables.getVariable());
 
-    let pathWithoutCollectionProperty = propertyPathToExpr.getPropertyPathWithoutFinalSegments(1);
-    let propertiesWithoutCollectionProperty = propertyPathToExpr.getPropertyNamesWithoutLambdaPrefix();
-    let finalPropertyName = propertiesWithoutCollectionProperty[propertiesWithoutCollectionProperty.length - 1];
-    let entityType = pathWithoutCollectionProperty.getFinalEntityType();
-    let finalProperty = entityType.getProperty(finalPropertyName);
-    let innerScopeId = innerLambdaExpression.scopeId;
-    let innerScopedMapping = outerFilterContext.scopedMapping.scope(innerScopeId);
-    innerScopedMapping.setNamespace(innerLambdaExpression.variable, innerLambdaExpression.entityType);
-    let finalVariableName = innerScopedMapping.getNamespace(innerLambdaExpression.variable)
-      .variables.getVariable();
+    let propertyPathWithoutCollectionProperty = propertyPathToExpr.getPropertyPathWithoutFinalSegments(1);
+    let propertyNames = propertyPathToExpr.getPropertyNamesWithoutLambdaPrefix();
+    let collectionPropertyName = propertyNames[propertyNames.length - 1];
+    let collectionProperty = propertyPathWithoutCollectionProperty.getFinalEntityType()
+      .getProperty(collectionPropertyName);
 
-    /* @smell: extract Branch class */
-    if (finalProperty.hasDirectRdfRepresentation()) {
-      ret
-        .looseBranch(pathWithoutCollectionProperty.getFinalMapping().variables.getVariable())
-        .optionalBranch(finalProperty.getNamespacedUri(), finalVariableName);
-    }
-    else {
-      ret
-        .looseBranch(pathWithoutCollectionProperty.getFinalMapping().variables.getVariable())
-        .optionalInverseBranch(finalProperty.getInverseProperty().getNamespacedUri(), finalVariableName);
-    }
+    let tree = new propertyTrees.RootTree();
+    let branch = tree.branch(branchFactory.create({
+      type: "any",
+      name: collectionPropertyName,
+      lambdaExpression: innerLambdaExpression,
+      inverse: !collectionProperty.hasDirectRdfRepresentation(),
+    }));
 
     let innerFilterContext: filters.FilterContext = {
       mapping: null,
@@ -45,11 +35,13 @@ export class FilterGraphPatternFactory {
       unscopedEntityType: outerFilterContext.unscopedEntityType,
       lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(innerLambdaExpression),
     };
-    let innerTree = this.createPropertyTree(innerFilterContext, lowLevelPropertyTree, branchFactory);
-    innerTree.traverse({
+    let innerTree = this.createPropertyTree(innerFilterContext, innerLowLevelPropertyTree, branchFactory);
+    innerTree.copyTo(branch);
+
+    tree.traverse({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelector(ret),
-      mapping: outerFilterContext.mapping,
-      scopedMapping: innerScopedMapping,
+      mapping: propertyPathWithoutCollectionProperty.getFinalMapping(),
+      scopedMapping: outerFilterContext.scopedMapping,
     });
 
     return ret;
@@ -93,8 +85,8 @@ export class FilterGraphPatternFactory {
       let inScopeVar = it.current();
       let lambdaExpression = scope.get(inScopeVar);
       let args: propertyTrees.BranchingArgs = {
-        property: inScopeVar,
-        inScopeVariable: true,
+        type: "inScopeVariable",
+        name: inScopeVar,
         inScopeVariableType: lambdaExpression.entityType,
       };
       let branch = result.branch(branchFactory.create(args));
@@ -118,8 +110,8 @@ export class FilterGraphPatternFactory {
   private createAndInsertBranch(property: schema.Property, propertyTree: filters.FlatPropertyTree,
                                 branchFactory: propertyTrees.BranchFactory): propertyTrees.Tree {
     let args: propertyTrees.BranchingArgs = {
-      property: property.getName(),
-      inScopeVariable: false,
+      type: "property",
+      name: property.getName(),
       complex: property.getEntityKind() === schema.EntityKind.Complex,
       singleValued: property.isCardinalityOne(),
       inverse: !property.mirroredFromProperty() && !property.hasDirectRdfRepresentation(),

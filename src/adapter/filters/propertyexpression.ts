@@ -94,7 +94,8 @@ export class AnyExpression {
       .registerFactoryCandidates(
         new propertyTreeImpl.ComplexBranchFactoryForFiltering(),
         new propertyTreeImpl.ElementaryBranchFactoryForFiltering(),
-        new propertyTreeImpl.InScopeVariableBranchFactory()
+        new propertyTreeImpl.InScopeVariableBranchFactory(),
+        new propertyTreeImpl.AnyBranchFactory()
       );
     let filterPatternFactory = new filterPatterns.FilterGraphPatternFactory();
     let filterPattern = filterPatternFactory.createAnyExpressionPattern(this.filterContext,

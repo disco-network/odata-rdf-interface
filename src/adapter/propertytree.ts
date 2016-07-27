@@ -1,6 +1,7 @@
 import mappings = require("./mappings");
 import gpatterns = require("../sparql/graphpatterns");
 import schema = require("../odata/schema");
+import filters = require("./filters");
 
 export class Tree {
   protected branches: { [id: string]: Tree } = {};
@@ -63,8 +64,9 @@ export interface GraphPatternSelector {
 }
 
 export interface BranchingArgs {
-  property: string;
-  inScopeVariable: boolean;
+  type: "any" | "property" | "inScopeVariable";
+  name: string;
+  lambdaExpression?: filters.LambdaExpression;
   inScopeVariableType?: schema.EntityType;
   loose?: boolean;
   inverse?: boolean;
@@ -77,8 +79,8 @@ export interface BranchingArgs {
 export class BranchingArgsHasher {
   public hash(args: BranchingArgs): string {
     return JSON.stringify({
-      property: args.property,
-      inScopeVariable: args.property,
+      property: args.name,
+      inScopeVariable: args.name,
     });
   }
 }
