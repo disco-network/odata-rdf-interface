@@ -1,6 +1,9 @@
 import filters = require("../src/adapter/filters");
 import mappings = require("../src/adapter/mappings");
 import schemaModule = require("../src/odata/schema");
+import propertyTree = require("../src/adapter/propertytree");
+import propertyTreeImpl = require("../src/adapter/propertytree_impl");
+import filterPatterns = require("../src/adapter/filterpatterns");
 let schema = new schemaModule.Schema();
 
 describe("A filter factory", () => {
@@ -12,7 +15,7 @@ describe("A filter factory", () => {
       rhs: { type: "string", value: "2" },
     };
 
-    let factory = createTestFilterExpressionFactory();
+    let factory = createFilterExpressionFactory();
     let filter = factory.fromRaw(raw);
 
     expect(filter instanceof filters.BinaryOperatorExpression).toBe(true);
@@ -21,13 +24,13 @@ describe("A filter factory", () => {
   });
   it("should throw if there's no matching expression", () => {
     let raw = { type: "is-42", value: "4*2" };
-    let factory = createTestFilterExpressionFactory();
+    let factory = createFilterExpressionFactory();
 
     expect(() => factory.fromRaw(raw)).toThrow();
   });
   it("should pass a factory to the FilterExpression", () => {
     let raw = { type: "test" };
-    let factory = createTestFilterExpressionFactory();
+    let factory = createFilterExpressionFactory();
     let args = (factory.fromRaw(raw) as TestFilterExpression).args;
 
     expect(args.factory).toBeDefined();
@@ -68,7 +71,7 @@ describe("A NumberLiteralExpression", () => {
 
 describe("An EqExpression", () => {
   it("should render to a SPARQL string", () => {
-    let factory = createTestFilterExpressionFactory();
+    let factory = createFilterExpressionFactory();
     let expr = factory.fromRaw({ type: "operator", op: "eq",
       lhs: { type: "test", value: "(lhs)" },
       rhs: { type: "test", value: "(rhs)" },
@@ -80,7 +83,7 @@ describe("An EqExpression", () => {
 
 describe("An OrExpression", () => {
   it("should render to SPARQL", () => {
-    let factory = createTestFilterExpressionFactory();
+    let factory = createFilterExpressionFactory();
     let expr = factory.fromRaw({ type: "operator", op: "or",
       lhs: { type: "test", value: "(lhs)" },
       rhs: { type: "test", value: "(rhs)" },
@@ -92,7 +95,7 @@ describe("An OrExpression", () => {
 
 describe("A PropertyExpression", () => {
   it("should apply to OData member expressions", () => {
-    expect(filters.PropertyExpressionFactory.doesApplyToRaw({
+    expect(new filters.PropertyExpressionFactory(null).doesApplyToRaw({
       type: "member-expression",
     })).toBe(true);
   });
@@ -103,13 +106,13 @@ describe("A PropertyExpression", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", vargen)
     );
-    let expr = filters.PropertyExpressionFactory.fromRaw({
+    let expr = createPropertyExpressionFactory().fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
       },
     }, {
-      factory: createTestFilterExpressionFactory(),
+      factory: createFilterExpressionFactory(),
       filterContext: {
         mapping: mapping,
         entityType: schema.getEntityType("Post"),
@@ -123,13 +126,13 @@ describe("A PropertyExpression", () => {
   });
 
   it("should not insert the collection property of 'any' operations into the property tree", () => {
-    let expr = filters.PropertyExpressionFactory.fromRaw({
+    let expr = createPropertyExpressionFactory().fromRaw({
       type: "member-expression", operation: "any", path: [ "A", "B", "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
       },
     }, {
-      factory: createTestFilterExpressionFactory(),
+      factory: createFilterExpressionFactory(),
       filterContext: {
         mapping: null,
         scopedMapping: null,
@@ -149,7 +152,7 @@ describe("A PropertyExpression", () => {
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
     let factory = new filters.FilterExpressionIoCContainer()
-      .registerDefaultFilterExpressions()
+      .registerFilterExpression(createPropertyExpressionFactory())
       .setStandardFilterContext({
         mapping: mapping,
         entityType: schema.getEntityType("Post"),
@@ -175,7 +178,7 @@ describe("A PropertyExpression", () => {
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
     let factory = new filters.FilterExpressionIoCContainer()
-      .registerDefaultFilterExpressions()
+      .registerFilterExpression(createPropertyExpressionFactory())
       .setStandardFilterContext({
         mapping: mapping,
         entityType: schema.getEntityType("Post"),
@@ -296,10 +299,32 @@ describe("A property path", () => {
   });
 });
 
-function createTestFilterExpressionFactory() {
+function createPropertyExpressionFactory() {
+  return new filters.PropertyExpressionFactory(createFilterPatternStrategy());
+}
+
+function createFilterPatternStrategy() {
+  return new filterPatterns.FilterGraphPatternStrategy(createBranchFactory());
+}
+
+function createBranchFactory() {
+  return new propertyTree.TreeDependencyInjector()
+      .registerFactoryCandidates(
+        new propertyTreeImpl.ComplexBranchFactoryForFiltering(),
+        new propertyTreeImpl.ElementaryBranchFactoryForFiltering(),
+        new propertyTreeImpl.InScopeVariableBranchFactory(),
+        new propertyTreeImpl.AnyBranchFactory()
+      );
+}
+
+function createFilterExpressionFactory() {
   let factory = new filters.FilterExpressionIoCContainer()
-    .registerDefaultFilterExpressions()
-    .registerFilterExpression(TestFilterExpression)
+    .registerFilterExpressions([
+      filters.StringLiteralExpressionFactory, filters.NumberLiteralExpressionFactory,
+      filters.AndExpressionFactory, filters.OrExpressionFactory,
+      filters.EqExpressionFactory, filters.ParenthesesExpressionFactory,
+      TestFilterExpression,
+    ])
     .setStandardFilterContext({
       mapping: null,
       scopedMapping: null,

@@ -103,7 +103,7 @@ describe("tree graph patterns", function() {
   });
 });
 
-describe("direct property graph patterns", function() {
+describe("direct property pattern strategies", function() {
   xit("should store the direct properties in the mapping", function() {
     let mapping = mhelper.createStructuredMapping();
     // xit expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
@@ -139,12 +139,11 @@ describe("direct property graph patterns", function() {
   });
 });
 
-describe("complex-property expand tree graph patterns", function() {
+describe("complex-property expand pattern strategy", function() {
   it("should expand the first depth level", function() {
     let expandTree = { Content: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = expandTreePatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"),
-      expandTree, mapping, createBranchFactory());
+    let gp = createExpandPatternStrategy().create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(mapping.getComplexProperty("Content").elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns().length).toEqual(1);
@@ -158,8 +157,7 @@ describe("complex-property expand tree graph patterns", function() {
   it("should expand the second depth level", function() {
     let expandTree = { Content: { Culture: {} } };
     let mapping = mhelper.createStructuredMapping("?post");
-    expandTreePatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"),
-      expandTree, mapping, createBranchFactory());
+    createExpandPatternStrategy().create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(mapping.getComplexProperty("Content").getComplexProperty("Culture")
     .elementaryPropertyExists("Id")).toEqual(true);
@@ -167,8 +165,7 @@ describe("complex-property expand tree graph patterns", function() {
   it("should expand the optional properties of the first depth level", function() {
     let expandTree = { Parent: {} };
     let mapping = mhelper.createStructuredMapping("?post");
-    let gp = expandTreePatterns.ExpandTreeGraphPatternFactory.create(schema.getEntityType("Post"),
-      expandTree, mapping, createBranchFactory());
+    let gp = createExpandPatternStrategy().create(schema.getEntityType("Post"), expandTree, mapping);
 
     expect(mapping.getComplexProperty("Parent").elementaryPropertyExists("Id")).toEqual(true);
     expect(gp.getUnionPatterns()[0].optionalBranch("disco:parent")[1].getDirectTriples()).toContain(
@@ -215,6 +212,10 @@ describe("A filter graph pattern", () => {
       .toBe(mapping.variables.getLambdaNamespace("it").getElementaryPropertyVariable("Id"));*/
   });
 });
+
+function createExpandPatternStrategy() {
+  return new expandTreePatterns.ExpandTreeGraphPatternFactory(createBranchFactory());
+}
 
 function createBranchFactory() {
   return new propertyTrees.TreeDependencyInjector()

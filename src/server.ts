@@ -9,7 +9,7 @@ import abnfInterpreter = require("abnfjs/interpreter");
 import ast2query = require("./odata/ast2query");
 import schema = require("./odata/schema");
 
-import sparqlQueries = require("./adapter/queries_sparql");
+import queryAdapter = require("./adapter/queries");
 
 import providerModule = require("./sparql/sparql_provider");
 
@@ -35,7 +35,7 @@ app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
 
     let ast = interpreter.getCompleteMatch(interpreter.getPattern("odataRelativeUri"), url);
     let queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), schm.raw);
-    let query = (new sparqlQueries.QueryFactory(queryModel, schm)).create();
+    let query = (new queryAdapter.QueryFactory(queryModel, schm)).create();
 
     query.run(provider, result => {
       sendResults(res, result);
@@ -55,10 +55,10 @@ app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
  * Pass the results of the query to the HTTP response object
  */
 function sendResults(res, result): void {
-  if (!result.error) {
+  if (!result.error()) {
     let content = JSON.stringify({
       "odata.metadata": config.publicRootDirectory + config.publicRelativeServiceDirectory + "/",
-      "value": result.result,
+      "value": result.result(),
     }, null, 2);
 
     res.writeHeader(200, {
@@ -74,7 +74,7 @@ function sendResults(res, result): void {
   }
 }
 function handleErrors(result, res) {
-  res.end("error: " + result.error.stack || result.error);
+  res.end("error: " + result.error().stack || result.error());
 }
 
 rdfstore.create(function(error, st) {

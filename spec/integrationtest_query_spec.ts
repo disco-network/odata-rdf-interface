@@ -6,7 +6,7 @@ describe("The query engine should evaluate", () => {
 
   /* @todo get test queries from array */
   createQuerySpec("/Posts", answer => {
-    let result = answer.result;
+    let result = answer.result();
     expectSuccess(answer);
     expect(result.length).toBe(2);
     expect(result[0].Id).toBe("1");
@@ -16,7 +16,7 @@ describe("The query engine should evaluate", () => {
   });
 
   createQuerySpec("/Posts?$expand=Content", answer => {
-    let result = answer.result;
+    let result = answer.result();
     expectSuccess(answer);
     expect(result).toEqual([
       {
@@ -43,7 +43,7 @@ describe("The query engine should evaluate", () => {
   });
 
   createQuerySpec("/Posts?$expand=Parent", answer => {
-    let result = answer.result;
+    let result = answer.result();
     expectSuccess(answer);
     expect(result).toEqual([
       {
@@ -66,7 +66,7 @@ describe("The query engine should evaluate", () => {
   });
 
   createQuerySpec("/Posts?$expand=Children", answer => {
-    let result = answer.result;
+    let result = answer.result();
     expectSuccess(answer);
     expect(result).toEqual([
       {
@@ -93,7 +93,7 @@ describe("The query engine should evaluate", () => {
   });
 
   createQuerySpec("/Posts?$expand=Children/Parent", answer => {
-    let result = answer.result;
+    let result = answer.result();
     expectSuccess(answer);
     expect(result).toEqual([
       {
@@ -126,72 +126,72 @@ describe("The query engine should evaluate", () => {
 
   createQuerySpec("/Posts?$filter='0' eq '1'", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(0);
+    expect(answer.result().length).toBe(0);
   });
 
   createQuerySpec("/Posts?$filter=Id eq '1'", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   });
 
   createQuerySpec("/Posts?$filter=Id eq '0'", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(0);
+    expect(answer.result().length).toBe(0);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq '1')", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   });
 
   createQuerySpec("/Posts?$filter=Id eq 1", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(2);
+    expect(answer.result().length).toBe(2);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq 1) and ((Id eq 2) or (Id eq 1))", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2) and (Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(2);
+    expect(answer.result().length).toBe(2);
   });
 
   createQuerySpec("/Posts?$filter=Content/Id eq 1", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
-    expect(answer.result[0].ContentId).toBe("1");
+    expect(answer.result().length).toBe(1);
+    expect(answer.result()[0].ContentId).toBe("1");
   }, () => {
     "before spec";
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: 1 eq 1)", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   }, () => {
     "before spec";
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: it/Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: Id eq 1)", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(1);
+    expect(answer.result().length).toBe(1);
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result.length).toBe(0);
+    expect(answer.result().length).toBe(0);
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: it/Children/any(it2: 1 eq 1))", answer => {
@@ -226,8 +226,8 @@ describe("The query engine should evaluate", () => {
 });
 
 function expectSuccess(answer) {
-  expect(answer.error).toBeUndefined();
-  expect(answer.result).toBeDefined();
+  expect(answer.error()).toBeUndefined();
+  expect(answer.result()).toBeDefined();
 }
 
 function storeSeed(store, graphName, cb) {

@@ -71,16 +71,16 @@ export class FilterExpressionIoCContainer {
     return this;
   }
 
-  public registerDefaultFilterExpressions() {
+  /*public registerDefaultFilterExpressions() {
     this.registerFilterExpressions([
       StringLiteralExpressionFactory, NumberLiteralExpressionFactory,
       ParenthesesExpressionFactory,
       AndExpressionFactory, OrExpressionFactory,
       EqExpressionFactory,
-      PropertyExpressionFactory,
+      new PropertyExpressionFactory(???),
     ]);
     return this;
-  }
+  }*/
 
   public registerFilterExpressions(types: FilterExpressionCandidateFactory[]) {
     for (let i = 0; i < types.length; ++i) {

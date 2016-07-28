@@ -3,22 +3,22 @@ import qsBuilder = require("../querystring_builder");
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 import mappings = require("../mappings");
-import propertyTree = require("../propertytree");
-import propertyTreeImpl = require("../propertytree_impl");
 
 export class PropertyExpressionFactory {
 
-  public static doesApplyToRaw(raw) {
+  constructor(private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy) {}
+
+  public doesApplyToRaw(raw) {
     return raw.type === "member-expression";
   }
 
-  public static fromRaw(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
+  public fromRaw(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
     let propertyPath = new PropertyPath(raw.path, args.filterContext);
     switch (raw.operation) {
       case "property-value":
         return new PropertyValueExpression(propertyPath, args);
       case "any":
-        return new AnyExpression(raw, propertyPath, args);
+        return new AnyExpression(raw, propertyPath, args, this.filterPatternStrategy);
       default:
         throw new Error("invalid operation: " + raw.operation);
     }
@@ -61,7 +61,8 @@ export class AnyExpression {
   private factory: filters.FilterExpressionFactory;
   private propertyPath: PropertyPath;
 
-  constructor(raw: any, propertyPath: PropertyPath, args: filters.FilterExpressionArgs) {
+  constructor(raw: any, propertyPath: PropertyPath, args: filters.FilterExpressionArgs,
+              private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy) {
     this.raw = raw;
     this.filterContext = args.filterContext;
     this.factory = args.factory;
@@ -90,16 +91,15 @@ export class AnyExpression {
 
   private buildFilterPatternContentString(innerFilterExpression: filters.FilterExpression) {
     /* @smell this should be passed to PropertyExpression */
-    let branchFactory = new propertyTree.TreeDependencyInjector()
+    /*let branchFactory = new propertyTree.TreeDependencyInjector()
       .registerFactoryCandidates(
         new propertyTreeImpl.ComplexBranchFactoryForFiltering(),
         new propertyTreeImpl.ElementaryBranchFactoryForFiltering(),
         new propertyTreeImpl.InScopeVariableBranchFactory(),
         new propertyTreeImpl.AnyBranchFactory()
-      );
-    let filterPatternFactory = new filterPatterns.FilterGraphPatternFactory();
-    let filterPattern = filterPatternFactory.createAnyExpressionPattern(this.filterContext,
-      innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath, branchFactory);
+      );*/
+    let filterPattern = this.filterPatternStrategy.createAnyExpressionPattern(this.filterContext,
+      innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath);
     let queryStringBuilder = new qsBuilder.QueryStringBuilder();
     return queryStringBuilder.buildGraphPatternContentString(filterPattern);
   }

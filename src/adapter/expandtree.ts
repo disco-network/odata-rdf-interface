@@ -9,10 +9,11 @@ import propertyTreeImpl = require("./propertytree_impl");
  * properties belonging to the OData entity type passed as schema.
  * Please separate the options like this: "no-id-property|some-other-option"
  */
-export class DirectPropertiesGraphPatternFactory {
+export class DirectPropertiesTreeStrategy {
 
-  public static create(entityType: schema.EntityType, branchFactory: propertyTree.BranchFactory,
-                       options: string): propertyTree.Tree {
+  constructor(private branchFactory: propertyTree.BranchFactory) {}
+
+  public create(entityType: schema.EntityType, options: string): propertyTree.Tree {
 
     let tree = new propertyTree.RootTree();
 
@@ -33,7 +34,7 @@ export class DirectPropertiesGraphPatternFactory {
           complex: false,
           mirroredIdFrom: property.mirroredFromProperty() && property.mirroredFromProperty().getName(),
         };
-        tree.branch(branchFactory.create(args));
+        tree.branch(this.branchFactory.create(args));
       }
     }
 
@@ -48,10 +49,15 @@ export class DirectPropertiesGraphPatternFactory {
  */
 export class ExpandTreeGraphPatternFactory {
 
-  public static create(entityType: schema.EntityType, expandTree,
-                       variableMapping: mappings.IStructuredSparqlVariableMapping,
-                       branchFactory: propertyTree.BranchFactory) {
-    let tree = this.createTree(entityType, expandTree, branchFactory);
+  private directPropertiesStrategy: DirectPropertiesTreeStrategy;
+
+  constructor(private branchFactory: propertyTree.BranchFactory) {
+    this.directPropertiesStrategy = new DirectPropertiesTreeStrategy(this.branchFactory);
+  }
+
+  public create(entityType: schema.EntityType, expandTree,
+                variableMapping: mappings.IStructuredSparqlVariableMapping) {
+    let tree = this.createTree(entityType, expandTree);
     let result = new gpatterns.TreeGraphPattern(variableMapping.getVariable());
     let mapping = new mappings.Mapping(
       new mappings.PropertyMapping(entityType),
@@ -65,11 +71,11 @@ export class ExpandTreeGraphPatternFactory {
     return result;
   }
 
-  private static createTree(entityType: schema.EntityType, expandTree, branchFactory: propertyTree.BranchFactory) {
+  private createTree(entityType: schema.EntityType, expandTree) {
 
     let tree = new propertyTree.RootTree();
 
-    tree.branch(branchFactory.create({
+    tree.branch(this.branchFactory.create({
       type: "property",
       name: "Id",
       inverse: false,
@@ -79,13 +85,13 @@ export class ExpandTreeGraphPatternFactory {
       mandatory: true,
     }));
 
-    let directPropertyTree = DirectPropertiesGraphPatternFactory.create(entityType, branchFactory, "no-id-property");
+    let directPropertyTree = this.directPropertiesStrategy.create(entityType, "no-id-property");
     directPropertyTree.copyTo(tree);
 
     for (let propertyName of Object.keys(expandTree)) {
       let property = entityType.getProperty(propertyName);
 
-      let branch = tree.branch(branchFactory.create({
+      let branch = tree.branch(this.branchFactory.create({
         type: "property",
         name: property.getName(),
         mirroredIdFrom: undefined,
@@ -95,8 +101,7 @@ export class ExpandTreeGraphPatternFactory {
         inverse: !property.hasDirectRdfRepresentation(),
       }));
 
-      let recursive = ExpandTreeGraphPatternFactory.createTree(property.getEntityType(), expandTree[propertyName],
-        branchFactory);
+      let recursive = this.createTree(property.getEntityType(), expandTree[propertyName]);
       recursive.copyTo(branch);
     }
 
