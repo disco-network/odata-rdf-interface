@@ -25,15 +25,15 @@ export class DirectPropertiesTreeStrategy {
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.getEntityKind() === schema.EntityKind.Elementary) {
-        let args: propertyTree.BranchingArgs = {
-          type: "property",
-          name: property.getName(),
-          inverse: !property.mirroredFromProperty() && !property.hasDirectRdfRepresentation(),
-          mandatory: !property.isOptional(),
-          singleValued: property.isCardinalityOne(),
-          complex: false,
-          mirroredIdFrom: property.mirroredFromProperty() && property.mirroredFromProperty().getName(),
-        };
+        let args = new propertyTree.PropertyBranchingArgsBuilder()
+          .name(property.getName())
+          .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
+          .mandatory(!property.isOptional())
+          .singleValued(property.isCardinalityOne())
+          .complex(false)
+          .mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName())
+          .loose(false)
+          .value;
         tree.branch(this.branchFactory.create(args));
       }
     }
@@ -75,15 +75,15 @@ export class ExpandTreeGraphPatternFactory {
 
     let tree = new propertyTree.RootTree();
 
-    tree.branch(this.branchFactory.create({
-      type: "property",
-      name: "Id",
-      inverse: false,
-      complex: false,
-      mirroredIdFrom: undefined,
-      singleValued: true,
-      mandatory: true,
-    }));
+    tree.branch(this.branchFactory.create(new propertyTree.PropertyBranchingArgsBuilder()
+      .name("Id")
+      .inverse(false)
+      .complex(false)
+      .mirroredIdFrom(undefined)
+      .singleValued(true)
+      .mandatory(true)
+      .loose(false)
+      .value));
 
     let directPropertyTree = this.directPropertiesStrategy.create(entityType, "no-id-property");
     directPropertyTree.copyTo(tree);
@@ -91,15 +91,14 @@ export class ExpandTreeGraphPatternFactory {
     for (let propertyName of Object.keys(expandTree)) {
       let property = entityType.getProperty(propertyName);
 
-      let branch = tree.branch(this.branchFactory.create({
-        type: "property",
-        name: property.getName(),
-        mirroredIdFrom: undefined,
-        complex: true,
-        mandatory: !property.isOptional(),
-        singleValued: property.isCardinalityOne(),
-        inverse: !property.hasDirectRdfRepresentation(),
-      }));
+      let branch = tree.branch(this.branchFactory.create(new propertyTree.PropertyBranchingArgsBuilder()
+        .name(property.getName())
+        .mirroredIdFrom(undefined)
+        .complex(true)
+        .mandatory(!property.isOptional())
+        .singleValued(property.isCardinalityOne())
+        .inverse(!property.hasDirectRdfRepresentation())
+        .loose(false).value));
 
       let recursive = this.createTree(property.getEntityType(), expandTree[propertyName]);
       recursive.copyTo(branch);

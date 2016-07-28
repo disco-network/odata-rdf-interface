@@ -25,8 +25,8 @@ export class QueryFactory {
  */
 export class EntitySetQuery implements ODataQueries.Query {
   private mapping: mappings.Mapping;
-  private queryString: string;
   private filterExpressionFactory: filters.FilterExpressionIoCContainer;
+  private queryString: string;
 
   constructor(private model: ODataQueries.QueryModel, private schema: Schema.Schema,
               private dependencyInjector: DependencyInjector) {}
@@ -41,6 +41,11 @@ export class EntitySetQuery implements ODataQueries.Query {
   private prepareSparqlQuery() {
     this.initializeFilterExpressionFactory();
     this.initializeQueryString();
+  }
+
+  private initializeFilterExpressionFactory() {
+    this.filterExpressionFactory = this.dependencyInjector.createFilterExpressionFactory()
+      .setStandardFilterContext(this.createFilterContext());
   }
 
   private translateResponseToOData(response: result.AnyResult): result.AnyResult {
@@ -64,28 +69,12 @@ export class EntitySetQuery implements ODataQueries.Query {
     return entitySetSchema.getEntityType();
   }
 
-  private initializeVariableMapping() {
-    let vargen = new mappings.SparqlVariableGenerator();
-    let varMapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
-    let propMapping = new mappings.PropertyMapping(this.getTypeOfEntitySet());
-    this.mapping = new mappings.Mapping(propMapping, varMapping);
-  }
-
-  private initializeFilterExpressionFactory() {
-    this.filterExpressionFactory = new filters.FilterExpressionIoCContainer()
-      .registerFilterExpressions([
-        filters.EqExpressionFactory, filters.AndExpressionFactory, filters.OrExpressionFactory,
-        filters.StringLiteralExpressionFactory, filters.NumberLiteralExpressionFactory,
-        filters.ParenthesesExpressionFactory,
-        new filters.PropertyExpressionFactory(this.dependencyInjector.createFilterPatternStrategy()),
-      ])
-      .setStandardFilterContext(this.createFilterContext());
-  }
-
   private initializeQueryString() {
-    let expandGraphPattern = this.createGraphPattern();
+    let expandGraphPattern = this.createExpandGraphPattern();
+
     let filterExpression = this.createFilterExpression();
     let filterGraphPattern = this.createFilterGraphPattern(filterExpression);
+
     let queryStringBuilder = this.createQueryStringBuilder();
     this.queryString = queryStringBuilder.fromGraphPattern(expandGraphPattern, {
       filterExpression: filterExpression,
@@ -93,28 +82,24 @@ export class EntitySetQuery implements ODataQueries.Query {
     });
   }
 
-  private createGraphPattern(): gpatterns.TreeGraphPattern {
+  private createExpandGraphPattern(): gpatterns.TreeGraphPattern {
     let expandPatternStrategy = this.dependencyInjector.createExpandPatternStrategy();
     return expandPatternStrategy.create(this.getTypeOfEntitySet(),
       this.getExpandTree(), this.getOrInitMapping().variables);
   }
 
-  private createFilterGraphPattern(filterExpression: filters.FilterExpression): gpatterns.TreeGraphPattern {
-    let filterPatternStrategy = this.dependencyInjector.createFilterPatternStrategy();
-    if (filterExpression !== undefined)
-      return filterPatternStrategy.createPattern(this.createFilterContext(),
+  private createFilterGraphPattern(filterExpression?: filters.FilterExpression): gpatterns.TreeGraphPattern {
+    if (filterExpression) {
+
+      let creationStrategy = this.dependencyInjector.createFilterPatternStrategy();
+      let filterGraphPattern = creationStrategy.createPattern(this.createFilterContext(),
         filterExpression.getPropertyTree());
+      return filterGraphPattern;
+    }
   }
 
   private createFilterExpression(): filters.FilterExpression {
     if (this.getRawFilter()) return this.filterExpressionFactory.fromRaw(this.getRawFilter());
-  }
-
-  private createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
-    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
-    queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
-    return queryStringBuilder;
   }
 
   private createFilterContext(): filters.FilterContext {
@@ -127,12 +112,11 @@ export class EntitySetQuery implements ODataQueries.Query {
     };
   }
 
-  private getExpandTree() {
-    return this.model.expandTree;
-  }
-
-  private getRawFilter() {
-    return this.model.filterOption;
+  private createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
+    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
+    queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    queryStringBuilder.insertPrefix("disco", "http://disco-network.org/resource/");
+    return queryStringBuilder;
   }
 
   private getOrInitMapping() {
@@ -141,15 +125,41 @@ export class EntitySetQuery implements ODataQueries.Query {
     }
     return this.mapping;
   }
+
+  private initializeVariableMapping() {
+    let vargen = new mappings.SparqlVariableGenerator();
+    let varMapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+    let propMapping = new mappings.PropertyMapping(this.getTypeOfEntitySet());
+    this.mapping = new mappings.Mapping(propMapping, varMapping);
+  }
+
+  private getExpandTree() {
+    return this.model.expandTree;
+  }
+
+  private getRawFilter() {
+    return this.model.filterOption;
+  }
 }
 
 export class DependencyInjector {
-  public createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
-    return new qsBuilder.QueryStringBuilder();
+
+  public createFilterExpressionFactory(): filters.FilterExpressionIoCContainer {
+    return new filters.FilterExpressionIoCContainer()
+      .registerFilterExpressions([
+        filters.EqExpressionFactory, filters.AndExpressionFactory, filters.OrExpressionFactory,
+        filters.StringLiteralExpressionFactory, filters.NumberLiteralExpressionFactory,
+        filters.ParenthesesExpressionFactory,
+        new filters.PropertyExpressionFactory(this.createFilterPatternStrategy()),
+      ]);
   }
 
   public createFilterPatternStrategy(): filterPatterns.FilterGraphPatternStrategy {
     return new filterPatterns.FilterGraphPatternStrategy(this.createBranchFactoryForFilering());
+  }
+
+  public createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
+    return new qsBuilder.QueryStringBuilder();
   }
 
   public createExpandPatternStrategy(): expandTreePatterns.ExpandTreeGraphPatternFactory {

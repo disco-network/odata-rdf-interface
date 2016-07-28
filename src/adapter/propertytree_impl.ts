@@ -39,19 +39,16 @@ export class GraphPatternSelector implements base.GraphPatternSelector {
 
 export class ComplexBranchFactory implements base.TreeFactoryCandidate {
   public doesApply(args: base.BranchingArgs) {
-    return args.type === "property" && args.complex && args.mirroredIdFrom === undefined;
+    return base.BranchingArgsGuard.isProperty(args) && args.complex && args.mirroredIdFrom === undefined;
   }
 
   public create(args: base.BranchingArgs) {
-    return new ComplexBranch(args);
+    if (base.BranchingArgsGuard.assertProperty(args))
+      return new ComplexBranch(args);
   }
 }
 
-export class ComplexBranch extends base.Branch {
-
-  constructor(branchingArgs: base.BranchingArgs) {
-    super(branchingArgs);
-  }
+export class ComplexBranch extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -93,19 +90,17 @@ export class ComplexBranch extends base.Branch {
 
 export class ElementarySingleValuedBranchFactory implements base.TreeFactoryCandidate {
   public doesApply(args: base.BranchingArgs) {
-    return args.type === "property" && !args.complex && args.mirroredIdFrom === undefined && args.singleValued;
+    return base.BranchingArgsGuard.isProperty(args)
+      && !args.complex && args.singleValued && args.mirroredIdFrom === undefined;
   }
 
   public create(args: base.BranchingArgs) {
-    return new ElementarySingleValuedBranch(args);
+    if (base.BranchingArgsGuard.assertProperty(args))
+      return new ElementarySingleValuedBranch(args);
   }
 }
 
-export class ElementarySingleValuedBranch extends base.Branch {
-
-  constructor(branchingArgs: base.BranchingArgs) {
-    super(branchingArgs);
-  }
+export class ElementarySingleValuedBranch extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -145,20 +140,17 @@ export class ElementarySingleValuedBranch extends base.Branch {
 
 export class ElementarySingleValuedMirroredBranchFactory implements base.TreeFactoryCandidate {
   public doesApply(args: base.BranchingArgs) {
-    return args.type === "property" && !args.complex && args.mirroredIdFrom !== undefined && args.singleValued &&
-      !args.inverse;
+    return base.BranchingArgsGuard.isProperty(args)
+      && !args.complex && args.mirroredIdFrom !== undefined && args.singleValued && !args.inverse;
   }
 
   public create(args: base.BranchingArgs) {
-    return new ElementarySingleValuedMirroredBranch(args);
+    if (base.BranchingArgsGuard.assertProperty(args))
+      return new ElementarySingleValuedMirroredBranch(args);
   }
 }
 
-export class ElementarySingleValuedMirroredBranch extends base.Branch {
-
-  constructor(branchingArgs: base.BranchingArgs) {
-    super(branchingArgs);
-  }
+export class ElementarySingleValuedMirroredBranch extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
 
@@ -200,11 +192,12 @@ export class InScopeVariableBranchFactory implements base.TreeFactoryCandidate {
   }
 
   public create(args: base.BranchingArgs) {
-    return new InScopeVariableBranch(args);
+    if (base.BranchingArgsGuard.assertInScopeVariable(args))
+      return new InScopeVariableBranch(args);
   }
 }
 
-export class InScopeVariableBranch extends base.Branch {
+export class InScopeVariableBranch extends base.Branch<base.InScopeVariableBranchingArgs> {
 
   public traverse(args: base.TraversingArgs) {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -231,19 +224,17 @@ export class InScopeVariableBranch extends base.Branch {
 
 export class ComplexBranchFactoryForFiltering implements base.TreeFactoryCandidate {
   public doesApply(args: base.BranchingArgs) {
-    return args.type === "property" && args.complex && args.singleValued && args.mirroredIdFrom === undefined;
+    return base.BranchingArgsGuard.isProperty(args)
+      && args.complex && args.singleValued && args.mirroredIdFrom === undefined;
   }
 
   public create(args: base.BranchingArgs) {
-    return new ComplexBranchForFiltering(args);
+    if (base.BranchingArgsGuard.assertProperty(args))
+      return new ComplexBranchForFiltering(args);
   }
 }
 
-export class ComplexBranchForFiltering extends base.Branch {
-
-  constructor(branchingArgs: base.BranchingArgs) {
-    super(branchingArgs);
-  }
+export class ComplexBranchForFiltering extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -274,19 +265,17 @@ export class ComplexBranchForFiltering extends base.Branch {
 
 export class ElementaryBranchFactoryForFiltering implements base.TreeFactoryCandidate {
   public doesApply(args: base.BranchingArgs) {
-    return args.type === "property" && !args.complex && args.mirroredIdFrom === undefined && args.singleValued;
+    return base.BranchingArgsGuard.isProperty(args)
+      && !args.complex && args.mirroredIdFrom === undefined && args.singleValued;
   }
 
   public create(args: base.BranchingArgs) {
-    return new ElementaryBranchForFiltering(args);
+    if (base.BranchingArgsGuard.assertProperty(args))
+      return new ElementaryBranchForFiltering(args);
   }
 }
 
-export class ElementaryBranchForFiltering extends base.Branch {
-
-  constructor(branchingArgs: base.BranchingArgs) {
-    super(branchingArgs);
-  }
+export class ElementaryBranchForFiltering extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -319,15 +308,12 @@ export class AnyBranchFactory implements base.TreeFactoryCandidate {
   }
 
   public create(args: base.BranchingArgs) {
-    return new AnyBranch(args);
+    if (base.BranchingArgsGuard.assertAny(args))
+      return new AnyBranch(args);
   }
 }
 
-export class AnyBranch extends base.Branch {
-
-  constructor(branchingArgs: base.BranchingArgs) {
-    super(branchingArgs);
-  }
+export class AnyBranch extends base.Branch<base.AnyBranchingArgs> {
 
   /**
    * args.mapping should be the last property before the any-ed collection property, say X.

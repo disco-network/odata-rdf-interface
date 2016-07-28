@@ -84,11 +84,10 @@ export class FilterGraphPatternStrategy {
     for (let it = lowLevelPropertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
       let inScopeVar = it.current();
       let lambdaExpression = scope.get(inScopeVar);
-      let args: propertyTrees.BranchingArgs = {
-        type: "inScopeVariable",
-        name: inScopeVar,
-        inScopeVariableType: lambdaExpression.entityType,
-      };
+      let args = new propertyTrees.InScopeBranchingArgsBuilder()
+        .name(inScopeVar)
+        .variableType(lambdaExpression.entityType)
+        .value;
       let branch = result.branch(this.branchFactory.create(args));
 
       let flatTree = lowLevelPropertyTree.inScopeVariables.getBranch(inScopeVar);
@@ -109,15 +108,15 @@ export class FilterGraphPatternStrategy {
 
   private createAndInsertBranch(property: schema.Property,
                                 propertyTree: filters.FlatPropertyTree): propertyTrees.Tree {
-    let args: propertyTrees.BranchingArgs = {
-      type: "property",
-      name: property.getName(),
-      complex: property.getEntityKind() === schema.EntityKind.Complex,
-      singleValued: property.isCardinalityOne(),
-      inverse: !property.mirroredFromProperty() && !property.hasDirectRdfRepresentation(),
-      mandatory: !property.isOptional(),
-      mirroredIdFrom: property.mirroredFromProperty() && property.mirroredFromProperty().getName(),
-    };
+    let args = new propertyTrees.PropertyBranchingArgsBuilder()
+      .name(property.getName())
+      .complex(property.getEntityKind() === schema.EntityKind.Complex)
+      .singleValued(property.isCardinalityOne())
+      .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
+      .mandatory(!property.isOptional())
+      .loose(false)
+      .mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName())
+      .value;
 
     let result = new propertyTrees.RootTree();
     let branch = result.branch(this.branchFactory.create(args));
