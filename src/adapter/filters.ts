@@ -71,17 +71,6 @@ export class FilterExpressionIoCContainer {
     return this;
   }
 
-  /*public registerDefaultFilterExpressions() {
-    this.registerFilterExpressions([
-      StringLiteralExpressionFactory, NumberLiteralExpressionFactory,
-      ParenthesesExpressionFactory,
-      AndExpressionFactory, OrExpressionFactory,
-      EqExpressionFactory,
-      new PropertyExpressionFactory(???),
-    ]);
-    return this;
-  }*/
-
   public registerFilterExpressions(types: FilterExpressionCandidateFactory[]) {
     for (let i = 0; i < types.length; ++i) {
       this.registerFilterExpression(types[i]);

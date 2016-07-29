@@ -122,9 +122,9 @@ export class FilterGraphPatternStrategy {
     let branch = result.branch(this.branchFactory.create(args));
 
     let subContext: filters.FilterContext = {
+      entityType: property.getEntityType(),
       mapping: null,
       scopedMapping: /* @todo */ null,
-      entityType: property.getEntityType(),
       unscopedEntityType: /* @todo */ null,
       lambdaVariableScope: new filters.LambdaVariableScope(),
     };

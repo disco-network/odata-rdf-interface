@@ -14,7 +14,7 @@ import result = require("../result");
  * Used to generate query objects which can be run to modify and/or retrieve data.
  */
 export class QueryFactory {
-  constructor(private model: ODataQueries.QueryModel) { }
+  constructor(private model: QueryAdapterModel) { }
   public create(): ODataQueries.Query {
     return new EntitySetQuery(this.model, new DependencyInjector());
   }
@@ -24,12 +24,10 @@ export class QueryFactory {
  * Handles read-only OData queries.
  */
 export class EntitySetQuery implements ODataQueries.Query {
-  private model: QueryModel;
   private filterExpressionFactory: filters.FilterExpressionIoCContainer;
 
-  constructor(odataModel: ODataQueries.QueryModel,
+  constructor(private model: QueryAdapterModel,
               private dependencyInjector: DependencyInjector) {
-    this.model = new QueryModel(odataModel);
   }
 
   public run(sparqlProvider, cb: (result: result.AnyResult) => void): void {
@@ -104,12 +102,20 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 }
 
-export class QueryModel {
+export interface QueryAdapterModel {
+  getFilterContext(): filters.FilterContext;
+  getMapping(): mappings.Mapping;
+  getEntitySetType(): Schema.EntityType;
+  getExpandTree(): any;
+  getRawFilter(): any;
+}
+
+export class QueryAdapterModelImpl implements QueryAdapterModel {
 
   private mapping: mappings.Mapping;
   private filterContext: filters.FilterContext;
 
-  constructor(private model: ODataQueries.QueryModel) {}
+  constructor(private odata: ODataQueries.QueryModel) {}
 
   public getFilterContext(): filters.FilterContext {
     if (this.filterContext === undefined) {
@@ -132,15 +138,15 @@ export class QueryModel {
   }
 
   public getEntitySetType(): Schema.EntityType {
-    return this.model.entitySetType;
+    return this.odata.entitySetType;
   }
 
   public getExpandTree() {
-    return this.model.expandTree;
+    return this.odata.expandTree;
   }
 
   public getRawFilter() {
-    return this.model.filterOption;
+    return this.odata.filterOption;
   }
 
   private initializeVariableMapping() {
