@@ -120,11 +120,15 @@ export class QueryAdapterModelImpl implements QueryAdapterModel {
   public getFilterContext(): filters.FilterContext {
     if (this.filterContext === undefined) {
       this.filterContext = {
-        mapping: this.getMapping(),
-        entityType: this.getEntitySetType(),
-        scopedMapping: new mappings.ScopedMapping(this.getMapping()),
-        unscopedEntityType: this.getEntitySetType(),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        scope: {
+          entityType: this.getEntitySetType(),
+          unscopedEntityType: this.getEntitySetType(),
+          lambdaVariableScope: new filters.LambdaVariableScope(),
+        },
+        mapping: {
+          mapping: this.getMapping(),
+          scopedMapping: new mappings.ScopedMapping(this.getMapping()),
+        },
       };
     }
     return this.filterContext;

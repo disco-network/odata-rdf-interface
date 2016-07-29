@@ -111,11 +111,15 @@ export class AnyExpression {
   private createFilterContextInsideLambda(): filters.FilterContext {
     let lambdaExpression = this.createLambdaExpression();
     return {
-      mapping: this.filterContext.mapping,
-      scopedMapping: this.filterContext.scopedMapping.scope(this.innerScopeId),
-      entityType: this.filterContext.entityType,
-      unscopedEntityType: this.filterContext.unscopedEntityType,
-      lambdaVariableScope: this.filterContext.lambdaVariableScope.clone().add(lambdaExpression),
+      mapping: {
+        mapping: this.filterContext.mapping.mapping,
+        scopedMapping: this.filterContext.mapping.scopedMapping.scope(this.innerScopeId),
+      },
+      scope: {
+        entityType: this.filterContext.scope.entityType,
+        unscopedEntityType: this.filterContext.scope.unscopedEntityType,
+        lambdaVariableScope: this.filterContext.scope.lambdaVariableScope.clone().add(lambdaExpression),
+      },
     };
   }
 
@@ -205,11 +209,15 @@ export class PropertyPath {
 
   public getFilterContextAfterLambdaPrefix(): filters.FilterContext {
     return {
-      entityType: this.getEntityTypeAfterLambdaPrefix(),
-      unscopedEntityType: this.filterContext.unscopedEntityType,
-      mapping: this.getMappingAfterLambdaPrefix(),
-      scopedMapping: this.filterContext.scopedMapping,
-      lambdaVariableScope: new filters.LambdaVariableScope(),
+      scope: {
+        entityType: this.getEntityTypeAfterLambdaPrefix(),
+        unscopedEntityType: this.filterContext.scope.unscopedEntityType,
+        lambdaVariableScope: new filters.LambdaVariableScope(),
+      },
+      mapping: {
+        mapping: this.getMappingAfterLambdaPrefix(),
+        scopedMapping: this.filterContext.mapping.scopedMapping,
+      },
     };
   }
 
@@ -222,20 +230,20 @@ export class PropertyPath {
 
   public getVariableMappingAfterLambdaPrefix() {
     if (this.pathStartsWithLambdaPrefix()) {
-      return this.filterContext.scopedMapping.getNamespace(this.propertyNames[0]).variables;
+      return this.filterContext.mapping.scopedMapping.getNamespace(this.propertyNames[0]).variables;
     }
     else {
-      return this.filterContext.mapping.variables;
+      return this.filterContext.mapping.mapping.variables;
     }
   }
 
   public getPropertyMappingAfterLambdaPrefix() {
     if (this.pathStartsWithLambdaPrefix()) {
       let type = this.getEntityTypeAfterLambdaPrefix();
-      return this.filterContext.mapping.properties.createMappingFromEntityType(type);
+      return this.filterContext.mapping.mapping.properties.createMappingFromEntityType(type);
     }
     else {
-      return this.filterContext.mapping.properties;
+      return this.filterContext.mapping.mapping.properties;
     }
   }
 
@@ -244,7 +252,7 @@ export class PropertyPath {
       return this.getPrefixLambdaExpression().entityType;
     }
     else {
-      return this.filterContext.entityType;
+      return this.filterContext.scope.entityType;
     }
   }
 
@@ -267,6 +275,6 @@ export class PropertyPath {
   }
 
   private getLambdaVariableScope() {
-    return this.filterContext.lambdaVariableScope;
+    return this.filterContext.scope.lambdaVariableScope;
   }
 }

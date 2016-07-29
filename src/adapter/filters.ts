@@ -14,11 +14,19 @@ export interface FilterExpressionArgs {
 }
 
 export interface FilterContext {
-  mapping: mappings.Mapping;
+  scope: FilterScopeContext;
+  mapping: FilterMappingContext;
+}
+
+export interface FilterScopeContext {
   entityType: schema.EntityType;
-  scopedMapping: mappings.ScopedMapping;
   unscopedEntityType: schema.EntityType;
   lambdaVariableScope: LambdaVariableScope;
+}
+
+export interface FilterMappingContext {
+  mapping: mappings.Mapping;
+  scopedMapping: mappings.ScopedMapping;
 }
 
 export interface LambdaExpression {
@@ -120,9 +128,18 @@ export class FilterExpressionIoCContainer {
 
   private validateFilterContext(filterContext: FilterContext) {
     return filterContext !== undefined &&
-      filterContext.entityType !== undefined &&
-      filterContext.mapping !== undefined &&
-      filterContext.lambdaVariableScope !== undefined;
+      this.validateFilterScopeContext(filterContext.scope) &&
+      this.validateFilterMappingContext(filterContext.mapping);
+  }
+
+  private validateFilterScopeContext(context: FilterScopeContext) {
+    return context.entityType !== undefined &&
+      context.lambdaVariableScope !== undefined &&
+      context.unscopedEntityType !== undefined;
+  }
+
+  private validateFilterMappingContext(context: FilterMappingContext) {
+    return context.mapping !== undefined && context.scopedMapping !== undefined;
   }
 }
 

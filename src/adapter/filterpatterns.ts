@@ -27,12 +27,10 @@ export class FilterGraphPatternStrategy {
       inverse: !collectionProperty.hasDirectRdfRepresentation(),
     }));
 
-    let innerFilterContext: filters.FilterContext = {
-      mapping: null,
-      scopedMapping: null,
-      entityType: outerFilterContext.entityType,
-      unscopedEntityType: outerFilterContext.unscopedEntityType,
-      lambdaVariableScope: outerFilterContext.lambdaVariableScope.clone().add(innerLambdaExpression),
+    let innerFilterContext: filters.FilterScopeContext = {
+      entityType: outerFilterContext.scope.entityType,
+      unscopedEntityType: outerFilterContext.scope.unscopedEntityType,
+      lambdaVariableScope: outerFilterContext.scope.lambdaVariableScope.clone().add(innerLambdaExpression),
     };
     let innerMapping = propertyPathWithoutCollectionProperty.getFinalMapping();
     let innerTree = this.createPropertyTree(innerFilterContext, innerLowLevelPropertyTree);
@@ -42,7 +40,7 @@ export class FilterGraphPatternStrategy {
     tree.traverse({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelector(ret),
       mapping: innerMapping,
-      scopedMapping: outerFilterContext.scopedMapping,
+      scopedMapping: outerFilterContext.mapping.scopedMapping,
     });
 
     return ret;
@@ -51,24 +49,25 @@ export class FilterGraphPatternStrategy {
   /* @smell there are two kinds of PropertyTrees */
   public createPattern(filterContext: filters.FilterContext,
                        propertyTree: filters.ScopedPropertyTree): gpatterns.TreeGraphPattern {
-    let result = new gpatterns.TreeGraphPattern(filterContext.mapping.variables.getVariable());
+    let result = new gpatterns.TreeGraphPattern(filterContext.mapping.mapping.variables.getVariable());
     /* @smell pass selector as argument */
     let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
-    this.createPropertyTree(filterContext, propertyTree).traverse({
+    this.createPropertyTree(filterContext.scope, propertyTree).traverse({
       patternSelector: selector,
-      mapping: filterContext.mapping,
-      scopedMapping: filterContext.scopedMapping,
+      mapping: filterContext.mapping.mapping,
+      scopedMapping: filterContext.mapping.scopedMapping,
     });
 
     return result;
   }
 
-  public createPropertyTree(filterContext: filters.FilterContext,
+  public createPropertyTree(filterContext: filters.FilterScopeContext,
                             lowLevelPropertyTree: filters.ScopedPropertyTree): propertyTrees.Tree {
     return this.createPropertyBranch(filterContext, filterContext, lowLevelPropertyTree);
   }
 
-  private createPropertyBranch(filterContextOfRoot: filters.FilterContext, filterContextOfBranch: filters.FilterContext,
+  private createPropertyBranch(filterContextOfRoot: filters.FilterScopeContext,
+                               filterContextOfBranch: filters.FilterScopeContext,
                                lowLevelPropertyTree: filters.ScopedPropertyTree) {
     let entityType = filterContextOfBranch.entityType;
     let scope = filterContextOfBranch.lambdaVariableScope;
@@ -92,11 +91,9 @@ export class FilterGraphPatternStrategy {
 
       let flatTree = lowLevelPropertyTree.inScopeVariables.getBranch(inScopeVar);
       let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
-      let subContext: filters.FilterContext = {
+      let subContext: filters.FilterScopeContext = {
         entityType: lambdaExpression.entityType,
         unscopedEntityType: filterContextOfBranch.unscopedEntityType,
-        mapping: null,
-        scopedMapping: null,
         lambdaVariableScope: new filters.LambdaVariableScope(),
       };
       this.createPropertyBranch(filterContextOfRoot, subContext, subPropertyTree)
@@ -121,10 +118,8 @@ export class FilterGraphPatternStrategy {
     let result = new propertyTrees.RootTree();
     let branch = result.branch(this.branchFactory.create(args));
 
-    let subContext: filters.FilterContext = {
+    let subContext: filters.FilterScopeContext = {
       entityType: property.getEntityType(),
-      mapping: null,
-      scopedMapping: /* @todo */ null,
       unscopedEntityType: /* @todo */ null,
       lambdaVariableScope: new filters.LambdaVariableScope(),
     };

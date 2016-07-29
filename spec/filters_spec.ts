@@ -114,11 +114,14 @@ describe("A PropertyExpression", () => {
     }, {
       factory: createFilterExpressionFactory(),
       filterContext: {
-        mapping: mapping,
-        entityType: schema.getEntityType("Post"),
-        scopedMapping: new mappings.ScopedMapping(mapping),
-        unscopedEntityType: schema.getEntityType("Post"),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        scope: {
+          entityType: schema.getEntityType("Post"),
+          unscopedEntityType: schema.getEntityType("Post"),
+          lambdaVariableScope: new filters.LambdaVariableScope(),
+        },
+        mapping: {
+          mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
+        },
       },
     });
 
@@ -134,11 +137,14 @@ describe("A PropertyExpression", () => {
     }, {
       factory: createFilterExpressionFactory(),
       filterContext: {
-        mapping: null,
-        scopedMapping: null,
-        lambdaVariableScope: new filters.LambdaVariableScope(),
-        entityType: null,
-        unscopedEntityType: null,
+        scope: {
+          entityType: null,
+          unscopedEntityType: null,
+          lambdaVariableScope: new filters.LambdaVariableScope(),
+        },
+        mapping: {
+          mapping: null, scopedMapping: null,
+        },
       },
     });
 
@@ -154,11 +160,14 @@ describe("A PropertyExpression", () => {
     let factory = new filters.FilterExpressionIoCContainer()
       .registerFilterExpression(createPropertyExpressionFactory())
       .setStandardFilterContext({
-        mapping: mapping,
-        entityType: schema.getEntityType("Post"),
-        unscopedEntityType: schema.getEntityType("Post"),
-        scopedMapping: new mappings.ScopedMapping(mapping),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        scope: {
+          entityType: schema.getEntityType("Post"),
+          unscopedEntityType: schema.getEntityType("Post"),
+          lambdaVariableScope: new filters.LambdaVariableScope(),
+        },
+        mapping: {
+          mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
+        },
       });
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -180,12 +189,15 @@ describe("A PropertyExpression", () => {
     let factory = new filters.FilterExpressionIoCContainer()
       .registerFilterExpression(createPropertyExpressionFactory())
       .setStandardFilterContext({
-        mapping: mapping,
+      scope: {
         entityType: schema.getEntityType("Post"),
         unscopedEntityType: schema.getEntityType("Post"),
-        scopedMapping: new mappings.ScopedMapping(mapping),
         lambdaVariableScope: new filters.LambdaVariableScope(),
-      });
+      },
+      mapping: {
+        mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
+      },
+    });
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
@@ -286,13 +298,16 @@ describe("A lambda variable scope", () => {
 describe("A property path", () => {
   it("should detect the in-scope variable prefix", () => {
     let path = new filters.PropertyPath([ "it" ], {
-      mapping: null,
-      entityType: null,
-      unscopedEntityType: null,
-      scopedMapping: null,
-      lambdaVariableScope: new filters.LambdaVariableScope().add({
+      scope: {
+        entityType: null,
+        unscopedEntityType: null,
+        lambdaVariableScope: new filters.LambdaVariableScope().add({
         variable: "it", entityType: null, scopeId: null,
       }),
+      },
+      mapping: {
+        mapping: null, scopedMapping: null,
+      },
     });
 
     expect(path.pathStartsWithLambdaPrefix()).toBe(true);
@@ -326,11 +341,14 @@ function createFilterExpressionFactory() {
       TestFilterExpression,
     ])
     .setStandardFilterContext({
-      mapping: null,
-      scopedMapping: null,
-      entityType: null,
-      unscopedEntityType: null,
-      lambdaVariableScope: new filters.LambdaVariableScope(),
+      scope: {
+        entityType: null,
+        unscopedEntityType: null,
+        lambdaVariableScope: new filters.LambdaVariableScope(),
+      },
+      mapping: {
+        mapping: null, scopedMapping: null,
+      },
     });
   return factory;
 }
