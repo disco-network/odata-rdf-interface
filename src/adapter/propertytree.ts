@@ -213,9 +213,11 @@ export class AnyBranchingArgsBuilder extends AnyBranchingArgsBuilderTemplate<{ t
 
 export class BranchingArgsHasher {
   public hash(args: BranchingArgs): string {
+    // @smell how to guarantee that the hashing function keeps correct and
+    // groups the branches considered equal?
     return JSON.stringify({
-      property: args.name,
-      inScopeVariable: args.name,
+      type: args.type,
+      name: args.name,
     });
   }
 }
