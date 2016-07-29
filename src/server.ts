@@ -1,26 +1,11 @@
 import connect = require("connect");
-import fs = require("fs");
 import config = require("./config");
-
-import abnfTokenizer = require("abnfjs/tokenizer");
-import abnfParser = require("abnfjs/parser");
-import abnfInterpreter = require("abnfjs/interpreter");
-
-import ast2query = require("./odata/ast2query");
-import schema = require("./odata/schema");
-
-import queryAdapter = require("./adapter/queries");
 
 import providerModule = require("./sparql/sparql_provider");
 
 import rdfstore = require("rdfstore");
 
-let schm = new schema.Schema();
-
-let abnf = fs.readFileSync(config.localRootDirectory + "/src/odata/odata4-mod.abnf", "utf8");
-let tokens = abnfTokenizer.tokenize(abnf);
-let grammar = abnfParser.parse(tokens);
-let interpreter = new abnfInterpreter.Interpreter(grammar);
+import queryEngine = require("./adapter/query_engine");
 
 let store = null;
 let provider;
@@ -30,14 +15,9 @@ let app = connect();
 
 app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
   if (req.method === "GET") {
-    // @todo check if something important changes when rootDirectory !== '/'
-    let url = req.url.substr(1);
-
-    let ast = interpreter.getCompleteMatch(interpreter.getPattern("odataRelativeUri"), url);
-    let queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), schm.raw);
-    let query = (new queryAdapter.QueryFactory(queryModel, schm)).create();
-
-    query.run(provider, result => {
+    let engine = new queryEngine.QueryEngine();
+    engine.setSparqlProvider(provider);
+    engine.query(req.url, result => {
       sendResults(res, result);
     });
   }

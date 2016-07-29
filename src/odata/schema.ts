@@ -45,7 +45,11 @@ let raw = {
 };
 
 export class Schema {
-  public raw = raw;
+  public raw: any;
+
+  constructor(rawSchema: any = raw) {
+    this.raw = rawSchema;
+  }
 
   public getEntitySet(name: string): EntitySet {
     return new EntitySet(this, name);

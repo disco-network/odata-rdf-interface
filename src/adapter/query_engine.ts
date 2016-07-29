@@ -30,8 +30,8 @@ export class QueryEngine {
     let url = queryString.substr(1);
 
     let ast = this.interpreter.getCompleteMatch(this.interpreter.getPattern("odataRelativeUri"), url);
-    let queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), this.schm.raw);
-    let query = (new queries.QueryFactory(queryModel, this.schm)).create();
+    let queryModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), this.schm);
+    let query = (new queries.QueryFactory(queryModel)).create();
     query.run(this.sparqlProvider, cb);
   }
 }

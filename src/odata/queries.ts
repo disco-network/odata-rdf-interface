@@ -6,7 +6,7 @@ export interface Query {
 }
 
 export interface QueryModel {
-  entitySetName: string;
+  entitySetType: Schema.EntityType;
   path: any[]; /** navigation path */
   filterOption: any;
   expandTree: any;

@@ -1,7 +1,8 @@
 /** @module */
 import queryComposer = require("./querycomposer");
+import schema = require("./schema");
 
-export function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema) {
+export function getQueryModelFromEvaluatedAst(/*evaluated*/ast, schema: schema.Schema) {
   if (ast.type === "resourceQuery") {
     if (ast.resourcePath.type !== "entitySet")
       throw new Error("unsupported resource path type: " + ast.resourcePath.type);

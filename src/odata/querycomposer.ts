@@ -1,21 +1,22 @@
 /** @module */
 import Queries = require("./queries");
+import schema = require("./schema");
 
 export class QueryComposer implements Queries.QueryModel {
-  public entitySetName: string;
+  public entitySetType: schema.EntityType;
   public path: any[];
   public filterOption: any;
   public expandTree: any;
 
-  private schema: any;
-  private currentSchema: any;
+  private schema: schema.Schema;
+  private currentSchema: schema.EntityType;
   private currentIsCollection: boolean;
 
-  constructor(entitySetName: string, schema) {
-    this.entitySetName = entitySetName;
+  constructor(entitySetName: string, schema: schema.Schema) {
+    this.entitySetType = schema.getEntitySet(entitySetName).getEntityType();
     this.path = [];
     this.schema = schema;
-    this.currentSchema = schema.entitySets[entitySetName];
+    this.currentSchema = this.entitySetType;
     this.currentIsCollection = true;
   }
 
@@ -37,26 +38,14 @@ export class QueryComposer implements Queries.QueryModel {
     if (!this.currentIsCollection) throw new Error("current query part should be a collection");
     this.path.push({ type: "by-id", id: id, resultQuantity: "one" });
     this.currentIsCollection = false;
-    this.currentSchema = this.schema.entityTypes[this.currentSchema.type];
   }
 
   public selectProperty(property: string): void {
     if (this.currentIsCollection) throw new Error("current query part should be no collection");
-    if (this.currentSchema.properties[property] == null) throw new Error("property does not exist: " + property);
-    let propertySchema = this.currentSchema.properties[property];
-    this.currentIsCollection = propertySchema.quantity === "many-to-one" || propertySchema.quantity === "many-to-many";
-    this.path.push({ type: "property", name: property, resultQuantity: "many" });
-    if (this.currentIsCollection)
-      this.currentSchema = this.collectionSchema(propertySchema.type);
-    else
-      this.currentSchema = this.singleSchema(propertySchema.type);
-  }
-
-  public collectionSchema(type) {
-    return { type: type };
-  }
-
-  public singleSchema(type) {
-    return this.schema.entityTypes[type];
+    if (this.currentSchema.getProperty(property) === undefined) throw new Error("property does not exist: " + property);
+    let propertySchema = this.currentSchema.getProperty(property);
+    this.currentIsCollection = !propertySchema.isCardinalityOne();
+    this.path.push({ type: "property", name: property, resultQuantity: this.currentIsCollection ? "many" : "one" });
+    this.currentSchema = propertySchema.getEntityType();
   }
 }
