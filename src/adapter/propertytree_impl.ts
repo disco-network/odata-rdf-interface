@@ -1,5 +1,9 @@
 import base = require("./propertytree");
 import gpatterns = require("../sparql/graphpatterns");
+import {
+  MappingContract, MappingContractImpl, ScopedMappingContract,
+  GraphPatternContract, GraphPatternContractImpl,
+} from "./propertytreecontracts";
 
 /**
  * Selects the graph patterns to branch on for those properties which are shown (expanded) in the query result.
@@ -51,9 +55,10 @@ export class ComplexBranchFactory implements base.TreeFactoryCandidate {
 export class ComplexBranch extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = this.selectPattern(args.patternSelector);
-    let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
-    let variableName = args.mapping.variables.getComplexProperty(this.branchingArgs.name).getVariable();
+    let basePattern = this.selectPattern(args.get(GraphPatternContract).get());
+    let mapping = args.get(MappingContract).getMapping();
+    let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
+    let variableName = mapping.variables.getComplexProperty(this.branchingArgs.name).getVariable();
     let subPattern: gpatterns.TreeGraphPattern;
 
     if (this.branchingArgs.mandatory === true) {
@@ -69,12 +74,12 @@ export class ComplexBranch extends base.Branch<base.PropertyBranchingArgs> {
         subPattern = basePattern.optionalBranch(propertyName, variableName);
     }
 
-    let subMapping = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.name);
+    let subMapping = mapping.getSubMappingByComplexProperty(this.branchingArgs.name);
 
     return {
       pattern: subPattern,
       mapping: subMapping,
-      scopedMapping: args.scopedMapping,
+      scopedMapping: args.get(ScopedMappingContract).getScopedMapping(),
     };
   }
 
@@ -103,9 +108,10 @@ export class ElementarySingleValuedBranchFactory implements base.TreeFactoryCand
 export class ElementarySingleValuedBranch extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = this.selectPattern(args.patternSelector);
-    let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
-    let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
+    let basePattern = this.selectPattern(args.get(GraphPatternContract).get());
+    let mapping = args.get(MappingContract).getMapping();
+    let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
+    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
     let subPattern: gpatterns.TreeGraphPattern;
 
     if (this.branchingArgs.mandatory === true) {
@@ -124,7 +130,7 @@ export class ElementarySingleValuedBranch extends base.Branch<base.PropertyBranc
     return {
       pattern: subPattern,
       mapping: undefined,
-      scopedMapping: args.scopedMapping,
+      scopedMapping: args.get(ScopedMappingContract).getScopedMapping(),
     };
   }
 
@@ -154,15 +160,16 @@ export class ElementarySingleValuedMirroredBranch extends base.Branch<base.Prope
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
 
-    let complexPropertyUri = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.mirroredIdFrom);
-    let idPropertyUri = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.mirroredIdFrom)
+    let mapping = args.get(MappingContract).getMapping();
+    let complexPropertyUri = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.mirroredIdFrom);
+    let idPropertyUri = mapping.getSubMappingByComplexProperty(this.branchingArgs.mirroredIdFrom)
       .properties.getNamespacedUriOfProperty("Id");
 
-    let intermediateVariableName = args.mapping.variables.getComplexProperty(this.branchingArgs.mirroredIdFrom)
+    let intermediateVariableName = mapping.variables.getComplexProperty(this.branchingArgs.mirroredIdFrom)
       .getVariable();
-    let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
+    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
 
-    let basePattern = this.selectPattern(args.patternSelector);
+    let basePattern = this.selectPattern(args.get(GraphPatternContract).get());
     let subPattern = this.branchingArgs.mandatory === true ?
       basePattern
         .branch(complexPropertyUri, intermediateVariableName)
@@ -174,7 +181,7 @@ export class ElementarySingleValuedMirroredBranch extends base.Branch<base.Prope
     return {
       pattern: subPattern,
       mapping: undefined,
-      scopedMapping: args.scopedMapping,
+      scopedMapping: args.get(ScopedMappingContract).getScopedMapping(),
     };
   }
 
@@ -200,16 +207,17 @@ export class InScopeVariableBranchFactory implements base.TreeFactoryCandidate {
 export class InScopeVariableBranch extends base.Branch<base.InScopeVariableBranchingArgs> {
 
   public traverse(args: base.TraversingArgs) {
-    let basePattern = this.selectPattern(args.patternSelector);
+    let basePattern = this.selectPattern(args.get(GraphPatternContract).get());
+    let scopedMapping = args.get(ScopedMappingContract).getScopedMapping();
     let innerPattern = basePattern.looseBranch(
-      args.scopedMapping.getNamespace(this.branchingArgs.name).variables.getVariable());
+      scopedMapping.getNamespace(this.branchingArgs.name).variables.getVariable());
 
-    let innerPatternSelector = args.patternSelector.getOtherSelector(innerPattern);
-    let innerArgs: base.TraversingArgs = {
-      mapping: args.scopedMapping.getNamespace(this.branchingArgs.name),
-      scopedMapping: args.scopedMapping,
-      patternSelector: innerPatternSelector,
-    };
+    let innerPatternSelector = args.get(GraphPatternContract).get().getOtherSelector(innerPattern);
+    let innerArgs = args.createChild();
+    innerArgs.set(MappingContract,
+      new MappingContractImpl(scopedMapping.getNamespace(this.branchingArgs.name)));
+    innerArgs.set(GraphPatternContract,
+      new GraphPatternContractImpl(innerPatternSelector));
     for (let key of Object.keys(this.branches)) {
       this.branches[key].traverse(innerArgs);
     }
@@ -237,9 +245,10 @@ export class ComplexBranchFactoryForFiltering implements base.TreeFactoryCandida
 export class ComplexBranchForFiltering extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = this.selectPattern(args.patternSelector);
-    let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
-    let variableName = args.mapping.variables.getComplexProperty(this.branchingArgs.name).getVariable();
+    let basePattern = this.selectPattern(args.get(GraphPatternContract).get());
+    let mapping = args.get(MappingContract).getMapping();
+    let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
+    let variableName = mapping.variables.getComplexProperty(this.branchingArgs.name).getVariable();
     let subPattern: gpatterns.TreeGraphPattern;
 
     if (this.branchingArgs.inverse === true)
@@ -247,12 +256,12 @@ export class ComplexBranchForFiltering extends base.Branch<base.PropertyBranchin
     else
       subPattern = basePattern.optionalBranch(propertyName, variableName);
 
-    let subMapping = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.name);
+    let subMapping = mapping.getSubMappingByComplexProperty(this.branchingArgs.name);
 
     return {
       pattern: subPattern,
       mapping: subMapping,
-      scopedMapping: args.scopedMapping,
+      scopedMapping: args.get(ScopedMappingContract).getScopedMapping(),
     };
   }
 
@@ -278,9 +287,10 @@ export class ElementaryBranchFactoryForFiltering implements base.TreeFactoryCand
 export class ElementaryBranchForFiltering extends base.Branch<base.PropertyBranchingArgs> {
 
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
-    let basePattern = this.selectPattern(args.patternSelector);
-    let propertyName = args.mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
-    let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
+    let basePattern = this.selectPattern(args.get(GraphPatternContract).get());
+    let mapping = args.get(MappingContract).getMapping();
+    let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
+    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
     let subPattern: gpatterns.TreeGraphPattern;
 
     if (this.branchingArgs.inverse === true)
@@ -291,7 +301,7 @@ export class ElementaryBranchForFiltering extends base.Branch<base.PropertyBranc
     return {
       pattern: subPattern,
       mapping: undefined,
-      scopedMapping: args.scopedMapping,
+      scopedMapping: args.get(ScopedMappingContract).getScopedMapping(),
     };
   }
 
@@ -321,12 +331,13 @@ export class AnyBranch extends base.Branch<base.AnyBranchingArgs> {
    */
   protected applyBranch(args: base.TraversingArgs): base.BranchingResult {
     let basePattern = this.selectQueryRootPattern(args);
-    let rootVariableName = args.mapping.variables.getVariable();
+    let mapping = args.get(MappingContract).getMapping();
+    let rootVariableName = mapping.variables.getVariable();
     let collectionPropertyOData = this.branchingArgs.name;
-    let collectionPropertyUri = args.mapping.properties.getNamespacedUriOfProperty(collectionPropertyOData);
+    let collectionPropertyUri = mapping.properties.getNamespacedUriOfProperty(collectionPropertyOData);
 
     let lambdaExpression = this.branchingArgs.lambdaExpression;
-    let innerScopedMapping = args.scopedMapping.scope(lambdaExpression.scopeId);
+    let innerScopedMapping = args.get(ScopedMappingContract).getScopedMapping().scope(lambdaExpression.scopeId);
     innerScopedMapping.setNamespace(lambdaExpression.variable, lambdaExpression.entityType);
     let lambdaVariableName = innerScopedMapping.getNamespace(lambdaExpression.variable).variables.getVariable();
 
@@ -342,15 +353,15 @@ export class AnyBranch extends base.Branch<base.AnyBranchingArgs> {
     }
 
     return {
-      mapping: args.scopedMapping.unscoped(),
+      mapping: args.get(ScopedMappingContract).getScopedMapping().unscoped(),
       scopedMapping: innerScopedMapping,
       pattern: basePattern,
     };
   }
 
   private selectQueryRootPattern(args: base.TraversingArgs) {
-    let knownPattern = args.patternSelector.getRootPattern();
-    let rootVariable = args.scopedMapping.unscoped().variables.getVariable();
+    let knownPattern = args.get(GraphPatternContract).get().getRootPattern();
+    let rootVariable = args.get(ScopedMappingContract).getScopedMapping().unscoped().variables.getVariable();
     return knownPattern.looseBranch(rootVariable);
   }
 }

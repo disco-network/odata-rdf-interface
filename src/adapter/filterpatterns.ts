@@ -37,11 +37,11 @@ export class FilterGraphPatternStrategy {
     innerTree.copyTo(branch);
 
     let ret = new gpatterns.TreeGraphPattern(innerMapping.variables.getVariable());
-    tree.traverse({
+    tree.traverse(new propertyTrees.TraversingArgsWritable({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelector(ret),
       mapping: innerMapping,
       scopedMapping: outerFilterContext.mapping.scopedMapping,
-    });
+    }));
 
     return ret;
   }
@@ -52,11 +52,11 @@ export class FilterGraphPatternStrategy {
     let result = new gpatterns.TreeGraphPattern(filterContext.mapping.mapping.variables.getVariable());
     /* @smell pass selector as argument */
     let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
-    this.createPropertyTree(filterContext.scope, propertyTree).traverse({
+    this.createPropertyTree(filterContext.scope, propertyTree).traverse(new propertyTrees.TraversingArgsWritable({
       patternSelector: selector,
       mapping: filterContext.mapping.mapping,
       scopedMapping: filterContext.mapping.scopedMapping,
-    });
+    }));
 
     return result;
   }

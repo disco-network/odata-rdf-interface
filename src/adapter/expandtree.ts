@@ -63,11 +63,11 @@ export class ExpandTreeGraphPatternFactory {
       new mappings.PropertyMapping(entityType),
       variableMapping
     );
-    tree.traverse({
+    tree.traverse(new propertyTree.TraversingArgsWritable({
       patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelector(result),
       mapping: mapping,
       scopedMapping: new mappings.ScopedMapping(mapping),
-    });
+    }));
     return result;
   }
 

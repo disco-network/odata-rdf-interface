@@ -2,6 +2,8 @@ import mappings = require("./mappings");
 import gpatterns = require("../sparql/graphpatterns");
 import schema = require("../odata/schema");
 import filters = require("./filters");
+import openArgs = require("./openargs");
+import contracts = require("./propertytreecontracts");
 
 export class Tree {
   protected branches: { [id: string]: Tree } = {};
@@ -222,10 +224,20 @@ export class BranchingArgsHasher {
   }
 }
 
-export interface TraversingArgs {
-  patternSelector: GraphPatternSelector;
-  mapping: mappings.Mapping;
-  scopedMapping: mappings.ScopedMapping;
+export interface TraversingArgs extends openArgs.OpenArgsReadonly {}
+export class TraversingArgsWritable extends openArgs.OpenArgsImpl {
+  constructor(explicitArgs?: {
+                               patternSelector: GraphPatternSelector,
+                               mapping: mappings.Mapping,
+                               scopedMapping: mappings.ScopedMapping,
+                             }) {
+    super();
+    if (explicitArgs !== undefined) {
+      this.set(contracts.GraphPatternContract, new contracts.GraphPatternContractImpl(explicitArgs.patternSelector));
+      this.set(contracts.MappingContract, new contracts.MappingContractImpl(explicitArgs.mapping));
+      this.set(contracts.ScopedMappingContract, new contracts.ScopedMappingContractImpl(explicitArgs.scopedMapping));
+    }
+  }
 }
 
 export class RootTree extends Tree {
@@ -245,14 +257,14 @@ export class Branch<Args extends BranchingArgs> extends Tree {
 
   public traverse(args: TraversingArgs): void {
     let result = this.applyBranch(args);
-    let subSelector = args.patternSelector.getOtherSelector(result.pattern);
+    let subSelector = args.get(contracts.GraphPatternContract).get().getOtherSelector(result.pattern);
+    let subArgs = args.createChild();
+    subArgs.set(contracts.GraphPatternContract, new contracts.GraphPatternContractImpl(subSelector));
+    subArgs.set(contracts.MappingContract, new contracts.MappingContractImpl(result.mapping));
+    subArgs.set(contracts.ScopedMappingContract, new contracts.ScopedMappingContractImpl(result.scopedMapping));
     for (let hash of Object.keys(this.branches)) {
       let branch = this.branches[hash];
-      branch.traverse({
-        patternSelector: subSelector,
-        mapping: result.mapping,
-        scopedMapping: result.scopedMapping,
-      });
+      branch.traverse(subArgs as openArgs.OpenArgsReadonly);
     }
   }
 
