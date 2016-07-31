@@ -200,7 +200,7 @@ describe("The query engine should evaluate", () => {
     "before execution";
   });
 
-  function createQuerySpec(query: string, cb: (results: any) => void, before: () => void = () => null,
+  function createQuerySpec(query: string, cb: (results) => void, before: () => void = () => null,
                            pending: boolean = false) {
     let fn = pending ? xit : it;
     fn(query, (done) => {
@@ -219,6 +219,41 @@ describe("The query engine should evaluate", () => {
             expect(e.stack || e).toBe("no exception");
             done();
           }
+        });
+      });
+    });
+  }
+
+  function createMultiQuerySpec(query: string[], cb: ((results) => void), before: () => void = () => null,
+                                pending: boolean = false) {
+    let fn = pending ? xit : it;
+    let ret = [];
+    fn(query, (done) => {
+      before();
+      rdfstore.create((error, store) => {
+        let graphName = "http://example.org/";
+        storeSeed(store, graphName, () => {
+          let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
+          let engine = new odataQueryEngine.QueryEngine();
+          engine.setSparqlProvider(sparqlProvider);
+          let i = -1;
+          function iteration() {
+            if (i >= query.length) {
+              done();
+              return;
+            }
+            try {
+              engine.query(query[++i], results => {
+                ret.push(results);
+                iteration();
+              });
+            }
+            catch (e) {
+              expect(e.stack || e).toBe("no exception in iteration " + i);
+              done();
+            }
+          }
+          iteration();
         });
       });
     });

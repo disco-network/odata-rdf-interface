@@ -1,6 +1,16 @@
 import gpatterns = require("../sparql/graphpatterns");
 import filters = require("./filters");
 
+export interface IQueryStringBuilder {
+  insertPrefix(prefix: string, uri: string);
+  fromGraphPattern(graphPattern: gpatterns.TreeGraphPattern,
+                   options?: QueryStringBuilderOptions): string;
+  buildGraphPatternStringWithOptions(graphPattern, options?: QueryStringBuilderOptions): string;
+  buildFilterPatternAmendmentString(options?: QueryStringBuilderOptions): string;
+  buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string;
+  buildGraphPatternContentString(graphPattern: gpatterns.TreeGraphPattern): string;
+}
+
 export class QueryStringBuilder {
   private prefixes: { [id: string]: string } = { };
 
@@ -19,20 +29,6 @@ export class QueryStringBuilder {
     let filter = this.buildFilterPatternAmendmentString(options);
     ret += filter;
     ret += " }";
-    return ret;
-  }
-
-  public buildFilterPatternAmendmentString(options?: QueryStringBuilderOptions) {
-    let ret = "";
-    if (options && options.filterExpression) {
-      if (options && options.filterPattern) {
-        let filterPatternString = this.buildGraphPatternString(options.filterPattern);
-        /* we need to filter out empty patterns because of an issue in rdfstore-js */
-        if (filterPatternString !== "{  }")
-          ret += " . " + filterPatternString;
-      }
-      ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
-    }
     return ret;
   }
 
@@ -70,7 +66,21 @@ export class QueryStringBuilder {
     return parts.join(" . ");
   }
 
-  public buildPrefixString() {
+  private buildFilterPatternAmendmentString(options?: QueryStringBuilderOptions) {
+    let ret = "";
+    if (options && options.filterExpression) {
+      if (options && options.filterPattern) {
+        let filterPatternString = this.buildGraphPatternString(options.filterPattern);
+        /* we need to filter out empty patterns because of an issue in rdfstore-js */
+        if (filterPatternString !== "{  }")
+          ret += " . " + filterPatternString;
+      }
+      ret += " . FILTER(" + options.filterExpression.toSparql() + ")";
+    }
+    return ret;
+  }
+
+  private buildPrefixString() {
     let parts: string[] = [ ];
     for (let prefix of Object.keys(this.prefixes)) {
       parts.push("PREFIX " + prefix + ": <" + this.prefixes[prefix] + ">");
