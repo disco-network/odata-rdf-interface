@@ -16,4 +16,8 @@ export class SparqlProvider implements base.SparqlProviderBase {
       }
     });
   }
+
+  public query(queryString: string, cb: (result: result.AnyResult) => void): void {
+    //
+  }
 }

@@ -3,8 +3,6 @@ import abnfParser = require("abnfjs/parser");
 import abnfInterpreter = require("abnfjs/interpreter");
 
 import sparqlProvider = require("../sparql/sparql_provider_base");
-import odataParser = require("../odata/odata_parser_base");
-import entityReader = require("../odata/entity_reader_base");
 import postQueries = require("../adapter/postquery");
 import ast2query = require("../odata/ast2query");
 import schema = require("../odata/schema");
@@ -23,9 +21,7 @@ export interface IQueryEngine {
 export class QueryEngine {
   private interpreter: abnfInterpreter.Interpreter;
   private sparqlProvider: sparqlProvider.SparqlProviderBase;
-  private odataParser: odataParser.ODataParserBase;
-  private entityReader: entityReader.EntityReaderBase;
-  private postQueryStringBuilder: postQueries.QueryStringBuilder;
+  private postQueryStringBuilder: postQueries.QueryStringBuilderBase;
   private schm = new schema.Schema();
 
   constructor() {
@@ -39,15 +35,7 @@ export class QueryEngine {
     this.sparqlProvider = value;
   }
 
-  public setODataParser(value: odataParser.ODataParserBase) {
-    this.odataParser = value;
-  }
-
-  public setEntityReader(value: entityReader.EntityReaderBase) {
-    this.entityReader = value;
-  }
-
-  public setPostQueryStringBuilder(value: postQueries.QueryStringBuilder) {
+  /* unused */ setPostQueryStringBuilder(value: postQueries.QueryStringBuilderBase) {
     this.postQueryStringBuilder = value;
   }
 

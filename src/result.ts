@@ -1,4 +1,4 @@
-export class Result<Result, Error> {
+export class Result<Res, Err> {
 
   public static success<Result>(res: Result) {
     return new Result<Result, any>(res);
@@ -8,7 +8,7 @@ export class Result<Result, Error> {
     return new Result<any, Error>(null, err);
   }
 
-  constructor(private res: Result, private err?: Error) {
+  constructor(private res: Res, private err?: Err) {
   }
 
   public success() {
@@ -21,6 +21,12 @@ export class Result<Result, Error> {
 
   public result() {
     return this.res;
+  }
+
+  public process<NewRes, NewErr>(success: (result: Res) => NewRes,
+                                 error: (err: Err) => NewErr): Result<NewRes, NewErr> {
+    if (this.success()) return Result.success(success(this.result()));
+    else return Result.error(error(this.error()));
   }
 }
 
