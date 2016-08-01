@@ -144,6 +144,7 @@ export class ElementarySingleValuedBranch extends base.Branch<base.PropertyBranc
 
 // ===
 
+/* @smell always having to check that mirroredIdFrom !== undefined violates OCP */
 export class ElementarySingleValuedMirroredBranchFactory implements base.TreeFactoryCandidate {
   public doesApply(args: base.BranchingArgs) {
     return base.BranchingArgsGuard.isProperty(args)
