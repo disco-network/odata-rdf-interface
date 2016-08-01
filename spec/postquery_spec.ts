@@ -11,11 +11,15 @@ import schema = require("../src/odata/schema");
 
 let queries = [
   "/Posts",
+  "/Content",
 ];
 
 let jsonStrings = [
   JSON.stringify({
     ContentId: "1",
+  }),
+  JSON.stringify({
+    Title: "MyContent",
   }),
 ];
 
@@ -27,6 +31,13 @@ let asts = [
       entitySetName: "Posts",
     },
   },
+  {
+    type: "resourceQuery",
+    resourcePath: {
+      type: "entitySet",
+      entitySetName: "Content",
+    },
+  },
 ];
 
 let entities = [
@@ -34,16 +45,24 @@ let entities = [
     Id: "3",
     ContentId: "1",
   },
+  {
+    Id: "3",
+    Title: "MyContent",
+  },
 ];
 
 let types = [
   new schema.Schema().getEntityType("Post"),
+  new schema.Schema().getEntityType("Content"),
 ];
 
 let sparqlStrings = [
   "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
       "PREFIX disco: <http://disco-network.org/resource/> " +
       "INSERT DATA { ?x0 rdf:type disco:Post . ?x0 disco:id '3' . ?x0 disco:content ?x1 } WHERE { ?x1 disco:id '1' }",
+  "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
+      "PREFIX disco: <http://disco-network.org/resource/> " +
+      "INSERT DATA { ?x0 rdf:type disco:Content . ?x0 disco:id '3' . ?x0 disco:title 'MyContent' }",
 ];
 
 describe("OData.QueryEngine:", () => {
@@ -111,6 +130,13 @@ describe("Adapter.ODataProvider:", () => {
       expect(sparqlQueryCount).toBe(1);
       done();
     });
+  });
+});
+
+describe("PostQueryStringBuilder:", () => {
+  it("build a query string for inserting a Content", () => {
+    let builder = new postQueries.QueryStringBuilder();
+    expect(builder.build(entities[1], types[1])).toBe(sparqlStrings[1]);
   });
 });
 
