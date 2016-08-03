@@ -1,9 +1,8 @@
-import mappings = require("./mappings");
-import gpatterns = require("../sparql/graphpatterns");
-import schema = require("../odata/schema");
-import filters = require("./filters");
-import openArgs = require("./openargs");
-import contracts = require("./propertytreecontracts");
+import mappings = require("../mappings");
+import gpatterns = require("../../sparql/graphpatterns");
+import schema = require("../../odata/schema");
+import filters = require("../filters");
+import { TraversingArgs } from "./traversingargs";
 
 export class Tree {
   protected branches: { [id: string]: Tree } = {};
@@ -55,14 +54,6 @@ export class TreeDependencyInjector implements BranchFactory {
 export interface TreeFactoryCandidate {
   doesApply(args: BranchingArgs): boolean;
   create(args: BranchingArgs): Tree;
-}
-
-export interface GraphPatternSelector {
-  getRootPattern(): gpatterns.TreeGraphPattern;
-  getUnionPatternForSingleValuedBranches(): gpatterns.TreeGraphPattern;
-  getNewUnionPattern(): gpatterns.TreeGraphPattern;
-
-  getOtherSelector(rootPattern: gpatterns.TreeGraphPattern): GraphPatternSelector;
 }
 
 export type BranchingArgs = PropertyBranchingArgs | InScopeVariableBranchingArgs | AnyBranchingArgs;
@@ -224,22 +215,6 @@ export class BranchingArgsHasher {
   }
 }
 
-export interface TraversingArgs extends openArgs.OpenArgsReadonly {}
-export class TraversingArgsWritable extends openArgs.OpenArgsImpl {
-  constructor(explicitArgs?: {
-                               patternSelector: GraphPatternSelector,
-                               mapping: mappings.Mapping,
-                               scopedMapping: mappings.ScopedMapping,
-                             }) {
-    super();
-    if (explicitArgs !== undefined) {
-      this.set(contracts.GraphPatternContract, new contracts.GraphPatternContractImpl(explicitArgs.patternSelector));
-      this.set(contracts.MappingContract, new contracts.MappingContractImpl(explicitArgs.mapping));
-      this.set(contracts.ScopedMappingContract, new contracts.ScopedMappingContractImpl(explicitArgs.scopedMapping));
-    }
-  }
-}
-
 export class RootTree extends Tree {
 
   public traverse(args: TraversingArgs): void {
@@ -256,15 +231,10 @@ export class Branch<Args extends BranchingArgs> extends Tree {
   }
 
   public traverse(args: TraversingArgs): void {
-    let result = this.applyBranch(args);
-    let subSelector = args.get(contracts.GraphPatternContract).get().getOtherSelector(result.pattern);
-    let subArgs = args.createChild();
-    subArgs.set(contracts.GraphPatternContract, new contracts.GraphPatternContractImpl(subSelector));
-    subArgs.set(contracts.MappingContract, new contracts.MappingContractImpl(result.mapping));
-    subArgs.set(contracts.ScopedMappingContract, new contracts.ScopedMappingContractImpl(result.scopedMapping));
+    let subArgs = this.applyBranch(args);
     for (let hash of Object.keys(this.branches)) {
       let branch = this.branches[hash];
-      branch.traverse(subArgs as openArgs.OpenArgsReadonly);
+      branch.traverse(subArgs);
     }
   }
 
@@ -272,7 +242,7 @@ export class Branch<Args extends BranchingArgs> extends Tree {
     return new BranchingArgsHasher().hash(this.branchingArgs);
   }
 
-  protected applyBranch(args: TraversingArgs): BranchingResult {
+  protected applyBranch(args: TraversingArgs): TraversingArgs {
     throw new Error("abstract class - not implemented");
   }
 }

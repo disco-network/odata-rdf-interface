@@ -1,8 +1,9 @@
 import schema = require("../odata/schema");
 import gpatterns = require("../sparql/graphpatterns");
 import filters = require("./filters");
-import propertyTrees = require("./propertytree");
-import propertyTreesImpl = require("./propertytree_impl");
+import propertyTrees = require("./propertytree/propertytree");
+import propertyTreesImpl = require("./propertytree/propertytree_impl");
+import { TraversingArgs, IGraphPatternSelector } from "./propertytree/traversingargs";
 
 export class FilterGraphPatternStrategy {
 
@@ -37,7 +38,7 @@ export class FilterGraphPatternStrategy {
     innerTree.copyTo(branch);
 
     let ret = new gpatterns.TreeGraphPattern(innerMapping.variables.getVariable());
-    tree.traverse(new propertyTrees.TraversingArgsWritable({
+    tree.traverse(new TraversingArgs({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelector(ret),
       mapping: innerMapping,
       scopedMapping: outerFilterContext.mapping.scopedMapping,
@@ -51,8 +52,8 @@ export class FilterGraphPatternStrategy {
                        propertyTree: filters.ScopedPropertyTree): gpatterns.TreeGraphPattern {
     let result = new gpatterns.TreeGraphPattern(filterContext.mapping.mapping.variables.getVariable());
     /* @smell pass selector as argument */
-    let selector: propertyTrees.GraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
-    this.createPropertyTree(filterContext.scope, propertyTree).traverse(new propertyTrees.TraversingArgsWritable({
+    let selector: IGraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
+    this.createPropertyTree(filterContext.scope, propertyTree).traverse(new TraversingArgs({
       patternSelector: selector,
       mapping: filterContext.mapping.mapping,
       scopedMapping: filterContext.mapping.scopedMapping,

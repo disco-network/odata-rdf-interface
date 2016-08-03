@@ -6,8 +6,8 @@ import filters = require("./filters");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
-import propertyTrees = require("./propertytree");
-import propertyTreesImpl = require("./propertytree_impl");
+import propertyTrees = require("./propertytree/propertytree");
+import propertyTreesImpl = require("./propertytree/propertytree_impl");
 import result = require("../result");
 
 /**

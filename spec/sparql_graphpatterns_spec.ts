@@ -1,8 +1,8 @@
 import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
 import gpatterns = require("../src/sparql/graphpatterns");
-import propertyTrees = require("../src/adapter/propertytree");
-import propertyTreesImpl = require("../src/adapter/propertytree_impl");
+import propertyTrees = require("../src/adapter/propertytree/propertytree");
+import propertyTreesImpl = require("../src/adapter/propertytree/propertytree_impl");
 import expandTreePatterns = require("../src/adapter/expandtree");
 import mhelper = require("./helpers/sparql_mappings");
 

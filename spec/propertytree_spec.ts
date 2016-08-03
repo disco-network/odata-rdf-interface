@@ -1,4 +1,4 @@
-import propertyTree = require("../src/adapter/propertytree");
+import propertyTree = require("../src/adapter/propertytree/propertytree");
 import mappings = require("../src/adapter/mappings");
 import schema = require("../src/odata/schema");
 

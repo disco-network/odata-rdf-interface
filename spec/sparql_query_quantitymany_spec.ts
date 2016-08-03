@@ -2,8 +2,8 @@ import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
 import expandTreePatterns = require("../src/adapter/expandtree");
 import mhelper = require("./helpers/sparql_mappings");
-import propertyTrees = require("../src/adapter/propertytree");
-import propertyTreesImpl = require("../src/adapter/propertytree_impl");
+import propertyTrees = require("../src/adapter/propertytree/propertytree");
+import propertyTreesImpl = require("../src/adapter/propertytree/propertytree_impl");
 
 describe('OData properties with quantity "many"', function() {
   it("should be integrated with UNION", function() {

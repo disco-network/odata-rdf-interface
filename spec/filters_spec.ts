@@ -1,8 +1,8 @@
 import filters = require("../src/adapter/filters");
 import mappings = require("../src/adapter/mappings");
 import schemaModule = require("../src/odata/schema");
-import propertyTree = require("../src/adapter/propertytree");
-import propertyTreeImpl = require("../src/adapter/propertytree_impl");
+import propertyTree = require("../src/adapter/propertytree/propertytree");
+import propertyTreeImpl = require("../src/adapter/propertytree/propertytree_impl");
 import filterPatterns = require("../src/adapter/filterpatterns");
 let schema = new schemaModule.Schema();
 

@@ -1,8 +1,9 @@
 import gpatterns = require("../sparql/graphpatterns");
 import mappings = require("./mappings");
 import schema = require("../odata/schema");
-import propertyTree = require("./propertytree");
-import propertyTreeImpl = require("./propertytree_impl");
+import propertyTree = require("./propertytree/propertytree");
+import propertyTreeImpl = require("./propertytree/propertytree_impl");
+import { TraversingArgs } from "./propertytree/traversingargs";
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -63,7 +64,7 @@ export class ExpandTreeGraphPatternFactory {
       new mappings.PropertyMapping(entityType),
       variableMapping
     );
-    tree.traverse(new propertyTree.TraversingArgsWritable({
+    tree.traverse(new TraversingArgs({
       patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelector(result),
       mapping: mapping,
       scopedMapping: new mappings.ScopedMapping(mapping),
