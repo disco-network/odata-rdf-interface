@@ -4,9 +4,9 @@ import filters = require("./filters");
 export interface IQueryStringBuilder {
   insertPrefix(prefix: string, uri: string);
   fromGraphPattern(graphPattern: gpatterns.TreeGraphPattern,
-                   options?: QueryStringBuilderOptions): string;
-  buildGraphPatternStringWithOptions(graphPattern, options?: QueryStringBuilderOptions): string;
-  buildFilterPatternAmendmentString(options?: QueryStringBuilderOptions): string;
+                   options?: IQueryStringBuilderOptions): string;
+  buildGraphPatternStringWithOptions(graphPattern, options?: IQueryStringBuilderOptions): string;
+  buildFilterPatternAmendmentString(options?: IQueryStringBuilderOptions): string;
   buildGraphPatternString(graphPattern: gpatterns.TreeGraphPattern): string;
   buildGraphPatternContentString(graphPattern: gpatterns.TreeGraphPattern): string;
 }
@@ -19,12 +19,12 @@ export class QueryStringBuilder {
   }
 
   public fromGraphPattern(graphPattern: gpatterns.TreeGraphPattern,
-                          options?: QueryStringBuilderOptions): string {
+                          options?: IQueryStringBuilderOptions): string {
     return this.buildPrefixString() +
       " SELECT * WHERE " + this.buildGraphPatternStringWithOptions(graphPattern, options);
   }
 
-  public buildGraphPatternStringWithOptions(graphPattern, options?: QueryStringBuilderOptions): string {
+  public buildGraphPatternStringWithOptions(graphPattern, options?: IQueryStringBuilderOptions): string {
     let ret = "{ " + this.buildGraphPatternString(graphPattern);
     let filter = this.buildFilterPatternAmendmentString(options);
     ret += filter;
@@ -66,7 +66,7 @@ export class QueryStringBuilder {
     return parts.join(" . ");
   }
 
-  private buildFilterPatternAmendmentString(options?: QueryStringBuilderOptions) {
+  private buildFilterPatternAmendmentString(options?: IQueryStringBuilderOptions) {
     let ret = "";
     if (options && options.filterExpression) {
       if (options && options.filterPattern) {
@@ -89,7 +89,7 @@ export class QueryStringBuilder {
   }
 }
 
-export interface QueryStringBuilderOptions {
-  filterExpression?: filters.FilterExpression;
+export interface IQueryStringBuilderOptions {
+  filterExpression?: filters.IFilterExpression;
   filterPattern?: gpatterns.TreeGraphPattern;
 }

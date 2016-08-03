@@ -71,7 +71,7 @@ describe("OData.QueryEngine:", () => {
                                   entityObject) {
     it(test, done => {
       let odataQuery = "/Posts";
-      let engine = new odataQueryEngine.QueryEngineImpl();
+      let engine = new odataQueryEngine.QueryEngine();
       let parser = new ODataParser();
       parser.parsePOST = query => {
         expect(query).toBe("/Posts");
@@ -140,25 +140,25 @@ describe("PostQueryStringBuilder:", () => {
   });
 });
 
-class ODataParser implements odataParser.ODataParserBase {
+class ODataParser implements odataParser.IODataParserBase {
   public parsePOST(query: string): any {
     //
   }
 }
 
-class EntityReader implements entityReader.EntityReaderBase {
+class EntityReader implements entityReader.IEntityReaderBase {
   public fromJson(json: string, entityType: schema.EntityType): any {
     //
   }
 }
 
-class DataProvider implements odataProviderBase.DataProviderBase {
+class DataProvider implements odataProviderBase.IDataProviderBase {
   public insertEntity(entity: any, type: schema.EntityType, cb: (result: results.AnyResult) => void) {
     //
   }
 }
 
-class SparqlProvider implements sparqlProviderBase.SparqlProviderBase {
+class SparqlProvider implements sparqlProviderBase.ISparqlProvider {
   public querySelect() {
     //
   }
@@ -168,7 +168,7 @@ class SparqlProvider implements sparqlProviderBase.SparqlProviderBase {
   }
 }
 
-class PostQueryStringBuilder implements postQueries.QueryStringBuilderBase {
+class PostQueryStringBuilder implements postQueries.IQueryStringBuilder {
   public build(entity, type: schema.EntityType): any {
     //
   }

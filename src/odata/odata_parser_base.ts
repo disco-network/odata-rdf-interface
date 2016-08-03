@@ -1,3 +1,3 @@
-export interface ODataParserBase {
+export interface IODataParserBase {
   parsePOST(query: string): any;
 }

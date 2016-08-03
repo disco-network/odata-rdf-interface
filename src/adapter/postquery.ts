@@ -1,6 +1,6 @@
 import schema = require("../odata/schema");
 
-export interface QueryStringBuilderBase {
+export interface IQueryStringBuilder {
   build(entity: any, type: schema.EntityType): string;
 }
 

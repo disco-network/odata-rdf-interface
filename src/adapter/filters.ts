@@ -2,47 +2,47 @@ import mappings = require("./mappings");
 import schema = require("../odata/schema");
 import propertyExpr = require("./filters/propertyexpression");
 
-export interface FilterExpression {
-  getSubExpressions(): FilterExpression[];
+export interface IFilterExpression {
+  getSubExpressions(): IFilterExpression[];
   getPropertyTree(): ScopedPropertyTree;
   toSparql(): string;
 }
 
-export interface FilterExpressionArgs {
-  factory: FilterExpressionFactory;
-  filterContext?: FilterContext;
+export interface IFilterExpressionArgs {
+  factory: IFilterExpressionFactory;
+  filterContext?: IFilterContext;
 }
 
-export interface FilterContext {
-  scope: FilterScopeContext;
-  mapping: FilterMappingContext;
+export interface IFilterContext {
+  scope: IFilterScopeContext;
+  mapping: IFilterMappingContext;
 }
 
-export interface FilterScopeContext {
+export interface IFilterScopeContext {
   entityType: schema.EntityType;
   unscopedEntityType: schema.EntityType;
   lambdaVariableScope: LambdaVariableScope;
 }
 
-export interface FilterMappingContext {
+export interface IFilterMappingContext {
   mapping: mappings.Mapping;
   scopedMapping: mappings.ScopedMapping;
 }
 
-export interface LambdaExpression {
+export interface ILambdaExpression {
   variable: string;
   entityType: schema.EntityType;
   scopeId: mappings.UniqueScopeIdentifier;
 }
 
-export interface FilterExpressionFactory {
-  fromRaw(raw, context?: FilterContext): FilterExpression;
+export interface IFilterExpressionFactory {
+  fromRaw(raw, context?: IFilterContext): IFilterExpression;
 }
 
 export class LambdaVariableScope {
-  private data: { [id: string]: LambdaExpression } = {};
+  private data: { [id: string]: ILambdaExpression } = {};
 
-  public add(lambdaExpression: LambdaExpression) {
+  public add(lambdaExpression: ILambdaExpression) {
     if (this.exists(lambdaExpression.variable) === false) {
       this.data[lambdaExpression.variable] = lambdaExpression;
       return this;
@@ -54,7 +54,7 @@ export class LambdaVariableScope {
     return this.data[variable] !== undefined;
   }
 
-  public get(variable: string): LambdaExpression {
+  public get(variable: string): ILambdaExpression {
     return this.data[variable];
   }
 
@@ -71,22 +71,22 @@ export class LambdaVariableScope {
  * Creates appropriate FilterExpressions from raw data.
  */
 export class FilterExpressionIoCContainer {
-  private registeredFilterExpressions: FilterExpressionCandidateFactory[] = [];
-  private standardFilterContext: FilterContext;
+  private registeredFilterExpressions: IFilterExpressionCandidateFactory[] = [];
+  private standardFilterContext: IFilterContext;
 
-  public setStandardFilterContext(filterContext: FilterContext) {
+  public setStandardFilterContext(filterContext: IFilterContext) {
     this.standardFilterContext = filterContext;
     return this;
   }
 
-  public registerFilterExpressions(types: FilterExpressionCandidateFactory[]) {
+  public registerFilterExpressions(types: IFilterExpressionCandidateFactory[]) {
     for (let i = 0; i < types.length; ++i) {
       this.registerFilterExpression(types[i]);
     }
     return this;
   }
 
-  public registerFilterExpression(Type: FilterExpressionCandidateFactory) {
+  public registerFilterExpression(Type: IFilterExpressionCandidateFactory) {
     if (this.registeredFilterExpressions.indexOf(Type) === -1)
       this.registeredFilterExpressions.push(Type);
     return this;
@@ -97,7 +97,7 @@ export class FilterExpressionIoCContainer {
    * The FilterContext will be also used as default value for child expressions -
    * see this.creationArgs(...).
    */
-  public fromRaw(raw: any, filterContext = this.standardFilterContext): FilterExpression {
+  public fromRaw(raw: any, filterContext = this.standardFilterContext): IFilterExpression {
     if (this.validateCreationArgs()) {
       return this.fromRawNoValidations(raw, filterContext);
     }
@@ -106,7 +106,7 @@ export class FilterExpressionIoCContainer {
     }
   }
 
-  private fromRawNoValidations(raw, filterContext: FilterContext): FilterExpression {
+  private fromRawNoValidations(raw, filterContext: IFilterContext): IFilterExpression {
       for (let i = 0; i < this.registeredFilterExpressions.length; ++i) {
         let SelectedFilterExpression = this.registeredFilterExpressions[i];
         if (SelectedFilterExpression.doesApplyToRaw(raw))
@@ -115,7 +115,7 @@ export class FilterExpressionIoCContainer {
       throw new Error("filter expression is not supported: " + JSON.stringify(raw));
   }
 
-  private createCreationArgs(filterContext: FilterContext): FilterExpressionArgs {
+  private createCreationArgs(filterContext: IFilterContext): IFilterExpressionArgs {
     return {
       factory: { fromRaw: (raw, context = filterContext) => this.fromRaw(raw, context) },
       filterContext: filterContext,
@@ -126,34 +126,34 @@ export class FilterExpressionIoCContainer {
     return this.validateFilterContext(this.standardFilterContext);
   }
 
-  private validateFilterContext(filterContext: FilterContext) {
+  private validateFilterContext(filterContext: IFilterContext) {
     return filterContext !== undefined &&
       this.validateFilterScopeContext(filterContext.scope) &&
       this.validateFilterMappingContext(filterContext.mapping);
   }
 
-  private validateFilterScopeContext(context: FilterScopeContext) {
+  private validateFilterScopeContext(context: IFilterScopeContext) {
     return context.entityType !== undefined &&
       context.lambdaVariableScope !== undefined &&
       context.unscopedEntityType !== undefined;
   }
 
-  private validateFilterMappingContext(context: FilterMappingContext) {
+  private validateFilterMappingContext(context: IFilterMappingContext) {
     return context.mapping !== undefined && context.scopedMapping !== undefined;
   }
 }
 
-export interface FilterExpressionCandidateFactory {
-  fromRaw(raw, args: FilterExpressionArgs): FilterExpression;
+export interface IFilterExpressionCandidateFactory {
+  fromRaw(raw, args: IFilterExpressionArgs): IFilterExpression;
   doesApplyToRaw(raw): boolean;
 }
 
 export let PropertyExpressionFactory = propertyExpr.PropertyExpressionFactory;
 
-export class LiteralExpressionFactory<ValueType> implements FilterExpressionCandidateFactory {
-  constructor(private config: LiteralExpressionConfig<ValueType>) {}
+export class LiteralExpressionFactory<ValueType> implements IFilterExpressionCandidateFactory {
+  constructor(private config: ILiteralExpressionConfig<ValueType>) {}
 
-  public fromRaw(raw, args: FilterExpressionArgs): FilterExpression {
+  public fromRaw(raw, args: IFilterExpressionArgs): IFilterExpression {
     return new LiteralExpression(this.config.parse(raw), this.config);
   }
 
@@ -178,15 +178,15 @@ export let NumberLiteralExpressionFactory = new LiteralExpressionFactory<number>
   toSparql: value => "'" + value + "'",
 });
 
-export class BinaryOperatorExpressionFactory implements FilterExpressionCandidateFactory {
+export class BinaryOperatorExpressionFactory implements IFilterExpressionCandidateFactory {
 
-  constructor(private config: BinaryOperatorExpressionConfig) {}
+  constructor(private config: IBinaryOperatorExpressionConfig) {}
 
   public doesApplyToRaw(raw) {
     return raw.type === "operator" && raw.op === this.config.opName;
   }
 
-  public fromRaw(raw, args: FilterExpressionArgs) {
+  public fromRaw(raw, args: IFilterExpressionArgs) {
     return new BinaryOperatorExpression(raw, this.config, args.factory);
   }
 }
@@ -203,27 +203,27 @@ export class ParenthesesExpressionFactory {
     return raw.type === "parentheses-expression";
   }
 
-  public static fromRaw(raw, args: FilterExpressionArgs) {
+  public static fromRaw(raw, args: IFilterExpressionArgs) {
     // We don't have to return a ParenthesesExpression, let's choose the direct way
     return args.factory.fromRaw(raw.inner);
   }
 }
 
-export interface LiteralExpressionConfig<ValueType> {
+export interface ILiteralExpressionConfig<ValueType> {
   typeName: string;
   parse: (raw) => ValueType;
   toSparql: (value: ValueType) => string;
 };
 
-export class LiteralExpression<ValueType> implements FilterExpression {
+export class LiteralExpression<ValueType> implements IFilterExpression {
 
     private value: ValueType;
 
-    constructor(value: ValueType, private config: LiteralExpressionConfig<ValueType>) {
+    constructor(value: ValueType, private config: ILiteralExpressionConfig<ValueType>) {
       this.value = value;
     }
 
-    public getSubExpressions(): FilterExpression[] {
+    public getSubExpressions(): IFilterExpression[] {
       return [];
     }
 
@@ -236,23 +236,23 @@ export class LiteralExpression<ValueType> implements FilterExpression {
     }
 }
 
-export interface BinaryOperatorExpressionConfig {
+export interface IBinaryOperatorExpressionConfig {
   opName: string;
   sparql: string;
 }
 
 export class BinaryOperatorExpression {
 
-    private lhs: FilterExpression;
-    private rhs: FilterExpression;
+    private lhs: IFilterExpression;
+    private rhs: IFilterExpression;
 
-    constructor(raw, private config: BinaryOperatorExpressionConfig,
-                expressionFactory: FilterExpressionFactory) {
+    constructor(raw, private config: IBinaryOperatorExpressionConfig,
+                expressionFactory: IFilterExpressionFactory) {
       this.lhs = expressionFactory.fromRaw(raw.lhs);
       this.rhs = expressionFactory.fromRaw(raw.rhs);
     }
 
-    public getSubExpressions(): FilterExpression[] {
+    public getSubExpressions(): IFilterExpression[] {
       return [ this.lhs, this.rhs ];
     }
 
@@ -299,7 +299,7 @@ export class FlatPropertyTree {
     return this.fromDataObject({});
   }
 
-  public static fromDataObject(data: FlatPropertyTreeDataObject) {
+  public static fromDataObject(data: IFlatPropertyTreeDataObject) {
     let tree = new FlatPropertyTree();
     tree.data = {};
     for (let property of Object.keys(data)) {
@@ -329,7 +329,7 @@ export class FlatPropertyTree {
    * Return an iterator object whose current() method returns the first item.
    * Calling next() will make the iterator step forward and return item 2 etc.
    */
-  public getIterator(): Iterator<string> {
+  public getIterator(): IIterator<string> {
     let properties = Object.keys(this.data);
     let i = 0;
     return { current: () => properties[i], next: () => properties[++i], hasValue: () => properties.length > i };
@@ -349,7 +349,7 @@ export class FlatPropertyTree {
   }
 
   public toDataObject() {
-    let ret: FlatPropertyTreeDataObject = {};
+    let ret: IFlatPropertyTreeDataObject = {};
     for (let it = this.getIterator(); it.hasValue(); it.next()) {
       ret[it.current()] = this.getBranch(it.current()).toDataObject();
     }
@@ -357,18 +357,18 @@ export class FlatPropertyTree {
   }
 }
 
-export interface FlatPropertyTreeDataObject {
-  [id: string]: FlatPropertyTreeDataObject;
+export interface IFlatPropertyTreeDataObject {
+  [id: string]: IFlatPropertyTreeDataObject;
 }
 
-export interface Iterator<T> {
+export interface IIterator<T> {
   current(): T;
   next(): T;
   hasValue(): boolean;
 }
 
 export class FilterExpressionHelper {
-  public static getPropertyTree(subExpressions: FilterExpression[]): ScopedPropertyTree {
+  public static getPropertyTree(subExpressions: IFilterExpression[]): ScopedPropertyTree {
     let propertyTrees = subExpressions.map(se => se.getPropertyTree());
     let result = ScopedPropertyTree.create();
     propertyTrees.forEach(tree => {

@@ -1,4 +1,4 @@
-export interface Factory {
+export interface IFactory {
   create(): any;
 }
 

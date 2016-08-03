@@ -78,7 +78,7 @@ export interface InScopeVariableBranchingArgs {
 export interface AnyBranchingArgs {
   type: "any";
   name: string;
-  lambdaExpression: filters.LambdaExpression;
+  lambdaExpression: filters.ILambdaExpression;
   inverse: boolean;
 }
 
@@ -184,7 +184,7 @@ class AnyBranchingArgsBuilderTemplate<Value extends { type: "any" }> {
     this.set({ name: value });
   }
 
-  public lambdaExpression(value: filters.LambdaExpression) {
+  public lambdaExpression(value: filters.ILambdaExpression) {
     this.set({ lambdaExpression: value });
   }
 

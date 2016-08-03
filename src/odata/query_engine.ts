@@ -4,16 +4,16 @@ import entityReader = require("../odata/entity_reader_base");
 import dataProvider = require("../odata/data_provider");
 import schema = require("../odata/schema");
 
-export interface QueryEngine {
+export interface IQueryEngine {
   queryGET(query: string, cb: (result: results.AnyResult) => void): void;
   queryPOST(query: string, body: string, cb: (result: results.AnyResult) => void): void;
 }
 
-export class QueryEngineImpl implements QueryEngine {
+export class QueryEngine implements IQueryEngine {
 
-  private odataParser: odataParser.ODataParserBase;
-  private entityReader: entityReader.EntityReaderBase;
-  private dataProvider: dataProvider.DataProviderBase;
+  private odataParser: odataParser.IODataParserBase;
+  private entityReader: entityReader.IEntityReaderBase;
+  private dataProvider: dataProvider.IDataProviderBase;
   private schema: schema.Schema;
 
   public queryGET(query: string, cb: (result: results.AnyResult) => void) {
@@ -30,15 +30,15 @@ export class QueryEngineImpl implements QueryEngine {
     });
   }
 
-  public setODataParser(parser: odataParser.ODataParserBase) {
+  public setODataParser(parser: odataParser.IODataParserBase) {
     this.odataParser = parser;
   }
 
-  public setEntityReader(reader: entityReader.EntityReaderBase) {
+  public setEntityReader(reader: entityReader.IEntityReaderBase) {
     this.entityReader = reader;
   }
 
-  public setDataProvider(provider: dataProvider.DataProviderBase) {
+  public setDataProvider(provider: dataProvider.IDataProviderBase) {
     this.dataProvider = provider;
   }
 

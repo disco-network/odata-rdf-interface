@@ -2,7 +2,7 @@
 import base = require("./sparql_provider_base");
 import result = require("../result");
 
-export class SparqlProvider implements base.SparqlProviderBase {
+export class SparqlProvider implements base.ISparqlProvider {
   constructor(private store, private graphName: string) { }
 
   public querySelect(queryString: string, cb: (result: result.AnyResult) => void): void {

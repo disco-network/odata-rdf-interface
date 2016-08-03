@@ -2,7 +2,7 @@
 import Queries = require("./queries");
 import schema = require("./schema");
 
-export class QueryComposer implements Queries.QueryModel {
+export class QueryComposer implements Queries.IQueryModel {
   public entitySetType: schema.EntityType;
   public path: any[];
   public filterOption: any;

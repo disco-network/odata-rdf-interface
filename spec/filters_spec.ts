@@ -246,7 +246,7 @@ describe("A flat property tree", () => {
 
 describe("A lambda variable scope", () => {
   it("should recall lambda expressions", () => {
-    let lambda: filters.LambdaExpression = {
+    let lambda: filters.ILambdaExpression = {
       variable: "it",
       entityType: null,
       scopeId: null,
@@ -357,12 +357,12 @@ function createNullArgs() {
   return { mapping: null, entityType: null, factory: null };
 }
 
-class TestFilterExpression implements filters.FilterExpression {
+class TestFilterExpression implements filters.IFilterExpression {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
-  public static fromRaw(raw, args: filters.FilterExpressionArgs) { return new TestFilterExpression(raw.value, args); }
+  public static fromRaw(raw, args: filters.IFilterExpressionArgs) { return new TestFilterExpression(raw.value, args); }
 
-  constructor(public value, public args: filters.FilterExpressionArgs) {}
-  public getSubExpressions(): filters.FilterExpression[] { return []; }
+  constructor(public value, public args: filters.IFilterExpressionArgs) {}
+  public getSubExpressions(): filters.IFilterExpression[] { return []; }
   public getPropertyTree(): filters.ScopedPropertyTree { return new filters.ScopedPropertyTree(); }
   public toSparql(): string { return this.value.toString(); }
 }

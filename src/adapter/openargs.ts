@@ -4,66 +4,66 @@ declare class Map {
   public forEach(fn: (value, key, map: Map) => void): any;
 }
 
-export interface OpenArgsReadonly {
-  get<SpecificContract extends ContractImplementer>
+export interface IOpenArgsReadonly {
+  get<SpecificContract extends IContractImplementer>
     (Contract: ContractSpecification<SpecificContract>): SpecificContract;
-  createChild(): OpenArgs;
+  createChild(): IOpenArgs;
 }
 
-export interface OpenArgs extends OpenArgsReadonly {
-  set<SpecificContract extends ContractImplementer>
+export interface IOpenArgs extends IOpenArgsReadonly {
+  set<SpecificContract extends IContractImplementer>
     (Contract: ContractSpecification<SpecificContract>, instance: SpecificContract);
 }
 
-export interface OpenArgsCompatibilityCheckerReadonly {
-  checkCompatibility(args: OpenArgs, knownContracts: ContractSpecification<any>[]): boolean;
+export interface IOpenArgsCompatibilityCheckerReadonly {
+  checkCompatibility(args: IOpenArgs, knownContracts: ContractSpecification<any>[]): boolean;
 }
 
-export interface OpenArgsCompatibilityChecker extends OpenArgsCompatibilityCheckerReadonly {
-  setDefaultCondition<SpecificContract extends ContractImplementer>
+export interface IOpenArgsCompatibilityChecker extends IOpenArgsCompatibilityCheckerReadonly {
+  setDefaultCondition<SpecificContract extends IContractImplementer>
     (Contract: ContractSpecification<SpecificContract>, condition: (c: SpecificContract) => boolean);
 }
 
-export class OpenArgsImpl {
+export class OpenArgs {
 
   private map = new Map();
 
-  constructor(private parent?: OpenArgsReadonly) {
+  constructor(private parent?: IOpenArgsReadonly) {
   }
 
-  public get<SpecificContract extends ContractImplementer>
+  public get<SpecificContract extends IContractImplementer>
     (Contract: ContractSpecification<SpecificContract>): SpecificContract {
     return this.map.get(Contract);
   }
 
-  public set<SpecificContract extends ContractImplementer>(Contract: ContractSpecification<SpecificContract>,
-                                                           instance: SpecificContract) {
+  public set<SpecificContract extends IContractImplementer>(Contract: ContractSpecification<SpecificContract>,
+                                                            instance: SpecificContract) {
     instance.initializeWithPreviousArgs(this.parent);
     this.map.set(Contract, instance);
   }
 
   public createChild() {
-    let ret = new OpenArgsImpl(this as OpenArgsReadonly);
+    let ret = new OpenArgs(this as IOpenArgsReadonly);
     this.map.forEach((value, key) => ret.map.set(key, value));
     return ret;
   }
 }
 
-export interface ContractImplementer {
-  initializeWithPreviousArgs(args: OpenArgsReadonly);
+export interface IContractImplementer {
+  initializeWithPreviousArgs(args: IOpenArgsReadonly);
 }
 
-export class ContractSpecification<T extends ContractImplementer> {
+export class ContractSpecification<T extends IContractImplementer> {
   public methodWithContractImplementerReturnType(): T {
     return null;
   }
 }
 
-export class OpenArgsCompatibilityCheckerImpl implements OpenArgsCompatibilityChecker {
+export class OpenArgsCompatibilityChecker implements IOpenArgsCompatibilityChecker {
 
   private defaultConditions = new Map();
 
-  public checkCompatibility(args: OpenArgs, knownContracts: ContractSpecification<any>[]): boolean {
+  public checkCompatibility(args: IOpenArgs, knownContracts: ContractSpecification<any>[]): boolean {
     let ret = true;
     this.defaultConditions.forEach((condition, Contract) => {
       if (knownContracts.indexOf(Contract) === -1)
@@ -72,7 +72,7 @@ export class OpenArgsCompatibilityCheckerImpl implements OpenArgsCompatibilityCh
     return ret;
   }
 
-  public setDefaultCondition<SpecificContract extends ContractImplementer>
+  public setDefaultCondition<SpecificContract extends IContractImplementer>
     (Contract: ContractSpecification<SpecificContract>, condition: (c: SpecificContract) => boolean) {
     if (this.defaultConditions.get(Contract) === undefined) {
       this.defaultConditions.set(Contract, condition);

@@ -12,7 +12,7 @@ export class PropertyExpressionFactory {
     return raw.type === "member-expression";
   }
 
-  public fromRaw(raw, args: filters.FilterExpressionArgs): filters.FilterExpression {
+  public fromRaw(raw, args: filters.IFilterExpressionArgs): filters.IFilterExpression {
     let propertyPath = new PropertyPath(raw.path, args.filterContext);
     switch (raw.operation) {
       case "property-value":
@@ -25,18 +25,18 @@ export class PropertyExpressionFactory {
   }
 }
 
-export class PropertyValueExpression implements filters.FilterExpression {
-  private filterContext: filters.FilterContext;
-  private factory: filters.FilterExpressionFactory;
+export class PropertyValueExpression implements filters.IFilterExpression {
+  private filterContext: filters.IFilterContext;
+  private factory: filters.IFilterExpressionFactory;
   private propertyPath: PropertyPath;
 
-  constructor(propertyPath: PropertyPath, args: filters.FilterExpressionArgs) {
+  constructor(propertyPath: PropertyPath, args: filters.IFilterExpressionArgs) {
     this.propertyPath = propertyPath;
     this.filterContext = args.filterContext;
     this.factory = args.factory;
   }
 
-  public getSubExpressions(): filters.FilterExpression[] {
+  public getSubExpressions(): filters.IFilterExpression[] {
     return [];
   }
 
@@ -56,12 +56,12 @@ export class PropertyValueExpression implements filters.FilterExpression {
 
 export class AnyExpression {
   private raw: any;
-  private filterContext: filters.FilterContext;
+  private filterContext: filters.IFilterContext;
   private innerScopeId = new mappings.UniqueScopeIdentifier("any");
-  private factory: filters.FilterExpressionFactory;
+  private factory: filters.IFilterExpressionFactory;
   private propertyPath: PropertyPath;
 
-  constructor(raw: any, propertyPath: PropertyPath, args: filters.FilterExpressionArgs,
+  constructor(raw: any, propertyPath: PropertyPath, args: filters.IFilterExpressionArgs,
               private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy) {
     this.raw = raw;
     this.filterContext = args.filterContext;
@@ -69,7 +69,7 @@ export class AnyExpression {
     this.propertyPath = propertyPath;
   }
 
-  public getSubExpressions(): filters.FilterExpression[] {
+  public getSubExpressions(): filters.IFilterExpression[] {
     return [];
   }
 
@@ -89,7 +89,7 @@ export class AnyExpression {
       + " }";
   }
 
-  private buildFilterPatternContentString(innerFilterExpression: filters.FilterExpression) {
+  private buildFilterPatternContentString(innerFilterExpression: filters.IFilterExpression) {
     /* @smell this should be passed to PropertyExpression */
     /*let branchFactory = new propertyTree.TreeDependencyInjector()
       .registerFactoryCandidates(
@@ -104,11 +104,11 @@ export class AnyExpression {
     return queryStringBuilder.buildGraphPatternContentString(filterPattern);
   }
 
-  private buildFilterExpressionAmendmentString(innerFilterExpression: filters.FilterExpression) {
+  private buildFilterExpressionAmendmentString(innerFilterExpression: filters.IFilterExpression) {
     return " . FILTER(" + innerFilterExpression.toSparql() + ")";
   }
 
-  private createFilterContextInsideLambda(): filters.FilterContext {
+  private createFilterContextInsideLambda(): filters.IFilterContext {
     let lambdaExpression = this.createLambdaExpression();
     return {
       mapping: {
@@ -123,7 +123,7 @@ export class AnyExpression {
     };
   }
 
-  private createLambdaExpression(): filters.LambdaExpression {
+  private createLambdaExpression(): filters.ILambdaExpression {
     return {
       variable: this.raw.lambdaExpression.variable,
       entityType: this.propertyPath.getFinalEntityType(),
@@ -139,7 +139,7 @@ export class AnyExpression {
 
 export class PropertyPath {
 
-  constructor(private propertyNames?: string[], private filterContext?: filters.FilterContext) {}
+  constructor(private propertyNames?: string[], private filterContext?: filters.IFilterContext) {}
 
   public getFinalElementaryPropertyVariable() {
     let mapping = this.getVariableMappingAfterLambdaPrefix();
@@ -207,7 +207,7 @@ export class PropertyPath {
       this.propertyNames.slice(1) : this.propertyNames;
   }
 
-  public getFilterContextAfterLambdaPrefix(): filters.FilterContext {
+  public getFilterContextAfterLambdaPrefix(): filters.IFilterContext {
     return {
       scope: {
         entityType: this.getEntityTypeAfterLambdaPrefix(),

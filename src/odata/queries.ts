@@ -1,11 +1,11 @@
 /** @module */
 import Schema = require("./schema");
 
-export interface Query {
+export interface IQuery {
   run(sparqlProvider, cb: (result) => void): void;
 }
 
-export interface QueryModel {
+export interface IQueryModel {
   entitySetType: Schema.EntityType;
   path: any[]; /** navigation path */
   filterOption: any;
@@ -16,7 +16,7 @@ export interface QueryModel {
  * The concrete database logic is handled by the result and context parameters.
  */
 export class JsonResultBuilder {
-  public run(results: any[], context: QueryContext): any[] {
+  public run(results: any[], context: IQueryContext): any[] {
     let entityCollection = new EntityCollection(context, Schema.EntityKind.Complex);
 
     /* @smell */
@@ -28,19 +28,19 @@ export class JsonResultBuilder {
   }
 }
 
-export interface EntityValue {
+export interface IEntityValue {
   /** Apply the values of variables in this result object. */
   applyResult(result: any): void;
   /** Create a JS data object conforming to the OData output format. */
   serializeToODataJson(): any;
 }
 
-export class EntityCollection implements EntityValue {
-  private context: QueryContext;
+export class EntityCollection implements IEntityValue {
+  private context: IQueryContext;
   private kind: Schema.EntityKind;
-  private entities: { [id: string]: EntityValue } = {};
+  private entities: { [id: string]: IEntityValue } = {};
 
-  constructor(context: QueryContext, kind: Schema.EntityKind) {
+  constructor(context: IQueryContext, kind: Schema.EntityKind) {
     this.context = context;
     this.kind = kind;
   }
@@ -62,12 +62,12 @@ export class EntityCollection implements EntityValue {
   }
 }
 
-export class ComplexEntity implements EntityValue {
-  private context: QueryContext;
-  private value: { [id: string]: EntityValue } = undefined;
+export class ComplexEntity implements IEntityValue {
+  private context: IQueryContext;
+  private value: { [id: string]: IEntityValue } = undefined;
   private id: any;
 
-  constructor(context: QueryContext) {
+  constructor(context: IQueryContext) {
     this.context = context;
   }
 
@@ -131,7 +131,7 @@ export class ComplexEntity implements EntityValue {
   }
 }
 
-export class ElementaryEntity implements EntityValue {
+export class ElementaryEntity implements IEntityValue {
   private value: any = undefined;
 
   public applyResult(value: any): void {
@@ -149,7 +149,7 @@ export class ElementaryEntity implements EntityValue {
 }
 
 export class EntityFactory {
-  public static fromPropertyWithContext(property: Schema.Property, context: QueryContext): EntityValue {
+  public static fromPropertyWithContext(property: Schema.Property, context: IQueryContext): IEntityValue {
     let kind = property.getEntityKind();
     let subContext = context.getSubContext(property.getName());
     if (property.isCardinalityOne()) {
@@ -160,7 +160,7 @@ export class EntityFactory {
     }
   }
 
-  public static fromEntityKind(kind: Schema.EntityKind, context: QueryContext): EntityValue {
+  public static fromEntityKind(kind: Schema.EntityKind, context: IQueryContext): IEntityValue {
     switch (kind) {
       case Schema.EntityKind.Elementary:
         return new ElementaryEntity();
@@ -172,7 +172,7 @@ export class EntityFactory {
   }
 }
 
-export interface QueryContext {
+export interface IQueryContext {
   /** Iterate over all elementary properties expected by the query and pass their value. */
   forEachElementaryPropertyOfResult(result, fn: (value, property: Schema.Property, hasValue: boolean) => void): void;
   /** Iterate over all complex properties expected by the query. */
@@ -185,5 +185,5 @@ export interface QueryContext {
   forEachComplexPropertySchema(fn: (property: Schema.Property) => void): void;
 
   getUniqueIdOfResult(result): string;
-  getSubContext(property: string): QueryContext;
+  getSubContext(property: string): IQueryContext;
 }

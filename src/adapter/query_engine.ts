@@ -3,7 +3,6 @@ import abnfParser = require("abnfjs/parser");
 import abnfInterpreter = require("abnfjs/interpreter");
 
 import sparqlProvider = require("../sparql/sparql_provider_base");
-import postQueries = require("../adapter/postquery");
 import ast2query = require("../odata/ast2query");
 import schema = require("../odata/schema");
 import queries = require("../adapter/queries");
@@ -20,8 +19,7 @@ export interface IQueryEngine {
 
 export class QueryEngine {
   private interpreter: abnfInterpreter.Interpreter;
-  private sparqlProvider: sparqlProvider.SparqlProviderBase;
-  private postQueryStringBuilder: postQueries.QueryStringBuilderBase;
+  private sparqlProvider: sparqlProvider.ISparqlProvider;
   private schm = new schema.Schema();
 
   constructor() {
@@ -31,12 +29,8 @@ export class QueryEngine {
     this.interpreter = new abnfInterpreter.Interpreter(grammar);
   }
 
-  public setSparqlProvider(value: sparqlProvider.SparqlProviderBase) {
+  public setSparqlProvider(value: sparqlProvider.ISparqlProvider) {
     this.sparqlProvider = value;
-  }
-
-  /* unused */ setPostQueryStringBuilder(value: postQueries.QueryStringBuilderBase) {
-    this.postQueryStringBuilder = value;
   }
 
   public query(queryString: string, cb: (result: result.AnyResult) => void) {
@@ -44,7 +38,7 @@ export class QueryEngine {
 
     let ast = this.interpreter.getCompleteMatch(this.interpreter.getPattern("odataRelativeUri"), url);
     let odataModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), this.schm);
-    let modelAdapter = new queries.QueryAdapterModelImpl(odataModel);
+    let modelAdapter = new queries.QueryAdapterModel(odataModel);
     let query = (new queries.QueryFactory(modelAdapter)).create();
     query.run(this.sparqlProvider, cb);
   }

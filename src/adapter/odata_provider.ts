@@ -5,10 +5,10 @@ import results = require("../result");
 import sparqlProvider = require("../sparql/sparql_provider_base");
 import postQueries = require("../adapter/postquery");
 
-export class ODataProvider implements base.DataProviderBase {
+export class ODataProvider implements base.IDataProviderBase {
 
-  private sparqlProvider: sparqlProvider.SparqlProviderBase;
-  private postQueryStringBuilder: postQueries.QueryStringBuilderBase;
+  private sparqlProvider: sparqlProvider.ISparqlProvider;
+  private postQueryStringBuilder: postQueries.IQueryStringBuilder;
 
   public insertEntity(entity: any, type: schema.EntityType, cb: (result: results.AnyResult) => void) {
     this.sparqlProvider.query(this.postQueryStringBuilder.build(entity, type), result => {
@@ -16,11 +16,11 @@ export class ODataProvider implements base.DataProviderBase {
     });
   }
 
-  public setSparqlProvider(value: sparqlProvider.SparqlProviderBase) {
+  public setSparqlProvider(value: sparqlProvider.ISparqlProvider) {
     this.sparqlProvider = value;
   }
 
-  public setPostQueryStringBuilder(value: postQueries.QueryStringBuilderBase) {
+  public setPostQueryStringBuilder(value: postQueries.IQueryStringBuilder) {
     this.postQueryStringBuilder = value;
   }
 }

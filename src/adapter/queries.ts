@@ -14,8 +14,8 @@ import result = require("../result");
  * Used to generate query objects which can be run to modify and/or retrieve data.
  */
 export class QueryFactory {
-  constructor(private model: QueryAdapterModel) { }
-  public create(): ODataQueries.Query {
+  constructor(private model: IQueryAdapterModel) { }
+  public create(): ODataQueries.IQuery {
     return new EntitySetQuery(this.model, new DependencyInjector());
   }
 }
@@ -23,10 +23,10 @@ export class QueryFactory {
 /**
  * Handles read-only OData queries.
  */
-export class EntitySetQuery implements ODataQueries.Query {
+export class EntitySetQuery implements ODataQueries.IQuery {
   private filterExpressionFactory: filters.FilterExpressionIoCContainer;
 
-  constructor(private model: QueryAdapterModel,
+  constructor(private model: IQueryAdapterModel,
               private dependencyInjector: DependencyInjector) {
   }
 
@@ -71,7 +71,7 @@ export class EntitySetQuery implements ODataQueries.Query {
       this.model.getExpandTree(), this.model.getMapping().variables);
   }
 
-  private createFilterGraphPattern(filterExpression?: filters.FilterExpression): gpatterns.TreeGraphPattern {
+  private createFilterGraphPattern(filterExpression?: filters.IFilterExpression): gpatterns.TreeGraphPattern {
     if (filterExpression) {
 
       let creationStrategy = this.dependencyInjector.createFilterPatternStrategy();
@@ -81,7 +81,7 @@ export class EntitySetQuery implements ODataQueries.Query {
     }
   }
 
-  private createFilterExpression(): filters.FilterExpression {
+  private createFilterExpression(): filters.IFilterExpression {
     if (this.model.getRawFilter() !== undefined)
       return this.getFilterExpressionFactory().fromRaw(this.model.getRawFilter());
   }
@@ -102,22 +102,22 @@ export class EntitySetQuery implements ODataQueries.Query {
   }
 }
 
-export interface QueryAdapterModel {
-  getFilterContext(): filters.FilterContext;
+export interface IQueryAdapterModel {
+  getFilterContext(): filters.IFilterContext;
   getMapping(): mappings.Mapping;
   getEntitySetType(): Schema.EntityType;
   getExpandTree(): any;
   getRawFilter(): any;
 }
 
-export class QueryAdapterModelImpl implements QueryAdapterModel {
+export class QueryAdapterModel implements IQueryAdapterModel {
 
   private mapping: mappings.Mapping;
-  private filterContext: filters.FilterContext;
+  private filterContext: filters.IFilterContext;
 
-  constructor(private odata: ODataQueries.QueryModel) {}
+  constructor(private odata: ODataQueries.IQueryModel) {}
 
-  public getFilterContext(): filters.FilterContext {
+  public getFilterContext(): filters.IFilterContext {
     if (this.filterContext === undefined) {
       this.filterContext = {
         scope: {
@@ -208,7 +208,7 @@ export class DependencyInjector {
 /**
  * This class provides methods to interpret a SPARQL query result as OData.
  */
-export class SparqlQueryContext implements ODataQueries.QueryContext {
+export class SparqlQueryContext implements ODataQueries.IQueryContext {
   private mapping: mappings.IStructuredSparqlVariableMapping;
   private rootTypeSchema: Schema.EntityType;
   private remainingExpandBranch: Object;

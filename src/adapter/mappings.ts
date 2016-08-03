@@ -209,7 +209,7 @@ export class StructuredSparqlVariableMapping implements IStructuredSparqlVariabl
 export class SparqlVariableMapping<Variable> {
   private map: Object;
 
-  constructor(private vargen: VariableGenerator<Variable>) { }
+  constructor(private vargen: IVariableGenerator<Variable>) { }
   public getPropertyVariable(propertyName: string) {
     this.map = this.map || {};
     return this.map[propertyName] = this.map[propertyName] || this.vargen.next();
@@ -233,20 +233,20 @@ export class SparqlVariableMapping<Variable> {
 /**
  * Generates instances of StructuredSparqlVariableMapping.
  */
-export class ComplexSparqlVariableGenerator implements VariableGenerator<StructuredSparqlVariableMapping> {
+export class ComplexSparqlVariableGenerator implements IVariableGenerator<StructuredSparqlVariableMapping> {
   constructor(private vargen: SparqlVariableGenerator) {}
   public next(): StructuredSparqlVariableMapping {
     return new StructuredSparqlVariableMapping(this.vargen.next(), this.vargen);
   }
 }
 
-export class SparqlVariableGenerator implements VariableGenerator<string> {
+export class SparqlVariableGenerator implements IVariableGenerator<string> {
   private i: number = -1;
   public next(): string {
     return "?x" + (++this.i).toString();
   }
 }
 
-export interface VariableGenerator<Variable> {
+export interface IVariableGenerator<Variable> {
   next(): Variable;
 }
