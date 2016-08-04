@@ -4,6 +4,7 @@ import schema = require("../odata/schema");
 import propertyTree = require("./propertytree/propertytree");
 import propertyTreeImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs } from "./propertytree/traversingargs";
+import { PropertyBranchingArgsBuilder } from "./propertytree/branchingargs";
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -26,7 +27,7 @@ export class DirectPropertiesTreeStrategy {
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.getEntityKind() === schema.EntityKind.Elementary) {
-        let args = new propertyTree.PropertyBranchingArgsBuilder()
+        let args = new PropertyBranchingArgsBuilder()
           .name(property.getName())
           .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
           .mandatory(!property.isOptional())
@@ -76,7 +77,7 @@ export class ExpandTreeGraphPatternFactory {
 
     let tree = new propertyTree.RootTree();
 
-    tree.branch(this.branchFactory.create(new propertyTree.PropertyBranchingArgsBuilder()
+    tree.branch(this.branchFactory.create(new PropertyBranchingArgsBuilder()
       .name("Id")
       .inverse(false)
       .complex(false)
@@ -92,7 +93,7 @@ export class ExpandTreeGraphPatternFactory {
     for (let propertyName of Object.keys(expandTree)) {
       let property = entityType.getProperty(propertyName);
 
-      let branch = tree.branch(this.branchFactory.create(new propertyTree.PropertyBranchingArgsBuilder()
+      let branch = tree.branch(this.branchFactory.create(new PropertyBranchingArgsBuilder()
         .name(property.getName())
         .mirroredIdFrom(undefined)
         .complex(true)

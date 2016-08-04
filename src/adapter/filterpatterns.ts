@@ -4,6 +4,7 @@ import filters = require("./filters");
 import propertyTrees = require("./propertytree/propertytree");
 import propertyTreesImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs, IGraphPatternSelector } from "./propertytree/traversingargs";
+import { InScopeBranchingArgsBuilder, PropertyBranchingArgsBuilder } from "./propertytree/branchingargs";
 
 export class FilterGraphPatternStrategy {
 
@@ -84,7 +85,7 @@ export class FilterGraphPatternStrategy {
     for (let it = lowLevelPropertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
       let inScopeVar = it.current();
       let lambdaExpression = scope.get(inScopeVar);
-      let args = new propertyTrees.InScopeBranchingArgsBuilder()
+      let args = new InScopeBranchingArgsBuilder()
         .name(inScopeVar)
         .variableType(lambdaExpression.entityType)
         .value;
@@ -106,7 +107,7 @@ export class FilterGraphPatternStrategy {
 
   private createAndInsertBranch(property: schema.Property,
                                 propertyTree: filters.FlatPropertyTree): propertyTrees.Tree {
-    let args = new propertyTrees.PropertyBranchingArgsBuilder()
+    let args = new PropertyBranchingArgsBuilder()
       .name(property.getName())
       .complex(property.getEntityKind() === schema.EntityKind.Complex)
       .singleValued(property.isCardinalityOne())

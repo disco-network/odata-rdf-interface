@@ -1,13 +1,18 @@
 import openArgs = require("../src/adapter/openargs");
 
 describe("OpenArgs:", () => {
-  it("get / set Contracts and create children", () => {
+  it("set Contracts and create children", () => {
     let value = "";
     let args = new openArgs.OpenArgs();
     args.set(IContract, new Contract("a", v => value = v));
     expect(value).toBe("a");
     args.createChild().set(Contract, new Contract("b", v => value = v));
     expect(value).toBe("a/b");
+  });
+
+  it("get Contracts set before", () => {
+    let args = new openArgs.OpenArgs().set(IContract, new Contract("c", () => undefined));
+    expect(args.get(IContract).getValue()).toBe("c");
   });
 });
 

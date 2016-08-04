@@ -3,6 +3,10 @@ import gpatterns = require("../../sparql/graphpatterns");
 import {
   ITraversingArgs, IGraphPatterngArgs, IMappingArgs, IScopedMappingArgs, IGraphPatternSelector,
 } from "./traversingargs";
+import {
+  IBranchingArgs, BranchingArgsGuard,
+  IPropertyBranchingArgs, IInScopeVariableBranchingArgs, IAnyBranchingArgs,
+} from "./branchingargs";
 
 /**
  * Selects the graph patterns to branch on for those properties which are shown (expanded) in the query result.
@@ -40,18 +44,18 @@ export class GraphPatternSelector implements IGraphPatternSelector {
 
 // ===
 
-export class ComplexBranchFactory implements base.TreeFactoryCandidate {
-  public doesApply(args: base.BranchingArgs) {
-    return base.BranchingArgsGuard.isProperty(args) && args.complex && args.mirroredIdFrom === undefined;
+export class ComplexBranchFactory implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isProperty(args) && args.complex && args.mirroredIdFrom === undefined;
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertProperty(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertProperty(args))
       return new ComplexBranch(args);
   }
 }
 
-export class ComplexBranch extends base.Branch<base.PropertyBranchingArgs> {
+export class ComplexBranch extends base.Branch<IPropertyBranchingArgs> {
 
   protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -91,19 +95,19 @@ export class ComplexBranch extends base.Branch<base.PropertyBranchingArgs> {
 
 // ===
 
-export class ElementarySingleValuedBranchFactory implements base.TreeFactoryCandidate {
-  public doesApply(args: base.BranchingArgs) {
-    return base.BranchingArgsGuard.isProperty(args)
+export class ElementarySingleValuedBranchFactory implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isProperty(args)
       && !args.complex && args.singleValued && args.mirroredIdFrom === undefined;
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertProperty(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertProperty(args))
       return new ElementarySingleValuedBranch(args);
   }
 }
 
-export class ElementarySingleValuedBranch extends base.Branch<base.PropertyBranchingArgs> {
+export class ElementarySingleValuedBranch extends base.Branch<IPropertyBranchingArgs> {
 
   protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -142,19 +146,19 @@ export class ElementarySingleValuedBranch extends base.Branch<base.PropertyBranc
 // ===
 
 /* @smell always having to check that mirroredIdFrom !== undefined violates OCP */
-export class ElementarySingleValuedMirroredBranchFactory implements base.TreeFactoryCandidate {
-  public doesApply(args: base.BranchingArgs) {
-    return base.BranchingArgsGuard.isProperty(args)
+export class ElementarySingleValuedMirroredBranchFactory implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isProperty(args)
       && !args.complex && args.mirroredIdFrom !== undefined && args.singleValued && !args.inverse;
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertProperty(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertProperty(args))
       return new ElementarySingleValuedMirroredBranch(args);
   }
 }
 
-export class ElementarySingleValuedMirroredBranch extends base.Branch<base.PropertyBranchingArgs> {
+export class ElementarySingleValuedMirroredBranch extends base.Branch<IPropertyBranchingArgs> {
 
   protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
 
@@ -189,19 +193,19 @@ export class ElementarySingleValuedMirroredBranch extends base.Branch<base.Prope
 
 // ===
 
-export class InScopeVariableBranchFactory implements base.TreeFactoryCandidate {
+export class InScopeVariableBranchFactory implements base.ITreeFactoryCandidate {
 
-  public doesApply(args: base.BranchingArgs) {
+  public doesApply(args: IBranchingArgs) {
     return args.type === "inScopeVariable";
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertInScopeVariable(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertInScopeVariable(args))
       return new InScopeVariableBranch(args);
   }
 }
 
-export class InScopeVariableBranch extends base.Branch<base.InScopeVariableBranchingArgs> {
+export class InScopeVariableBranch extends base.Branch<IInScopeVariableBranchingArgs> {
 
   public traverse(args: ITraversingArgs) {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -225,19 +229,19 @@ export class InScopeVariableBranch extends base.Branch<base.InScopeVariableBranc
 
 // ===
 
-export class ComplexBranchFactoryForFiltering implements base.TreeFactoryCandidate {
-  public doesApply(args: base.BranchingArgs) {
-    return base.BranchingArgsGuard.isProperty(args)
+export class ComplexBranchFactoryForFiltering implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isProperty(args)
       && args.complex && args.singleValued && args.mirroredIdFrom === undefined;
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertProperty(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertProperty(args))
       return new ComplexBranchForFiltering(args);
   }
 }
 
-export class ComplexBranchForFiltering extends base.Branch<base.PropertyBranchingArgs> {
+export class ComplexBranchForFiltering extends base.Branch<IPropertyBranchingArgs> {
 
   protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -266,19 +270,19 @@ export class ComplexBranchForFiltering extends base.Branch<base.PropertyBranchin
 
 // ===
 
-export class ElementaryBranchFactoryForFiltering implements base.TreeFactoryCandidate {
-  public doesApply(args: base.BranchingArgs) {
-    return base.BranchingArgsGuard.isProperty(args)
+export class ElementaryBranchFactoryForFiltering implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isProperty(args)
       && !args.complex && args.mirroredIdFrom === undefined && args.singleValued;
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertProperty(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertProperty(args))
       return new ElementaryBranchForFiltering(args);
   }
 }
 
-export class ElementaryBranchForFiltering extends base.Branch<base.PropertyBranchingArgs> {
+export class ElementaryBranchForFiltering extends base.Branch<IPropertyBranchingArgs> {
 
   protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
@@ -305,18 +309,18 @@ export class ElementaryBranchForFiltering extends base.Branch<base.PropertyBranc
 
 // ===
 
-export class AnyBranchFactory implements base.TreeFactoryCandidate {
-  public doesApply(args: base.BranchingArgs) {
+export class AnyBranchFactory implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
     return args.type === "any";
   }
 
-  public create(args: base.BranchingArgs) {
-    if (base.BranchingArgsGuard.assertAny(args))
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertAny(args))
       return new AnyBranch(args);
   }
 }
 
-export class AnyBranch extends base.Branch<base.AnyBranchingArgs> {
+export class AnyBranch extends base.Branch<IAnyBranchingArgs> {
 
   /**
    * args.mapping should be the last property before the any-ed collection property, say X.
