@@ -4,76 +4,92 @@ declare class Map {
   public forEach(fn: (value, key, map: Map) => void): any;
 }
 
-export interface IOpenArgsReadonly {
-  get<SpecificContract extends IContractImplementer>
-    (Contract: ContractSpecification<SpecificContract>): SpecificContract;
-  createChild(): IOpenArgs;
+export interface IOpenArgsReadonly<Get> {
+  get: Get;
+  createChild(): IOpenArgs<Get, Get>;
 }
 
-export interface IOpenArgs extends IOpenArgsReadonly {
-  set<SpecificContract extends IContractImplementer>
-    (Contract: ContractSpecification<SpecificContract>, instance: SpecificContract);
+export interface IArgsGetter<T extends IContractImplementer<Get>, Get> {
+  (contract: IContractSpec<T, Get>): T;
 }
 
-export interface IOpenArgsCompatibilityCheckerReadonly {
-  checkCompatibility(args: IOpenArgs, knownContracts: ContractSpecification<any>[]): boolean;
+export interface IOpenArgs<Get extends ParentGet, ParentGet> extends IOpenArgsReadonly<Get> {
+  set<T extends IContractImplementer<ParentGet>>(Contract: IContractSpec<T, ParentGet>,
+                                     instance: T): IOpenArgs<Get & ((c: IContractSpec<T, ParentGet>) => T), ParentGet>;
 }
 
-export interface IOpenArgsCompatibilityChecker extends IOpenArgsCompatibilityCheckerReadonly {
-  setDefaultCondition<SpecificContract extends IContractImplementer>
-    (Contract: ContractSpecification<SpecificContract>, condition: (c: SpecificContract) => boolean);
-}
+export class OpenArgs<Get extends ParentGet, ParentGet> {
 
-export class OpenArgs {
+  public get = this.getDynamic as any as Get;
 
   private map = new Map();
+  private parent: IOpenArgsReadonly<ParentGet>;
 
-  constructor(private parent?: IOpenArgsReadonly) {
+  constructor(parent?: IOpenArgsReadonly<Get>) {
+    this.parent = parent;
   }
 
-  public get<SpecificContract extends IContractImplementer>
-    (Contract: ContractSpecification<SpecificContract>): SpecificContract {
+  public getDynamic<T extends IContractImplementer<ParentGet>>(Contract: IContractSpec<T, ParentGet>): T {
     return this.map.get(Contract);
   }
 
-  public set<SpecificContract extends IContractImplementer>(Contract: ContractSpecification<SpecificContract>,
-                                                            instance: SpecificContract) {
+  public set<T extends IContractImplementer<ParentGet>>(
+    Contract: IContractSpec<T, ParentGet>,
+    instance: T): IOpenArgs<Get & ((c: IContractSpec<T, ParentGet>) => T), ParentGet> {
+
     instance.initializeWithPreviousArgs(this.parent);
     this.map.set(Contract, instance);
+    return this as any as IOpenArgs<Get & ((c: IContractSpec<T, ParentGet>) => T), ParentGet>;
   }
 
   public createChild() {
-    let ret = new OpenArgs(this as IOpenArgsReadonly);
+    let ret = new OpenArgs(this as IOpenArgsReadonly<Get>);
     this.map.forEach((value, key) => ret.map.set(key, value));
     return ret;
   }
 }
 
-export interface IContractImplementer {
-  initializeWithPreviousArgs(args: IOpenArgsReadonly);
+export interface IContractImplementer<ParentGet> {
+  initializeWithPreviousArgs(args: IOpenArgsReadonly<ParentGet>);
 }
 
-export class ContractSpecification<T extends IContractImplementer> {
-  public methodWithContractImplementerReturnType(): T {
-    return null;
-  }
+export interface IContractSpec<T extends IContractImplementer<Get>, Get> {
+  defaultValue: T;
+}
+
+export interface ISimpleContractSpec<Get> extends IContractSpec<IContractImplementer<Get>, Get> {}
+
+export function defContract<T extends IContractImplementer<Get>, Get>(defaultValue?: T): IContractSpec<T, Get> {
+  return { defaultValue: defaultValue };
+}
+
+export interface IOpenArgsCompatibilityCheckerReadonly {
+  checkCompatibility<Get extends ParentGet, ParentGet>
+    (args: OpenArgs<Get, ParentGet>, knownContracts: ISimpleContractSpec<any>[]): boolean;
+}
+
+export interface IOpenArgsCompatibilityChecker extends IOpenArgsCompatibilityCheckerReadonly {
+  setDefaultCondition<SpecificContract extends IContractImplementer<ParentGet>, ParentGet>
+    (Contract: IContractSpec<SpecificContract, ParentGet>, condition: (c: SpecificContract) => boolean);
 }
 
 export class OpenArgsCompatibilityChecker implements IOpenArgsCompatibilityChecker {
 
   private defaultConditions = new Map();
 
-  public checkCompatibility(args: IOpenArgs, knownContracts: ContractSpecification<any>[]): boolean {
+  public checkCompatibility<Get extends ParentGet & ParentGet, ParentGet>
+    (args: OpenArgs<Get, ParentGet>, knownContracts: ISimpleContractSpec<any>[]): boolean {
     let ret = true;
     this.defaultConditions.forEach((condition, Contract) => {
       if (knownContracts.indexOf(Contract) === -1)
-        ret = ret && condition(args.get(Contract));
+        /* @todo use type guard instead of dynamic? */
+        ret = ret && condition(args.getDynamic(Contract));
     });
     return ret;
   }
 
-  public setDefaultCondition<SpecificContract extends IContractImplementer>
-    (Contract: ContractSpecification<SpecificContract>, condition: (c: SpecificContract) => boolean) {
+  public setDefaultCondition<SpecificContract extends IContractImplementer<ParentGet>, ParentGet>
+    (Contract: IContractSpec<SpecificContract, ParentGet>, condition: (c: SpecificContract) => boolean) {
     if (this.defaultConditions.get(Contract) === undefined) {
       this.defaultConditions.set(Contract, condition);
     }
