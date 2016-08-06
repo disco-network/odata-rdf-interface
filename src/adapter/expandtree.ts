@@ -4,7 +4,7 @@ import schema = require("../odata/schema");
 import propertyTree = require("./propertytree/propertytree");
 import propertyTreeImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs } from "./propertytree/traversingargs";
-import { PropertyBranchingArgsBuilder } from "./propertytree/branchingargs";
+import { PropertyBranchingArgsFactory } from "./propertytree/branchingargs";
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -13,9 +13,10 @@ import { PropertyBranchingArgsBuilder } from "./propertytree/branchingargs";
  */
 export class DirectPropertiesTreeStrategy {
 
-  constructor(private branchFactory: propertyTree.BranchFactory) {}
+  constructor(private branchFactory: propertyTree.BranchFactory, private argsFactory: PropertyBranchingArgsFactory) {}
 
-  public create(entityType: schema.EntityType, options: string): propertyTree.Tree {
+  public create(entityType: schema.EntityType,
+                options: string): propertyTree.Tree {
 
     let tree = new propertyTree.RootTree();
 
@@ -27,15 +28,7 @@ export class DirectPropertiesTreeStrategy {
       let propertyName = property.getName();
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.getEntityKind() === schema.EntityKind.Elementary) {
-        let args = new PropertyBranchingArgsBuilder()
-          .name(property.getName())
-          .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
-          .mandatory(!property.isOptional())
-          .singleValued(property.isCardinalityOne())
-          .complex(false)
-          .mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName())
-          .loose(false)
-          .value;
+        let args = this.argsFactory.fromProperty(property);
         tree.branch(this.branchFactory.create(args));
       }
     }
@@ -49,12 +42,12 @@ export class DirectPropertiesTreeStrategy {
  * (only considering complex properties) and a StructuredSparqlVariableMapping
  * so that it contains all data necessary for an OData $expand query.
  */
-export class ExpandTreeGraphPatternFactory {
+export class ExpandTreeGraphPatternStrategy {
 
   private directPropertiesStrategy: DirectPropertiesTreeStrategy;
 
-  constructor(private branchFactory: propertyTree.BranchFactory) {
-    this.directPropertiesStrategy = new DirectPropertiesTreeStrategy(this.branchFactory);
+  constructor(private branchFactory: propertyTree.BranchFactory, private argsFactory: PropertyBranchingArgsFactory) {
+    this.directPropertiesStrategy = new DirectPropertiesTreeStrategy(this.branchFactory, this.argsFactory);
   }
 
   public create(entityType: schema.EntityType, expandTree,
@@ -77,15 +70,8 @@ export class ExpandTreeGraphPatternFactory {
 
     let tree = new propertyTree.RootTree();
 
-    tree.branch(this.branchFactory.create(new PropertyBranchingArgsBuilder()
-      .name("Id")
-      .inverse(false)
-      .complex(false)
-      .mirroredIdFrom(undefined)
-      .singleValued(true)
-      .mandatory(true)
-      .loose(false)
-      .value));
+    let idProperty = entityType.getProperty("Id");
+    tree.branch(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));
 
     let directPropertyTree = this.directPropertiesStrategy.create(entityType, "no-id-property");
     directPropertyTree.copyTo(tree);
@@ -93,14 +79,7 @@ export class ExpandTreeGraphPatternFactory {
     for (let propertyName of Object.keys(expandTree)) {
       let property = entityType.getProperty(propertyName);
 
-      let branch = tree.branch(this.branchFactory.create(new PropertyBranchingArgsBuilder()
-        .name(property.getName())
-        .mirroredIdFrom(undefined)
-        .complex(true)
-        .mandatory(!property.isOptional())
-        .singleValued(property.isCardinalityOne())
-        .inverse(!property.hasDirectRdfRepresentation())
-        .loose(false).value));
+      let branch = tree.branch(this.branchFactory.create(this.argsFactory.fromProperty(property)));
 
       let recursive = this.createTree(property.getEntityType(), expandTree[propertyName]);
       recursive.copyTo(branch);

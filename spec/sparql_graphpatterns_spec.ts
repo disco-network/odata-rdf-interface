@@ -1,10 +1,7 @@
 import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
 import gpatterns = require("../src/sparql/graphpatterns");
-import propertyTrees = require("../src/adapter/propertytree/propertytree");
-import propertyTreesImpl = require("../src/adapter/propertytree/propertytree_impl");
-import propertyMirroring = require("../src/adapter/propertymirroring");
-import expandTreePatterns = require("../src/adapter/expandtree");
+import propertyTreeConfiguration = require("../src/adapter/configuration/propertytree");
 import mhelper = require("./helpers/sparql_mappings");
 
 describe("tree graph patterns", function() {
@@ -215,14 +212,5 @@ describe("A filter graph pattern", () => {
 });
 
 function createExpandPatternStrategy() {
-  return new expandTreePatterns.ExpandTreeGraphPatternFactory(createBranchFactory());
-}
-
-function createBranchFactory() {
-  return new propertyTrees.TreeDependencyInjector()
-    .registerFactoryCandidates(
-      new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
-      new propertyMirroring.ElementarySingleValuedMirroredBranchFactory(),
-      new propertyTreesImpl.ComplexBranchFactory()
-    );
+  return propertyTreeConfiguration.getExpandTreeGraphPatternStrategy();
 }

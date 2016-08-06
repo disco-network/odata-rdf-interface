@@ -15,16 +15,28 @@ export interface IPropertyBranchingArgs {
 }
 
 export class PropertyBranchingArgsFactory {
+  private modifiers: ((builder: PropertyBranchingArgsBuilder, property: schema.Property) => void)[] = [
+    (builder, property) => {
+      builder.mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName());
+    },
+  ];
+
   public fromProperty(property: schema.Property): IPropertyBranchingArgs {
-    return new PropertyBranchingArgsBuilder()
+    let builder = new PropertyBranchingArgsBuilder()
       .name(property.getName())
       .complex(property.getEntityKind() === schema.EntityKind.Complex)
       .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
       .mandatory(!property.isOptional())
       .singleValued(property.isCardinalityOne())
-      .loose(false)
-      .mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName())
-      .value;
+      .loose(false);
+    for (let modify of this.modifiers) {
+      modify(builder, property);
+    }
+    return builder.value;
+  }
+
+  public registerModifier(modify: (builder: PropertyBranchingArgsBuilder, property: schema.Property) => void) {
+    this.modifiers.push(modify);
   }
 }
 

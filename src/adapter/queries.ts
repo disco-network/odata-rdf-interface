@@ -6,9 +6,7 @@ import filters = require("./filters");
 import qsBuilder = require("./querystring_builder");
 import ODataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
-import propertyTrees = require("./propertytree/propertytree");
-import propertyTreesImpl = require("./propertytree/propertytree_impl");
-import propertyMirroring = require("./propertymirroring");
+import propertyTreeConfiguration = require("./configuration/propertytree");
 import result = require("../result");
 
 /**
@@ -174,35 +172,16 @@ export class DependencyInjector {
       ]);
   }
 
-  public createFilterPatternStrategy(): filterPatterns.FilterGraphPatternStrategy {
-    return new filterPatterns.FilterGraphPatternStrategy(this.createBranchFactoryForFilering());
-  }
-
   public createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
     return new qsBuilder.QueryStringBuilder();
   }
 
-  public createExpandPatternStrategy(): expandTreePatterns.ExpandTreeGraphPatternFactory {
-    return new expandTreePatterns.ExpandTreeGraphPatternFactory(this.createBranchFactoryForExpanding());
+  public createFilterPatternStrategy(): filterPatterns.FilterGraphPatternStrategy {
+    return propertyTreeConfiguration.getFilterGraphPatternStrategy();
   }
 
-  private createBranchFactoryForFilering(): propertyTrees.BranchFactory {
-    return new propertyTrees.TreeDependencyInjector()
-      .registerFactoryCandidates(
-        new propertyTreesImpl.ComplexBranchFactoryForFiltering(),
-        new propertyTreesImpl.ElementaryBranchFactoryForFiltering(),
-        new propertyTreesImpl.InScopeVariableBranchFactory(),
-        new propertyTreesImpl.AnyBranchFactory()
-      );
-  }
-
-  private createBranchFactoryForExpanding(): propertyTrees.BranchFactory {
-    return new propertyTrees.TreeDependencyInjector()
-      .registerFactoryCandidates(
-        new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
-        new propertyTreesImpl.ComplexBranchFactory(),
-        new propertyMirroring.ElementarySingleValuedMirroredBranchFactory()
-      );
+  public createExpandPatternStrategy(): expandTreePatterns.ExpandTreeGraphPatternStrategy {
+    return propertyTreeConfiguration.getExpandTreeGraphPatternStrategy();
   }
 }
 
