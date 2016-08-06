@@ -4,6 +4,7 @@ import expandTreePatterns = require("../src/adapter/expandtree");
 import mhelper = require("./helpers/sparql_mappings");
 import propertyTrees = require("../src/adapter/propertytree/propertytree");
 import propertyTreesImpl = require("../src/adapter/propertytree/propertytree_impl");
+import propertyMirroring = require("../src/adapter/propertymirroring");
 
 describe('OData properties with quantity "many"', function() {
   it("should be integrated with UNION", function() {
@@ -22,7 +23,7 @@ function createBranchFactory() {
   return new propertyTrees.TreeDependencyInjector()
     .registerFactoryCandidates(
       new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
-      new propertyTreesImpl.ElementarySingleValuedMirroredBranchFactory(),
+      new propertyMirroring.ElementarySingleValuedMirroredBranchFactory(),
       new propertyTreesImpl.ComplexBranchFactory()
     );
 }

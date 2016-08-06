@@ -3,6 +3,7 @@ let schema = new schemaModule.Schema();
 import gpatterns = require("../src/sparql/graphpatterns");
 import propertyTrees = require("../src/adapter/propertytree/propertytree");
 import propertyTreesImpl = require("../src/adapter/propertytree/propertytree_impl");
+import propertyMirroring = require("../src/adapter/propertymirroring");
 import expandTreePatterns = require("../src/adapter/expandtree");
 import mhelper = require("./helpers/sparql_mappings");
 
@@ -221,7 +222,7 @@ function createBranchFactory() {
   return new propertyTrees.TreeDependencyInjector()
     .registerFactoryCandidates(
       new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
-      new propertyTreesImpl.ElementarySingleValuedMirroredBranchFactory(),
+      new propertyMirroring.ElementarySingleValuedMirroredBranchFactory(),
       new propertyTreesImpl.ComplexBranchFactory()
     );
 }

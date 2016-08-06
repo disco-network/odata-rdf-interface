@@ -8,6 +8,7 @@ import ODataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
 import propertyTrees = require("./propertytree/propertytree");
 import propertyTreesImpl = require("./propertytree/propertytree_impl");
+import propertyMirroring = require("./propertymirroring");
 import result = require("../result");
 
 /**
@@ -199,8 +200,8 @@ export class DependencyInjector {
     return new propertyTrees.TreeDependencyInjector()
       .registerFactoryCandidates(
         new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
-        new propertyTreesImpl.ElementarySingleValuedMirroredBranchFactory(),
-        new propertyTreesImpl.ComplexBranchFactory()
+        new propertyTreesImpl.ComplexBranchFactory(),
+        new propertyMirroring.ElementarySingleValuedMirroredBranchFactory()
       );
   }
 }

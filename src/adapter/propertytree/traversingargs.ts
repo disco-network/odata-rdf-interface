@@ -34,9 +34,9 @@ export interface IGraphPatternSelector {
   getOtherSelector(rootPattern: gpatterns.TreeGraphPattern): IGraphPatternSelector;
 }
 
-export interface ITraversingArgs extends IGraphPatterngArgs, IMappingArgs, IScopedMappingArgs {}
+export interface ITraversingArgs extends IGraphPatternArgs, IMappingArgs, IScopedMappingArgs {}
 
-export interface IGraphPatterngArgs extends ITraversingArgsBase {
+export interface IGraphPatternArgs extends ITraversingArgsBase {
   patternSelector: IGraphPatternSelector;
 }
 

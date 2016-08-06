@@ -1,7 +1,7 @@
 import base = require("./propertytree");
 import gpatterns = require("../../sparql/graphpatterns");
 import {
-  ITraversingArgs, IGraphPatterngArgs, IMappingArgs, IScopedMappingArgs, IGraphPatternSelector,
+  ITraversingArgs, IGraphPatternArgs, IMappingArgs, IScopedMappingArgs, IGraphPatternSelector,
 } from "./traversingargs";
 import {
   IBranchingArgs, BranchingArgsGuard,
@@ -57,7 +57,7 @@ export class ComplexBranchFactory implements base.ITreeFactoryCandidate {
 
 export class ComplexBranch extends base.Branch<IPropertyBranchingArgs> {
 
-  protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
+  protected applyBranch(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
     let mapping = args.mapping;
     let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
@@ -109,7 +109,7 @@ export class ElementarySingleValuedBranchFactory implements base.ITreeFactoryCan
 
 export class ElementarySingleValuedBranch extends base.Branch<IPropertyBranchingArgs> {
 
-  protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
+  protected applyBranch(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
     let mapping = args.mapping;
     let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
@@ -140,54 +140,6 @@ export class ElementarySingleValuedBranch extends base.Branch<IPropertyBranching
       return patternSelector.getRootPattern();
     else
       return patternSelector.getUnionPatternForSingleValuedBranches();
-  }
-}
-
-// ===
-
-/* @smell always having to check that mirroredIdFrom !== undefined violates OCP */
-export class ElementarySingleValuedMirroredBranchFactory implements base.ITreeFactoryCandidate {
-  public doesApply(args: IBranchingArgs) {
-    return BranchingArgsGuard.isProperty(args)
-      && !args.complex && args.mirroredIdFrom !== undefined && args.singleValued && !args.inverse;
-  }
-
-  public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args))
-      return new ElementarySingleValuedMirroredBranch(args);
-  }
-}
-
-export class ElementarySingleValuedMirroredBranch extends base.Branch<IPropertyBranchingArgs> {
-
-  protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
-
-    let mapping = args.mapping;
-    let complexPropertyUri = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.mirroredIdFrom);
-    let idPropertyUri = mapping.getSubMappingByComplexProperty(this.branchingArgs.mirroredIdFrom)
-      .properties.getNamespacedUriOfProperty("Id");
-
-    let intermediateVariableName = mapping.variables.getComplexProperty(this.branchingArgs.mirroredIdFrom)
-      .getVariable();
-    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
-
-    let basePattern = this.selectPattern(args.patternSelector);
-    let subPattern = this.branchingArgs.mandatory === true ?
-      basePattern
-        .branch(complexPropertyUri, intermediateVariableName)
-        .branch(idPropertyUri, variableName) :
-      basePattern
-        .optionalBranch(complexPropertyUri, intermediateVariableName)
-        .branch(idPropertyUri, variableName);
-
-    let result = args.clone();
-    result.patternSelector = args.patternSelector.getOtherSelector(subPattern);
-    result.mapping = undefined;
-    return result;
-  }
-
-  private selectPattern(patternSelector: IGraphPatternSelector) {
-    return patternSelector.getUnionPatternForSingleValuedBranches();
   }
 }
 
@@ -243,7 +195,7 @@ export class ComplexBranchFactoryForFiltering implements base.ITreeFactoryCandid
 
 export class ComplexBranchForFiltering extends base.Branch<IPropertyBranchingArgs> {
 
-  protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
+  protected applyBranch(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
     let mapping = args.mapping;
     let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
@@ -284,7 +236,7 @@ export class ElementaryBranchFactoryForFiltering implements base.ITreeFactoryCan
 
 export class ElementaryBranchForFiltering extends base.Branch<IPropertyBranchingArgs> {
 
-  protected applyBranch(args: IGraphPatterngArgs & IMappingArgs): ITraversingArgs {
+  protected applyBranch(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
     let basePattern = this.selectPattern(args.patternSelector);
     let mapping = args.mapping;
     let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name);
@@ -326,7 +278,7 @@ export class AnyBranch extends base.Branch<IAnyBranchingArgs> {
    * args.mapping should be the last property before the any-ed collection property, say X.
    * args.patternSelector should be based on the branch on top of X.
    */
-  protected applyBranch(args: IGraphPatterngArgs & IMappingArgs & IScopedMappingArgs): ITraversingArgs {
+  protected applyBranch(args: IGraphPatternArgs & IMappingArgs & IScopedMappingArgs): ITraversingArgs {
     let basePattern = this.selectQueryRootPattern(args);
     let mapping = args.mapping;
     let rootVariableName = mapping.variables.getVariable();
@@ -356,7 +308,7 @@ export class AnyBranch extends base.Branch<IAnyBranchingArgs> {
     return result;
   }
 
-  private selectQueryRootPattern(args: IGraphPatterngArgs & IScopedMappingArgs) {
+  private selectQueryRootPattern(args: IGraphPatternArgs & IScopedMappingArgs) {
     let knownPattern = args.patternSelector.getRootPattern();
     let rootVariable = args.scopedMapping.unscoped().variables.getVariable();
     return knownPattern.looseBranch(rootVariable);

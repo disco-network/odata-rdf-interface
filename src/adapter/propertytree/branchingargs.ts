@@ -14,6 +14,20 @@ export interface IPropertyBranchingArgs {
   mirroredIdFrom: string;
 }
 
+export class PropertyBranchingArgsFactory {
+  public fromProperty(property: schema.Property): IPropertyBranchingArgs {
+    return new PropertyBranchingArgsBuilder()
+      .name(property.getName())
+      .complex(property.getEntityKind() === schema.EntityKind.Complex)
+      .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
+      .mandatory(!property.isOptional())
+      .singleValued(property.isCardinalityOne())
+      .loose(false)
+      .mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName())
+      .value;
+  }
+}
+
 export interface IInScopeVariableBranchingArgs {
   type: "inScopeVariable";
   name: string;
@@ -95,8 +109,9 @@ class PropertyBranchingArgsBuilderTemplate<Value extends { type: "property" }> {
   }
 }
 
-export class PropertyBranchingArgsBuilder extends PropertyBranchingArgsBuilderTemplate<{ type: "property" }> {
-  public value = { type: <"property"> "property" };
+export class PropertyBranchingArgsBuilder
+  extends PropertyBranchingArgsBuilderTemplate<{ type: "property", mirroredIdFrom: string }> {
+  public value = { type: <"property"> "property", mirroredIdFrom: undefined };
 }
 
 class InScopeBranchingArgsBuilderTemplate<Value extends { type: "inScopeVariable" }> {
