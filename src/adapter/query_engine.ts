@@ -6,11 +6,12 @@ import sparqlProvider = require("../sparql/sparql_provider_base");
 import ast2query = require("../odata/ast2query");
 import schema = require("../odata/schema");
 import queries = require("../adapter/queries");
+import queryConfiguration = require("../adapter/configuration/queries"); /* @smell, @todo */
 import result = require("../result");
 
 import fs = require("fs");
 
-/* The interface should conform encapsulation, hence the implementation
+/* The interface should conform encapsulation, hence implementation
    is responsible for dependency injection - see below. */
 export interface IQueryEngine {
   query(queryString: string, cb: (result: result.AnyResult) => void);
@@ -39,7 +40,7 @@ export class QueryEngine {
     let ast = this.interpreter.getCompleteMatch(this.interpreter.getPattern("odataRelativeUri"), url);
     let odataModel = ast2query.getQueryModelFromEvaluatedAst(ast.evaluate(), this.schm);
     let modelAdapter = new queries.QueryAdapterModel(odataModel);
-    let query = (new queries.QueryFactory(modelAdapter)).create();
+    let query = (new queryConfiguration.QueryFactory(modelAdapter)).create();
     query.run(this.sparqlProvider, cb);
   }
 

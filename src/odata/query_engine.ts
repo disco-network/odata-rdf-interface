@@ -17,7 +17,7 @@ export class QueryEngine implements IQueryEngine {
   private schema: schema.Schema;
 
   public queryGET(query: string, cb: (result: results.AnyResult) => void) {
-    //
+    // @todo
   }
 
   public queryPOST(query: string, body: string, cb: (result: results.AnyResult) => void) {
