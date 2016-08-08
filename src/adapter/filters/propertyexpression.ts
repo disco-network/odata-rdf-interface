@@ -1,5 +1,5 @@
 import filters = require("../filters");
-import qsBuilder = require("../querystring_builder");
+import qsBuilder = require("../../sparql/configuration/querystringbuilder"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 import mappings = require("../mappings");
@@ -83,29 +83,14 @@ export class AnyExpression {
     let innerFilterExpression = this.factory.fromRaw(this.raw.lambdaExpression.predicateExpression,
       this.createFilterContextInsideLambda());
 
-    return "EXISTS { "
-      + this.buildFilterPatternContentString(innerFilterExpression)
-      + this.buildFilterExpressionAmendmentString(innerFilterExpression)
-      + " }";
+    return `EXISTS ${this.buildFilterPatternString(innerFilterExpression)}`;
   }
 
-  private buildFilterPatternContentString(innerFilterExpression: filters.IFilterExpression) {
-    /* @smell this should be passed to PropertyExpression */
-    /*let branchFactory = new propertyTree.TreeDependencyInjector()
-      .registerFactoryCandidates(
-        new propertyTreeImpl.ComplexBranchFactoryForFiltering(),
-        new propertyTreeImpl.ElementaryBranchFactoryForFiltering(),
-        new propertyTreeImpl.InScopeVariableBranchFactory(),
-        new propertyTreeImpl.AnyBranchFactory()
-      );*/
+  private buildFilterPatternString(innerFilterExpression: filters.IFilterExpression) {
     let filterPattern = this.filterPatternStrategy.createAnyExpressionPattern(this.filterContext,
       innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath);
-    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
-    return queryStringBuilder.buildGraphPatternContentString(filterPattern);
-  }
-
-  private buildFilterExpressionAmendmentString(innerFilterExpression: filters.IFilterExpression) {
-    return " . FILTER(" + innerFilterExpression.toSparql() + ")";
+    let queryStringBuilder = new qsBuilder.GraphPatternStringBuilder();
+    return queryStringBuilder.buildGraphPatternStringAmendFilterExpression(filterPattern, innerFilterExpression);
   }
 
   private createFilterContextInsideLambda(): filters.IFilterContext {

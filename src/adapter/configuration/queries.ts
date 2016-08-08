@@ -1,6 +1,21 @@
 import base = require("../queries");
 import filters = require("../filters");
 import propertyTreeConfig = require("./propertytree");
+import sparqlBuilderConfig = require("../../sparql/configuration/querystringbuilder");
+
+export class EntitySetQuery extends base.EntitySetQuery {
+  constructor(model: base.IQueryAdapterModel) {
+    super(model, new EntitySetQueryStringBuilder());
+  }
+}
+
+export class EntitySetQueryStringBuilder extends base.EntitySetQueryStringBuilder {
+  constructor() {
+    super(new FilterExpressionFactory(),
+      propertyTreeConfig.getFilterGraphPatternStrategy(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(),
+      new sparqlBuilderConfig.SelectQueryStringBuilder());
+  }
+}
 
 export class QueryFactory extends base.QueryFactory {
   constructor(model: base.IQueryAdapterModel) {
@@ -17,12 +32,5 @@ export class FilterExpressionFactory extends filters.FilterExpressionIoCContaine
       filters.ParenthesesExpressionFactory,
       new filters.PropertyExpressionFactory(propertyTreeConfig.getFilterGraphPatternStrategy()),
     ]);
-  }
-}
-
-export class EntitySetQuery extends base.EntitySetQuery {
-  constructor(model: base.IQueryAdapterModel) {
-    super(model, new FilterExpressionFactory(),
-      propertyTreeConfig.getFilterGraphPatternStrategy(), propertyTreeConfig.getExpandTreeGraphPatternStrategy());
   }
 }

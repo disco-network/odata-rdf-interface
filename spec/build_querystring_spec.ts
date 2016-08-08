@@ -1,13 +1,13 @@
 import gpatterns = require("../src/sparql/graphpatterns");
-import qbuilder = require("../src/adapter/querystring_builder");
+import qbuilder = require("../src/sparql/querystringbuilder");
 
-describe("the query string builder", function() {
+describe("the graph pattern string builder", function() {
   it("should build queries without UNION and OPTIONAL", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.branch("disco:id", new gpatterns.ValueLeaf("1"));
     pattern.branch("disco:refersTo", "?ref").branch("disco:referree", new gpatterns.ValueLeaf("2"));
 
-    let builder = new qbuilder.QueryStringBuilder();
+    let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
     expect(queryString).toEqual(
@@ -20,7 +20,7 @@ describe("the query string builder", function() {
     pattern.newUnionPattern().branch("disco:parent", "?parent");
     pattern.newUnionPattern().inverseBranch("disco:parent", "?child");
 
-    let builder = new qbuilder.QueryStringBuilder();
+    let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
     expect(queryString).toEqual(
@@ -32,7 +32,7 @@ describe("the query string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.newUnionPattern().newUnionPattern().branch("disco:id", new gpatterns.ValueLeaf("1"));
 
-    let builder = new qbuilder.QueryStringBuilder();
+    let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
     expect(queryString).toEqual(
@@ -43,7 +43,7 @@ describe("the query string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.branch("disco:content", "?cnt").newUnionPattern().branch("disco:id", "?id");
 
-    let builder = new qbuilder.QueryStringBuilder();
+    let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
     expect(queryString).toEqual(
@@ -54,7 +54,7 @@ describe("the query string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.optionalBranch("disco:parent", "?par").branch("disco:id", "?id");
 
-    let builder = new qbuilder.QueryStringBuilder();
+    let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
     expect(queryString).toEqual(
@@ -65,11 +65,110 @@ describe("the query string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?rootA");
     pattern.newConjunctivePattern(new gpatterns.TreeGraphPattern("?rootB")).branch("disco:id", "?id");
 
-    let builder = new qbuilder.QueryStringBuilder();
+    let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
     expect(queryString).toEqual(
       "{ { ?rootB disco:id ?id } }"
     );
   });
+
+  it("should amend FILTER expressions after empty patterns", () => {
+    let pattern = new gpatterns.TreeGraphPattern("?root");
+
+    let builder = new qbuilder.GraphPatternStringBuilder();
+    let query = builder.buildGraphPatternStringAmendFilterExpression(pattern, { toSparql: () => "{filter}" });
+
+    expect(query).toBe("{ FILTER({filter}) }");
+  });
+
+  it("should amend FILTER expressions after patterns", () => {
+    let pattern = new gpatterns.TreeGraphPattern("{subject}");
+    pattern.branch("{predicate}", "{object}");
+
+    let builder = new qbuilder.GraphPatternStringBuilder();
+    let query = builder.buildGraphPatternStringAmendFilterExpression(pattern, { toSparql: () => "{filter}" });
+
+    expect(query).toBe("{ {subject} {predicate} {object} . FILTER({filter}) }");
+  });
 });
+
+describe("SelectSkeletonBuilder:", () => {
+  it("build a query skeleton without prefixes", () => {
+    let builder = new qbuilder.SelectSkeletonBuilder();
+
+    let query = builder.buildSkeleton("", "{graphPattern}");
+
+    expect(query).toBe("SELECT * WHERE {graphPattern}");
+  });
+
+  it("build a query skeleton with prefixes", () => {
+    let builder = new qbuilder.SelectSkeletonBuilder();
+
+    let query = builder.buildSkeleton("{prefixes}", "{graphPattern}");
+
+    expect(query).toBe("{prefixes} SELECT * WHERE {graphPattern}");
+  });
+});
+
+describe("SelectQueryStringBuilder:", () => {
+  let pattern1 = new gpatterns.TreeGraphPattern("?root");
+  spec("no prefix, no filter", {
+    prefixes: [], pattern: pattern1, filter: undefined, prefixString: "", patternString: "{  }",
+    queryString: "SELECT WHERE {  }",
+  });
+
+  let pattern2 = new gpatterns.TreeGraphPattern("?root");
+  spec("with 1 prefix, no filter", {
+    prefixes: [{ prefix: "pre", uri: "pre://fi.x" }], pattern: pattern2, filter: undefined,
+      prefixString: "PREFIX pre: <pre://fi.x>", patternString: "{  }", queryString: "SELECT WHERE {  }",
+  });
+
+  let pattern3 = new gpatterns.TreeGraphPattern("?root");
+  spec("with 2 prefix, no filter", {
+    prefixes: [{ prefix: "pre", uri: "pre://fi.x" }, { prefix: "ex", uri: "ex" }], pattern: pattern3, filter: undefined,
+      prefixString: "PREFIX pre: <pre://fi.x> PREFIX ex: <ex>", patternString: "{  }", queryString: "SELECT WHERE {  }",
+  });
+
+  function spec(name: string, args: {
+    prefixes: qbuilder.IPrefix[]; pattern: gpatterns.TreeGraphPattern; filter: qbuilder.IFilterExpression;
+    patternString: string; prefixString: string; queryString: string
+  }) {
+    it(name, () => {
+      let patternBuilder = new GraphPatternStringBuilder();
+      patternBuilder.buildGraphPatternStringAmendFilterExpression = (pat, filter?) => {
+        expect(pat).toBe(args.pattern);
+        expect(filter).toBe(args.filter);
+        return args.patternString;
+      };
+      let skeletonBuilder = new SelectSkeletonBuilder();
+      skeletonBuilder.buildSkeleton = (prefixes, pat) => {
+        expect(prefixes).toEqual(args.prefixString);
+        expect(pat).toBe(args.patternString);
+        return args.queryString;
+      };
+      let builder = new qbuilder.SelectQueryStringBuilder(skeletonBuilder, patternBuilder);
+
+      let query = builder.fromGraphPatternAndFilterExpression(args.prefixes, args.pattern, args.filter);
+
+      expect(query).toBe(args.queryString);
+    });
+  }
+});
+
+class SelectSkeletonBuilder implements qbuilder.ISelectSkeletonBuilder {
+  public buildSkeleton(prefixes: string, graphPattern: string): any {
+    //
+  }
+}
+
+class GraphPatternStringBuilder implements qbuilder.IGraphPatternStringBuilder {
+  public buildGraphPatternString(pattern: gpatterns.TreeGraphPattern): any {
+    return this.buildGraphPatternStringAmendFilterExpression(pattern);
+  }
+
+  public buildGraphPatternStringAmendFilterExpression(pattern: gpatterns.TreeGraphPattern,
+                                                      filter?: qbuilder.IFilterExpression): any {
+    //
+  }
+}

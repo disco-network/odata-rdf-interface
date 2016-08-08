@@ -3,8 +3,8 @@ import gpatterns = require("../sparql/graphpatterns");
 import filterPatterns = require("./filterpatterns");
 import expandTreePatterns = require("./expandtree");
 import filters = require("./filters");
-import qsBuilder = require("./querystring_builder");
-import ODataQueries = require("../odata/queries");
+import psBuilder = require("../sparql/querystringbuilder");
+import odataQueries = require("../odata/queries");
 import Schema = require("../odata/schema");
 import result = require("../result");
 
@@ -14,8 +14,8 @@ import result = require("../result");
 /* @todo open/closed principle: use factory candidates (see FilterExpressionIoCContainer)? */
 export class QueryFactory {
   constructor(private model: IQueryAdapterModel,
-              private createEntitySetQuery: (model: IQueryAdapterModel) => ODataQueries.IQuery) { }
-  public create(): ODataQueries.IQuery {
+              private createEntitySetQuery: (model: IQueryAdapterModel) => odataQueries.IQuery) { }
+  public create(): odataQueries.IQuery {
     return this.createEntitySetQuery(this.model);
   }
 }
@@ -23,13 +23,9 @@ export class QueryFactory {
 /**
  * Handles read-only OData queries.
  */
-export class EntitySetQuery implements ODataQueries.IQuery {
+export class EntitySetQuery implements odataQueries.IQuery {
 
-  constructor(private model: IQueryAdapterModel,
-              private filterExpressionFactory: filters.FilterExpressionIoCContainer,
-              private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
-              private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy) {
-    this.filterExpressionFactory.setStandardFilterContext(this.model.getFilterContext());
+  constructor(private model: IQueryAdapterModel, private queryStringBuilder: IEntitySetQueryStringBuilder) {
   }
 
   public run(sparqlProvider, cb: (result: result.AnyResult) => void): void {
@@ -39,16 +35,7 @@ export class EntitySetQuery implements ODataQueries.IQuery {
   }
 
   private generateQueryString(): string {
-    let expandGraphPattern = this.createExpandGraphPattern();
-
-    let filterExpression = this.createFilterExpression();
-    let filterGraphPattern = this.createFilterGraphPattern(filterExpression);
-
-    let queryStringBuilder = this.createQueryStringBuilder();
-    return queryStringBuilder.fromGraphPattern(expandGraphPattern, {
-      filterExpression: filterExpression,
-      filterPattern: filterGraphPattern,
-    });
+    return this.queryStringBuilder.fromQueryAdapterModel(this.model);
   }
 
   private translateResponseToOData(response: result.AnyResult): result.AnyResult {
@@ -63,38 +50,61 @@ export class EntitySetQuery implements ODataQueries.IQuery {
   private translateSuccessfulResponseToOData(response: any) {
     let queryContext = new SparqlQueryContext(this.model.getMapping().variables,
       this.model.getEntitySetType(), this.model.getExpandTree());
-    let resultBuilder = new ODataQueries.JsonResultBuilder();
+    let resultBuilder = new odataQueries.JsonResultBuilder();
     return resultBuilder.run(response, queryContext);
   }
+}
 
-  private createExpandGraphPattern(): gpatterns.TreeGraphPattern {
-    return this.expandTreePatternStrategy.create(this.model.getEntitySetType(),
-      this.model.getExpandTree(), this.model.getMapping().variables);
+export interface IEntitySetQueryStringBuilder {
+  fromQueryAdapterModel(model: IQueryAdapterModel);
+}
+
+export class EntitySetQueryStringBuilder {
+
+  constructor(private filterExpressionFactory: filters.FilterExpressionIoCContainer,
+              private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
+              private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
+              private sparqlSelectBuilder: psBuilder.ISelectQueryStringBuilder) {
   }
 
-  private createFilterGraphPattern(filterExpression?: filters.IFilterExpression): gpatterns.TreeGraphPattern {
+  public fromQueryAdapterModel(model: IQueryAdapterModel) {
+    let expandGraphPattern = this.createExpandGraphPattern(model);
+
+    let filterExpression = this.createFilterExpression(model);
+    let filterGraphPattern = this.createFilterGraphPattern(model, filterExpression);
+
+    let graphPattern = new gpatterns.TreeGraphPattern(model.getMapping().variables.getVariable());
+    graphPattern.newConjunctivePattern(expandGraphPattern);
+    graphPattern.newConjunctivePattern(filterGraphPattern);
+
+    let prefixes = [
+      { prefix: "rdf", uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
+      { prefix: "disco", uri: "http://disco-network.org/resource/" },
+    ];
+
+    return this.sparqlSelectBuilder.fromGraphPatternAndFilterExpression(prefixes, graphPattern, filterExpression);
+  }
+
+  private createExpandGraphPattern(model: IQueryAdapterModel): gpatterns.TreeGraphPattern {
+    return this.expandTreePatternStrategy.create(model.getEntitySetType(),
+      model.getExpandTree(), model.getMapping().variables);
+  }
+
+  private createFilterGraphPattern(model: IQueryAdapterModel,
+                                   filterExpression?: filters.IFilterExpression): gpatterns.TreeGraphPattern {
     if (filterExpression) {
 
-      let filterGraphPattern = this.filterPatternStrategy.createPattern(this.model.getFilterContext(),
+      let filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
         filterExpression.getPropertyTree());
       return filterGraphPattern;
     }
   }
 
-  private createFilterExpression(): filters.IFilterExpression {
-    if (this.model.getRawFilter() !== undefined)
-      return this.getFilterExpressionFactory().fromRaw(this.model.getRawFilter());
-  }
-
-  private getFilterExpressionFactory() {
-    return this.filterExpressionFactory;
-  }
-
-  private createQueryStringBuilder(): qsBuilder.QueryStringBuilder {
-    let queryStringBuilder = new qsBuilder.QueryStringBuilder();
-    queryStringBuilder.insertPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    queryStringBuilder.insertPrefix(/** @smell */ "disco", "http://disco-network.org/resource/");
-    return queryStringBuilder;
+  private createFilterExpression(model: IQueryAdapterModel): filters.IFilterExpression {
+    if (model.getRawFilter() !== undefined) {
+      this.filterExpressionFactory.setStandardFilterContext(model.getFilterContext());
+      return this.filterExpressionFactory.fromRaw(model.getRawFilter());
+    }
   }
 }
 
@@ -111,7 +121,7 @@ export class QueryAdapterModel implements IQueryAdapterModel {
   private mapping: mappings.Mapping;
   private filterContext: filters.IFilterContext;
 
-  constructor(private odata: ODataQueries.IQueryModel) {}
+  constructor(private odata: odataQueries.IQueryModel) {}
 
   public getFilterContext(): filters.IFilterContext {
     if (this.filterContext === undefined) {
@@ -160,7 +170,7 @@ export class QueryAdapterModel implements IQueryAdapterModel {
 /**
  * This class provides methods to interpret a SPARQL query result as OData.
  */
-export class SparqlQueryContext implements ODataQueries.IQueryContext {
+export class SparqlQueryContext implements odataQueries.IQueryContext {
   private mapping: mappings.IStructuredSparqlVariableMapping;
   private rootTypeSchema: Schema.EntityType;
   private remainingExpandBranch: Object;
