@@ -73,6 +73,10 @@ export let odataParserTests: IODataParserTestCase[] = [
   { query: queries[0], ast: asts[0] },
 ];
 
+export let entityReaderTests: IEntityReaderTestCase[] = [
+  { input: jsonStrings[0], type: types[0], outputEntity: entities[0] },
+];
+
 export interface IPostQueryTestCase {
   query: string; body: string; ast: any; entity: any; entityType: schema.EntityType; sparql: string;
 }
@@ -83,4 +87,8 @@ export interface IODataParserTestCase {
 
 export interface IODataRepositoryTestCase {
   entity: any; entityType: schema.EntityType; sparql: string;
+}
+
+export interface IEntityReaderTestCase {
+  input: string; type: schema.EntityType; outputEntity: any;
 }

@@ -165,6 +165,14 @@ export class Property extends RdfBasedSchemaResource {
     }
   }
 
+  public isAutoIncrementable(): boolean {
+    return this.getRaw().nullable === "auto-increment";
+  }
+
+  public genNextAutoIncrementValue(): string {
+    return (this.getRaw().autoIncrement_nextValue++).toString(10);
+  }
+
   public hasInverseProperty(): boolean {
     return this.getRaw().foreignProperty != null;
   }
