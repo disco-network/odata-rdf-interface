@@ -20,7 +20,9 @@ let asts = [
     resourcePath: {
       type: "entitySet",
       entitySetName: "Posts",
+      navigation: { type: "none" },
     },
+    queryOptions: {},
   },
   {
     type: "resourceQuery",
@@ -63,12 +65,20 @@ export let postQueryTests: IPostQueryTestCase[] = [
     sparql: sparqlStrings[1] },
 ];
 
-export let odataRepositoryQueryTests = [
+export let odataRepositoryQueryTests: IODataRepositoryTestCase[] = [
   { entity: entities[0], entityType: types[0], sparql: sparqlStrings[0] },
+];
+
+export let odataParserTests: IODataParserTestCase[] = [
+  { query: queries[0], ast: asts[0] },
 ];
 
 export interface IPostQueryTestCase {
   query: string; body: string; ast: any; entity: any; entityType: schema.EntityType; sparql: string;
+}
+
+export interface IODataParserTestCase {
+  query: string; ast: any;
 }
 
 export interface IODataRepositoryTestCase {

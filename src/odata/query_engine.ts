@@ -1,5 +1,5 @@
 import results = require("../result");
-import odataParser = require("../odata/odata_parser_base");
+import odataParser = require("../odata/parser");
 import entityReader = require("../odata/entity_reader_base");
 import repository = require("../odata/repository");
 import schema = require("../odata/schema");
@@ -24,7 +24,7 @@ export class QueryEngine implements IQueryEngine {
 
   public queryPOST(query: string, body: string, cb: (result: results.AnyResult) => void) {
     /* @todo verify AST */
-    let ast = this.odataParser.parsePOST(query);
+    let ast = this.odataParser.parse(query);
     let type = this.schema.getEntitySet(ast.resourcePath.entitySetName).getEntityType();
     let entity = this.entityReader.fromJson(body, type);
     this.repository.insertEntity(entity, type, result => {

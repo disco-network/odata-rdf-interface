@@ -1,13 +1,10 @@
-import abnfTokenizer = require("abnfjs/tokenizer");
-import abnfParser = require("abnfjs/parser");
-import abnfInterpreter = require("abnfjs/interpreter");
-import fs = require("fs");
+import odataParser = require("../src/odata/parser");
+import queryTestCases = require("./helpers/querytestcases");
 
-describe("odata parser", function() {
+describe("ODataParser", function() {
   it("should parse an OData filter expression", function() {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"), "Posts?$filter=a/b/c eq 1");
-    let evaluated = result.evaluate();
+    let evaluated = parser.parse("Posts?$filter=a/b/c eq 1");
 
     expect(evaluated.queryOptions).toBeDefined();
     expect(evaluated.queryOptions.filter).toBeDefined();
@@ -18,8 +15,7 @@ describe("odata parser", function() {
 
   it("should parse an OData expand expression", function() {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
-      "Posts?$expand=Children/ReferredFrom").evaluate();
+    let result = parser.parse("Posts?$expand=Children/ReferredFrom");
 
     expect(result.queryOptions.expand.length).toEqual(1);
     expect(result.queryOptions.expand[0].path[0]).toEqual("Children");
@@ -28,8 +24,7 @@ describe("odata parser", function() {
 
   it("should parse a simple filter expression", () => {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
-      "Posts?$filter='2' eq '1'").evaluate();
+    let result = parser.parse("Posts?$filter='2' eq '1'");
 
     let filterOption = result.queryOptions.filter;
     expect(filterOption.type).toBe("operator");
@@ -40,8 +35,7 @@ describe("odata parser", function() {
 
   it("should parse a simple member expression", () => {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
-      "Posts?$filter=Id eq '1'").evaluate();
+    let result = parser.parse("Posts?$filter=Id eq '1'");
 
     let filterOption = result.queryOptions.filter;
     expect(filterOption.lhs.type).toBe("member-expression");
@@ -52,8 +46,7 @@ describe("odata parser", function() {
 
   it("should parse a simple any expression", () => {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
-      "Posts?$filter=Children/any(it: it/Id eq 2)").evaluate();
+    let result = parser.parse("Posts?$filter=Children/any(it: it/Id eq 2)");
 
     let filterOption = result.queryOptions.filter;
     expect(filterOption.type).toBe("member-expression");
@@ -65,20 +58,30 @@ describe("odata parser", function() {
 
   it("should accept parentheses in a filter expression", () => {
     let parser = initODataParser();
-    let result = parser.getCompleteMatch(parser.getPattern("odataRelativeUri"),
-      "Posts?$filter=(Id eq '1')").evaluate();
+    let result = parser.parse("Posts?$filter=(Id eq '1')");
 
     let filterOption = result.queryOptions.filter;
     expect(filterOption.type).toBe("parentheses-expression");
     expect(filterOption.inner.type).toBe("operator");
   });
+});
 
-  function initODataParser() {
-    let abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
-    let tok = abnfTokenizer.tokenize(abnf);
-    let par = abnfParser.parse(tok);
-    let inter = new abnfInterpreter.Interpreter(par);
+describe("ODataParser (generated tests)", () => {
+  queryTestCases.odataParserTests.forEach(
+    (args, i) => spec(`#${i}`, args)
+  );
 
-    return inter;
+  function spec(name: string, args: queryTestCases.IODataParserTestCase) {
+    it(name, () => {
+      let parser = initODataParser();
+
+      let ast = parser.parse(args.query);
+
+      expect(ast).toEqual(args.ast);
+    });
   }
 });
+
+function initODataParser(): odataParser.IODataParser {
+  return new odataParser.ODataParser();
+}

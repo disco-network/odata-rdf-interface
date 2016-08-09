@@ -1,4 +1,4 @@
-import odataParser = require("../src/odata/odata_parser_base");
+import odataParser = require("../src/odata/parser");
 import entityReader = require("../src/odata/entity_reader_base");
 import repository = require("../src/odata/repository");
 import queryEngine = require("../src/odata/query_engine");
@@ -12,7 +12,7 @@ describe("OData.QueryEngine:", () => {
   function queryAstTypeJsonEntity(test: string, args: queryTestCases.IPostQueryTestCase) {
     it(test, done => {
       let parser = new ODataParser();
-      parser.parsePOST = query => {
+      parser.parse = query => {
         expect(query).toBe("/Posts");
         return args.ast;
       };
@@ -43,7 +43,7 @@ describe("OData.QueryEngine:", () => {
 });
 
 class ODataParser implements odataParser.IODataParser {
-  public parsePOST(query: string): any {
+  public parse(query: string): any {
     //
   }
 }
