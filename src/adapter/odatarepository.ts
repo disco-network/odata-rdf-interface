@@ -1,11 +1,11 @@
-import base = require("../odata/data_provider");
+import base = require("../odata/repository");
 import schema = require("../odata/schema");
 import results = require("../result");
 
 import sparqlProvider = require("../sparql/sparql_provider_base");
 import postQueries = require("../adapter/postquery");
 
-export class ODataProvider implements base.IDataProviderBase {
+export class ODataRepository implements base.IRepository {
 
   private sparqlProvider: sparqlProvider.ISparqlProvider;
   private postQueryStringBuilder: postQueries.IQueryStringBuilder;
