@@ -7,8 +7,8 @@ import postQueries = require("../adapter/postquery");
 
 export class ODataRepository implements base.IRepository {
 
-  private sparqlProvider: sparqlProvider.ISparqlProvider;
-  private postQueryStringBuilder: postQueries.IQueryStringBuilder;
+  constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
+              private postQueryStringBuilder: postQueries.IQueryStringBuilder) {}
 
   public insertEntity(entity: any, type: schema.EntityType, cb: (result: results.AnyResult) => void) {
     this.sparqlProvider.query(this.postQueryStringBuilder.build(entity, type), result => {
