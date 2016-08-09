@@ -43,7 +43,7 @@ export class TreeDependencyInjector implements BranchFactory {
   }
 
   public registerFactoryCandidates(...candidates: ITreeFactoryCandidate[]) {
-    this.candidates.push.apply(this.candidates, arguments);
+    this.candidates.push.apply(this.candidates, candidates);
     return this;
   }
 }

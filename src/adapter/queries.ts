@@ -233,10 +233,6 @@ export class SparqlQueryContext implements odataQueries.IQueryContext {
     }
   }
 
-  public getElementaryPropertyOfResult(result, propertyName: string): any {
-    return result[this.mapping.getElementaryPropertyVariable(propertyName).substr(1)].value;
-  }
-
   /** Return another context associated with a complex property. */
   public getSubContext(propertyName: string): SparqlQueryContext {
     /** @todo is it a good idea to create so many instances? */
