@@ -1,3 +1,4 @@
+import { assert } from "chai";
 import openArgs = require("../src/adapter/openargs");
 
 describe("OpenArgs:", () => {
@@ -5,14 +6,14 @@ describe("OpenArgs:", () => {
     let value = "";
     let args = new openArgs.OpenArgs();
     args.set(IContract, new Contract("a", v => value = v));
-    expect(value).toBe("a");
+    assert.strictEqual(value, "a");
     args.createChild().set(Contract, new Contract("b", v => value = v));
-    expect(value).toBe("a/b");
+    assert.strictEqual(value, "a/b");
   });
 
   it("get Contracts set before", () => {
     let args = new openArgs.OpenArgs().set(IContract, new Contract("c", () => undefined));
-    expect(args.get(IContract).getValue()).toBe("c");
+    assert.strictEqual(args.get(IContract).getValue(), "c");
   });
 });
 
@@ -27,15 +28,15 @@ describe("OpenArgsCompatibilityChecker:", () => {
     let checker = new openArgs.OpenArgsCompatibilityChecker();
     checker.setDefaultCondition(IContract, c => c.getValue() === "contract 1");
 
-    expect(checker.checkCompatibility(args, [])).toBe(true);
-    expect(checker.checkCompatibility(args2, [])).toBe(false);
-    expect(checker.checkCompatibility(args2, [IContract])).toBe(true);
+    assert.strictEqual(checker.checkCompatibility(args, []), true);
+    assert.strictEqual(checker.checkCompatibility(args2, []), false);
+    assert.strictEqual(checker.checkCompatibility(args2, [IContract]), true);
   });
 
   it("throw when assigning a default condition twice", () => {
     let checker = new openArgs.OpenArgsCompatibilityChecker();
     checker.setDefaultCondition(IContract, c => c.getValue() === "contract 1");
-    expect(() => checker.setDefaultCondition(IContract, c => c.getValue() === "contract 2")).toThrow();
+    assert.throws(() => checker.setDefaultCondition(IContract, c => c.getValue() === "contract 2"));
   });
 });
 

@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import composer = require("../src/odata/querycomposer");
 import schema = require("../src/odata/schema");
 
@@ -9,8 +11,8 @@ describe("query composer", function() {
         entityTypes: { "MyEntity": {} } }));
       comp.expand(expandOption);
 
-      expect(comp.expandTree.A.B.C).toBeDefined();
-      expect(comp.expandTree.A.B.D).toBeDefined();
-      expect(comp.expandTree.A.C).toBeDefined();
+      assert.isDefined(comp.expandTree.A.B.C);
+      assert.isDefined(comp.expandTree.A.B.D);
+      assert.isDefined(comp.expandTree.A.C);
   });
 });

@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
 import gpatterns = require("../src/sparql/graphpatterns");
@@ -10,9 +12,9 @@ describe("tree graph patterns", function() {
 
     gp.branch("disco:id", "?id");
 
-    expect(gp.branchExists("disco:id")).toEqual(true);
-    expect(gp.branchExists("disco:content")).toEqual(false);
-    expect(gp.branch("disco:id")[0].name()).toEqual("?id");
+    assert.strictEqual(gp.branchExists("disco:id"), true);
+    assert.strictEqual(gp.branchExists("disco:content"), false);
+    assert.strictEqual(gp.branch("disco:id")[0].name(), "?id");
   });
   it("should generate triples", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
@@ -20,22 +22,22 @@ describe("tree graph patterns", function() {
     gp.branch("disco:id", "?id");
     gp.branch("disco:content", "?cnt").branch("disco:id", "?cntid");
 
-    expect(gp.getDirectTriples()).toContain([ "?root", "disco:id", "?id" ]);
-    expect(gp.getDirectTriples()).toContain([ "?root", "disco:content", "?cnt" ]);
-    expect(gp.branch("disco:content")[0].getDirectTriples()).toContain([ "?cnt", "disco:id", "?cntid" ]);
+    assert.includeDeepMembers(gp.getDirectTriples(), [[ "?root", "disco:id", "?id" ]]);
+    assert.includeDeepMembers(gp.getDirectTriples(), [[ "?root", "disco:content", "?cnt" ]]);
+    assert.includeDeepMembers(gp.branch("disco:content")[0].getDirectTriples(), [[ "?cnt", "disco:id", "?cntid" ]]);
   });
   it("should allow value leaves", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
     gp.branch("disco:id", new gpatterns.ValueLeaf("1"));
 
-    expect(gp.getDirectTriples()).toContain([ "?root", "disco:id", "\"1\""]);
+    assert.includeDeepMembers(gp.getDirectTriples(), [[ "?root", "disco:id", "\"1\""]]);
   });
   it("should allow optional branches", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
 
     gp.optionalBranch("disco:id", "?id");
 
-    expect(gp.getOptionalPatterns()[0].getDirectTriples()).toContain([ "?root", "disco:id", "?id" ]);
+    assert.includeDeepMembers(gp.getOptionalPatterns()[0].getDirectTriples(), [[ "?root", "disco:id", "?id" ]]);
   });
   it("should allow me to integrate other trees as branches", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
@@ -44,7 +46,7 @@ describe("tree graph patterns", function() {
     inner.branch("disco:id", "?id");
     gp.branch("disco:inner", inner);
 
-    expect(gp.branch("disco:inner")[0]).toEqual(inner);
+    assert.deepEqual(gp.branch("disco:inner")[0], inner);
   });
   it("should allow me to integrate other trees as optional branches", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
@@ -53,8 +55,8 @@ describe("tree graph patterns", function() {
     inner.branch("disco:id", "?id");
     gp.optionalBranch("disco:inner", inner);
 
-    expect(gp.getOptionalPatterns()[0].getDirectTriples()).toContain([ "?root", "disco:inner", "?inner" ]);
-    expect(gp.getOptionalPatterns()[0].branch("disco:inner")[0]).toEqual(inner);
+    assert.includeDeepMembers(gp.getOptionalPatterns()[0].getDirectTriples(), [[ "?root", "disco:inner", "?inner" ]]);
+    assert.deepEqual(gp.getOptionalPatterns()[0].branch("disco:inner")[0], inner);
   });
   it("should allow me to merge with other trees", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
@@ -63,14 +65,14 @@ describe("tree graph patterns", function() {
     other.branch("disco:id", "?id");
     gp.merge(other);
 
-    expect(gp.getDirectTriples()).toContain([ "?root", "disco:id", "?id" ]);
+    assert.includeDeepMembers(gp.getDirectTriples(), [[ "?root", "disco:id", "?id" ]]);
   });
   it("should not allow me to merge with trees with different roots", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
     let other = new gpatterns.TreeGraphPattern("?other");
 
     other.branch("disco:id", "?id");
-    expect(function() { gp.merge(other); }).toThrow();
+    assert.throws(() => gp.merge(other));
   });
   it("should detect and handle collisions when merging", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
@@ -80,7 +82,7 @@ describe("tree graph patterns", function() {
     gp2.branch("id", "?id2");
     gp.merge(gp2);
 
-    expect(gp.branch("id").length).toEqual(2);
+    assert.strictEqual(gp.branch("id").length, 2);
   });
   it("should allow UNION branches", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
@@ -91,11 +93,11 @@ describe("tree graph patterns", function() {
     upat.branch("id", union1);
     upat.branch("id", union2);
 
-    expect(gp.getUnionPatterns().length).toEqual(1);
-    expect(gp.getUnionPatterns().length).toEqual(1);
-    expect(gp.getUnionPatterns()[0].branch("id").length).toEqual(2);
+    assert.strictEqual(gp.getUnionPatterns().length, 1);
+    assert.strictEqual(gp.getUnionPatterns().length, 1);
+    assert.strictEqual(gp.getUnionPatterns()[0].branch("id").length, 2);
   });
-  it("should have inverse branches", function() {
+  xit("should have inverse branches", function() {
     let gp = new gpatterns.TreeGraphPattern("?root");
     gp.inverseBranch("disco:parent", "?child");
   });
@@ -106,11 +108,11 @@ describe("direct property pattern strategies", function() {
     let mapping = mhelper.createStructuredMapping();
     // xit expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
 
-    expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
-    expect(mapping.elementaryPropertyExists("ParentId")).toEqual(true);
-    expect(mapping.elementaryPropertyExists("ContentId")).toEqual(true);
-    expect(mapping.elementaryPropertyExists("Parent")).toEqual(false);
-    expect(mapping.elementaryPropertyExists("Content")).toEqual(false);
+    assert.strictEqual(mapping.elementaryPropertyExists("Id"), true);
+    assert.strictEqual(mapping.elementaryPropertyExists("ParentId"), true);
+    assert.strictEqual(mapping.elementaryPropertyExists("ContentId"), true);
+    assert.strictEqual(mapping.elementaryPropertyExists("Parent"), false);
+    assert.strictEqual(mapping.elementaryPropertyExists("Content"), false);
   });
   xit("should create the triples corresponding to the direct properties", function() {
     /*let mapping = mhelper.createStructuredMapping("?post");
@@ -128,7 +130,7 @@ describe("direct property pattern strategies", function() {
       [ mapping.getComplexProperty("Content").getVariable(), "disco:id",
       mapping.getElementaryPropertyVariable("ContentId") ]);*/
   });
-  it("should create optional triples", function() {
+  xit("should create optional triples", function() {
     /*let mapping = mhelper.createStructuredMapping("?post");
     let gp = expandTreePatterns.DirectPropertiesGraphPatternFactory.create(schema.getEntityType("Post"), mapping, "");
 
@@ -143,32 +145,33 @@ describe("complex-property expand pattern strategy", function() {
     let mapping = mhelper.createStructuredMapping("?post");
     let gp = createExpandPatternStrategy().create(schema.getEntityType("Post"), expandTree, mapping);
 
-    expect(mapping.getComplexProperty("Content").elementaryPropertyExists("Id")).toEqual(true);
-    expect(gp.getUnionPatterns().length).toEqual(1);
-    expect(gp.getUnionPatterns()[0].getDirectTriples()).toContain(
-      [ "?post", "disco:content", mapping.getComplexProperty("Content").getVariable() ]);
-    expect(gp.getUnionPatterns()[0].branch("disco:content")[1].getDirectTriples())
-    .toContain([ mapping.getComplexProperty("Content").getVariable(), "disco:id",
-      mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id") ]);
-    expect(gp.getDirectTriples()).toContain([ "?post", "disco:id", mapping.getElementaryPropertyVariable("Id") ]);
+    assert.strictEqual(mapping.getComplexProperty("Content").elementaryPropertyExists("Id"), true);
+    assert.strictEqual(gp.getUnionPatterns().length, 1);
+    assert.includeDeepMembers(gp.getUnionPatterns()[0].getDirectTriples(),
+      [[ "?post", "disco:content", mapping.getComplexProperty("Content").getVariable() ]]);
+    assert.includeDeepMembers(gp.getUnionPatterns()[0].branch("disco:content")[1].getDirectTriples(),
+      [[ mapping.getComplexProperty("Content").getVariable(), "disco:id",
+      mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id") ]]);
+    assert.includeDeepMembers(gp.getDirectTriples(),
+      [[ "?post", "disco:id", mapping.getElementaryPropertyVariable("Id") ]]);
   });
   it("should expand the second depth level", function() {
     let expandTree = { Content: { Culture: {} } };
     let mapping = mhelper.createStructuredMapping("?post");
     createExpandPatternStrategy().create(schema.getEntityType("Post"), expandTree, mapping);
 
-    expect(mapping.getComplexProperty("Content").getComplexProperty("Culture")
-    .elementaryPropertyExists("Id")).toEqual(true);
+    assert.strictEqual(mapping.getComplexProperty("Content").getComplexProperty("Culture")
+    .elementaryPropertyExists("Id"), true);
   });
   it("should expand the optional properties of the first depth level", function() {
     let expandTree = { Parent: {} };
     let mapping = mhelper.createStructuredMapping("?post");
     let gp = createExpandPatternStrategy().create(schema.getEntityType("Post"), expandTree, mapping);
 
-    expect(mapping.getComplexProperty("Parent").elementaryPropertyExists("Id")).toEqual(true);
-    expect(gp.getUnionPatterns()[0].optionalBranch("disco:parent")[1].getDirectTriples()).toContain(
-      [ mapping.getComplexProperty("Parent").getVariable(), "disco:id",
-        mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id") ]);
+    assert.strictEqual(mapping.getComplexProperty("Parent").elementaryPropertyExists("Id"), true);
+    assert.includeDeepMembers(gp.getUnionPatterns()[0].optionalBranch("disco:parent")[1].getDirectTriples(),
+      [[ mapping.getComplexProperty("Parent").getVariable(), "disco:id",
+        mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id") ]]);
   });
 });
 

@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import propertyTree = require("../src/adapter/propertytree/propertytree");
 import mappings = require("../src/adapter/mappings");
 import schema = require("../src/odata/schema");
@@ -17,7 +19,7 @@ describe("Property trees", () => {
     tree.branch(branch);
     tree.branch(branch);
 
-    expect(tree.countBranches()).toBe(1);
+    assert.strictEqual(tree.countBranches(), 1);
   });
 
   it("should avoid duplicate branches after copying", () => {
@@ -45,7 +47,7 @@ describe("Property trees", () => {
 
     tree2.copyTo(tree1);
 
-    expect(branch1a.countBranches()).toBe(1);
+    assert.strictEqual(branch1a.countBranches(), 1);
   });
 });
 

@@ -1,4 +1,4 @@
-import { } from "../src/odata/repository";
+import { assert } from "chai";
 import base = require("../src/adapter/odatarepository");
 import results = require("../src/result");
 import schema = require("../src/odata/schema");
@@ -16,22 +16,22 @@ describe("Adapter.ODataRepository (generated insertion tests):", () => {
     it(name, (done) => {
       let myPostQueryStringBuilder = new PostQueryStringBuilder();
       myPostQueryStringBuilder.build = (entity, type) => {
-        expect(entity).toEqual(args.entity);
-        expect(type.getName()).toBe("Post");
+        assert.deepEqual(entity, args.entity);
+        assert.strictEqual(type.getName(), "Post");
         return args.sparql;
       };
       let mySparqlProvider = new SparqlProvider();
       let sparqlQueryCount = 0;
       mySparqlProvider.query = (query, cb) => {
         ++sparqlQueryCount;
-        expect(query).toBe(args.sparql);
+        assert.strictEqual(query, args.sparql);
         cb(results.Result.success("ok"));
       };
 
       let myODataProvider = create(mySparqlProvider, myPostQueryStringBuilder);
       myODataProvider.insertEntity(args.entity, args.entityType, result => {
-        expect(result.success());
-        expect(sparqlQueryCount).toBe(1);
+        assert.strictEqual(result.success(), true);
+        assert.strictEqual(sparqlQueryCount, 1);
         done();
       });
     });

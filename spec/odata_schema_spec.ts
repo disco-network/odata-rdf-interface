@@ -1,11 +1,14 @@
-import SchemaModule = require('../src/odata/schema');
+import { assert } from "chai";
+
+import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
 
-describe('schema', function() {
-  it('should give me the entity type schema of Post', function() {
-    expect(schema.getEntityType('Post')).toBeDefined();
-  })
+describe("schema", function() {
+  it("should give me the entity type schema of Post", function() {
+    assert.isDefined(schema.getEntityType("Post"));
+  });
+
   it('should assign "Post.Content" the quantity one', function() {
-    expect(schema.getEntityType('Post').getProperty('Content').isCardinalityOne()).toEqual(true);
-  })
-})
+    assert.strictEqual(schema.getEntityType("Post").getProperty("Content").isCardinalityOne(), true);
+  });
+});

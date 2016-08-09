@@ -1,61 +1,62 @@
+import { assert } from "chai";
 import rdfstore = require("rdfstore");
 
 describe("rdfstore should execute", function() {
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBeGreaterThan(0);
+    assert.strictEqual(answer.error, null);
+    assert.isAbove(answer.result.length, 0);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post FILTER EXISTS { ?s disco:id '1'  } }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id FILTER(?id = '1') }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post FILTER(EXISTS { ?s disco:id '1' }) }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id "
     + "FILTER(?id = '1' && EXISTS { ?s disco:content ?cnt . ?cnt disco:id '1' }) }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id "
     + "FILTER(?id = '2' || EXISTS { ?s disco:content ?cnt . ?cnt disco:id '1' }) }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(2);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 2);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id . FILTER (?id = 1) }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(0);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 0);
   });
 
   createSpec("SELECT * WHERE { ?s rdf:type disco:Post . ?s disco:id ?id . FILTER (?id = '1') }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   createSpec("SELECT * WHERE { { ?x0 disco:id ?x1 } . FILTER(EXISTS {  { ?x6 disco:parent ?x0 } }) }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   createSpec("SELECT * WHERE {}", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(0);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 0);
   });
 
   createSpec("SELECT * WHERE { OPTIONAL { ?post disco:id '1' . ?post rdf:type disco:Post } }", answer => {
-    expect(answer.error).toBe(null);
-    expect(answer.result.length).toBe(1);
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 1);
   });
 
   function createSpec(query: string, cb: (results: any) => void) {

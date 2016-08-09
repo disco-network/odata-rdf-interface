@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import odataParser = require("../src/odata/parser");
 import entityReader = require("../src/odata/entity_reader_base");
 import repository = require("../src/odata/repository");
@@ -13,20 +15,20 @@ describe("OData.QueryEngine:", () => {
     it(test, done => {
       let parser = new ODataParser();
       parser.parse = query => {
-        expect(query).toBe("/Posts");
+        assert.strictEqual(query, "/Posts");
         return args.ast;
       };
       let entityReader = new EntityReader();
       entityReader.fromJson = (body, type) => {
-        expect(body).toBe(args.body);
-        expect(type.getName()).toBe("Post");
+        assert.strictEqual(body, args.body);
+        assert.strictEqual(type.getName(), "Post");
         return args.entity;
       };
       let repository = new Repository();
       let insertionCounter = 0;
       repository.insertEntity = (entity, type, cb) => {
-        expect(entity).toEqual(args.entity);
-        expect(type.getName()).toBe("Post");
+        assert.strictEqual(entity, args.entity);
+        assert.strictEqual(type.getName(), "Post");
         ++insertionCounter;
         cb(results.Result.success("ok"));
       };
@@ -34,8 +36,8 @@ describe("OData.QueryEngine:", () => {
       engine.setSchema(new schema.Schema());
 
       engine.queryPOST(args.query, args.body, result => {
-        expect(result.success()).toBe(true);
-        expect(insertionCounter).toBe(1);
+        assert.strictEqual(result.success(), true);
+        assert.strictEqual(insertionCounter, 1);
         done();
       });
     });

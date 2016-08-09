@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import base = require("../src/odata/entityreader");
 import queryTestCases = require("./helpers/querytestcases");
 
@@ -12,7 +14,7 @@ describe("OData.EntityReader", () => {
 
       let entity = entityReader.fromJson(args.input, args.type);
 
-      expect(entity).toEqual(args.outputEntity);
+      assert.deepEqual(entity, args.outputEntity);
     });
   }
 });

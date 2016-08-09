@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import filters = require("../src/adapter/filters");
 import mappings = require("../src/adapter/mappings");
 import schemaModule = require("../src/odata/schema");
@@ -18,22 +20,22 @@ describe("A filter factory", () => {
     let factory = createFilterExpressionFactory();
     let filter = factory.fromRaw(raw);
 
-    expect(filter instanceof filters.BinaryOperatorExpression).toBe(true);
-    expect(filter["lhs"] instanceof filters.LiteralExpression).toBe(true);
-    expect(filter["rhs"] instanceof filters.LiteralExpression).toBe(true);
+    assert.strictEqual(filter instanceof filters.BinaryOperatorExpression, true);
+    assert.strictEqual(filter["lhs"] instanceof filters.LiteralExpression, true);
+    assert.strictEqual(filter["rhs"] instanceof filters.LiteralExpression, true);
   });
   it("should throw if there's no matching expression", () => {
     let raw = { type: "is-42", value: "4*2" };
     let factory = createFilterExpressionFactory();
 
-    expect(() => factory.fromRaw(raw)).toThrow();
+    assert.throws(() => factory.fromRaw(raw));
   });
   it("should pass a factory to the FilterExpression", () => {
     let raw = { type: "test" };
     let factory = createFilterExpressionFactory();
     let args = (factory.fromRaw(raw) as TestFilterExpression).args;
 
-    expect(args.factory).toBeDefined();
+    assert.isDefined(args.factory);
   });
   xit("should be clonable", () => undefined);
 });
@@ -41,7 +43,7 @@ describe("A filter factory", () => {
 describe("A StringLiteralExpression", () => {
   it("should render to a SPARQL string", () => {
     let expr = filters.StringLiteralExpressionFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
-    expect(expr.toSparql()).toBe("'cat'");
+    assert.strictEqual(expr.toSparql(), "'cat'");
   });
 
   xit("should escape special characters", () => undefined);
@@ -49,23 +51,23 @@ describe("A StringLiteralExpression", () => {
 
 describe("A NumberLiteralExpression", () => {
   it("should apply to numbers", () => {
-    expect(filters.NumberLiteralExpressionFactory.doesApplyToRaw(
+    assert.strictEqual(filters.NumberLiteralExpressionFactory.doesApplyToRaw(
       { type: "decimalValue", value: "1" }
-    )).toBe(true);
+    ), true);
   });
 
   it("should render to a SPARQL string", () => {
     let expr = filters.NumberLiteralExpressionFactory.fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
-    expect(expr.toSparql()).toBe("'1'");
+    assert.strictEqual(expr.toSparql(), "'1'");
   });
 
   it("should disallow non-number values", () => {
-    expect(() => {
+    assert.throws(() => {
       filters.NumberLiteralExpressionFactory.fromRaw({
         type: "decimalValue", value: "cat",
       },
       { factory: null, filterContext: null });
-    }).toThrow();
+    });
   });
 });
 
@@ -77,7 +79,7 @@ describe("An EqExpression", () => {
       rhs: { type: "test", value: "(rhs)" },
     });
 
-    expect(expr.toSparql()).toBe("((lhs) = (rhs))");
+    assert.strictEqual(expr.toSparql(), "((lhs) = (rhs))");
   });
 });
 
@@ -89,15 +91,15 @@ describe("An OrExpression", () => {
       rhs: { type: "test", value: "(rhs)" },
     });
 
-    expect(expr.toSparql()).toBe("((lhs) || (rhs))");
+    assert.strictEqual(expr.toSparql(), "((lhs) || (rhs))");
   });
 });
 
 describe("A PropertyExpression", () => {
   it("should apply to OData member expressions", () => {
-    expect(new filters.PropertyExpressionFactory(null).doesApplyToRaw({
+    assert.strictEqual(new filters.PropertyExpressionFactory(null).doesApplyToRaw({
       type: "member-expression",
-    })).toBe(true);
+    }), true);
   });
 
   it("should handle simple 'any' expressions", () => {
@@ -125,7 +127,7 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
+    assert.strictEqual(expr.toSparql(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
   });
 
   it("should not insert the collection property of 'any' operations into the property tree", () => {
@@ -148,8 +150,8 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.getPropertyTree().root.toDataObject()).toEqual({ A: { B: {} } });
-    expect(expr.getPropertyTree().inScopeVariables.toDataObject()).toEqual({});
+    assert.deepEqual(expr.getPropertyTree().root.toDataObject(), { A: { B: {} } });
+    assert.deepEqual(expr.getPropertyTree().inScopeVariables.toDataObject(), {});
   });
 
   it("should process properties of the root entity in 'any' expessions", () => {
@@ -177,7 +179,7 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    expect(expr.toSparql()).toBe("EXISTS { { OPTIONAL { ?root disco:id ?x1 } . "
+    assert.strictEqual(expr.toSparql(), "EXISTS { { OPTIONAL { ?root disco:id ?x1 } . "
       + "{ OPTIONAL { ?x0 disco:parent ?root } } } . FILTER(?x1) }");
   });
 
@@ -207,7 +209,7 @@ describe("A PropertyExpression", () => {
     });
 
     /* @todo is it a good idea to use _OPTIONAL_ { ?x0 disco:parent ?root } ? */
-    expect(expr.toSparql()).toBe("EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } . "
+    assert.strictEqual(expr.toSparql(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } . "
       + "{ OPTIONAL { ?x0 disco:id ?x1 } } } . FILTER(?x1) }");
   });
 });
@@ -216,20 +218,20 @@ describe("A flat property tree", () => {
   it("should recall saved entries", () => {
     let tree = filters.FlatPropertyTree.empty();
     tree.createBranch("PropertyName").createBranch("SubProperty");
-    expect(tree.branchExists("PropertyName")).toBe(true);
-    expect(tree.branchExists("AsdfGhjk")).toBe(false);
-    expect(tree.branchExists("undefined")).toBe(false);
-    expect(tree.getBranch("PropertyName").branchExists("SubProperty")).toBe(true);
-    expect(tree.getIterator().current()).toBe("PropertyName");
+    assert.strictEqual(tree.branchExists("PropertyName"), true);
+    assert.strictEqual(tree.branchExists("AsdfGhjk"), false);
+    assert.strictEqual(tree.branchExists("undefined"), false);
+    assert.strictEqual(tree.getBranch("PropertyName").branchExists("SubProperty"), true);
+    assert.strictEqual(tree.getIterator().current(), "PropertyName");
   });
 
   xit("should be cloneable", () => {
     let tree = filters.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
 
-    expect(tree.clone().branchExists("Content")).toBe(true);
-    expect(tree.clone().branchExists("Id")).toBe(true);
-    expect(tree.clone().branchExists("undefined")).toBe(true);
-    expect(tree.clone().getBranch("Content").branchExists("Id")).toBe(true);
+    assert.strictEqual(tree.clone().branchExists("Content"), true);
+    assert.strictEqual(tree.clone().branchExists("Id"), true);
+    assert.strictEqual(tree.clone().branchExists("undefined"), true);
+    assert.strictEqual(tree.clone().getBranch("Content").branchExists("Id"), true);
   });
 
   it("should be mergeable", () => {
@@ -237,10 +239,10 @@ describe("A flat property tree", () => {
     let treeB = filters.FlatPropertyTree.fromDataObject({ "Content": { "Title": {} } });
     treeA.merge(treeB);
 
-    expect(treeA.branchExists("Content"));
-    expect(treeA.getBranch("Content").branchExists("Id"));
-    expect(treeA.getBranch("Content").branchExists("Title"));
-    expect(treeA.branchExists("Id"));
+    assert.strictEqual(treeA.branchExists("Content"), true);
+    assert.strictEqual(treeA.getBranch("Content").branchExists("Id"), true);
+    assert.strictEqual(treeA.getBranch("Content").branchExists("Title"), true);
+    assert.strictEqual(treeA.branchExists("Id"), true);
   });
 });
 
@@ -254,9 +256,9 @@ describe("A lambda variable scope", () => {
     let scope = new filters.LambdaVariableScope();
     scope.add(lambda);
 
-    expect(scope.exists("it")).toBe(true);
-    expect(scope.exists("undefined")).toBe(false);
-    expect(scope.get("it")).toBe(lambda);
+    assert.strictEqual(scope.exists("it"), true);
+    assert.strictEqual(scope.exists("undefined"), false);
+    assert.strictEqual(scope.get("it"), lambda);
   });
 
   it("should be cloneable", () => {
@@ -268,7 +270,7 @@ describe("A lambda variable scope", () => {
     });
     let cloned = scope.clone();
 
-    expect(scope.get("it")).toEqual(cloned.get("it"));
+    assert.strictEqual(scope.get("it"), cloned.get("it"));
   });
 
   it("should make clones independently changeable", () => {
@@ -278,20 +280,20 @@ describe("A lambda variable scope", () => {
     scope.add({ variable: "a", entityType: null, scopeId: null });
     cloned.add({ variable: "b", entityType: null, scopeId: null });
 
-    expect(cloned.exists("a")).toBe(false);
-    expect(scope.exists("b")).toBe(false);
+    assert.strictEqual(cloned.exists("a"), false);
+    assert.strictEqual(scope.exists("b"), false);
   });
 
   it("should have chainable write methods", () => {
-    expect(new filters.LambdaVariableScope()
+    assert.strictEqual(new filters.LambdaVariableScope()
       .add({ variable: "a", entityType: null, scopeId: null })
-      .exists("a")).toBe(true);
+      .exists("a"), true);
   });
 
   it("should throw when assigning a variable twice", () => {
-    expect(() => new filters.LambdaVariableScope()
+    assert.throws(() => new filters.LambdaVariableScope()
       .add({ variable: "it", entityType: null, scopeId: null })
-      .add({ variable: "it", entityType: null, scopeId: null })).toThrow();
+      .add({ variable: "it", entityType: null, scopeId: null }));
   });
 });
 
@@ -310,7 +312,7 @@ describe("A property path", () => {
       },
     });
 
-    expect(path.pathStartsWithLambdaPrefix()).toBe(true);
+    assert.strictEqual(path.pathStartsWithLambdaPrefix(), true);
   });
 });
 

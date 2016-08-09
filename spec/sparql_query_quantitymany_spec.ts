@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
 import mhelper = require("./helpers/sparql_mappings");
@@ -11,7 +13,7 @@ describe('OData properties with quantity "many"', function() {
     let gp = expandPatternStrategy.create(schema.getEntityType("Post"),
       expandTree, mapping);
 
-    expect(gp.getUnionPatterns().length).toEqual(2);
-    expect(gp.getUnionPatterns()[1].inverseBranch("disco:parent").length).toEqual(1);
+    assert.strictEqual(gp.getUnionPatterns().length, 2);
+    assert.strictEqual(gp.getUnionPatterns()[1].inverseBranch("disco:parent").length, 1);
   });
 });

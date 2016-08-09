@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
 import queryAdapter = require("../src/adapter/queries");
@@ -16,7 +18,7 @@ describe("query context", function() {
     let ok = false;
     queryContext.forEachElementaryPropertyOfResult(answer, function() { ok = true; });
 
-    expect(ok).toEqual(true);
+    assert.strictEqual(ok, true);
   });
   it("should return me a subcontext and recognize its elementary properties", function() {
     let mapping = mhelper.createStructuredMapping("?post");
@@ -29,7 +31,7 @@ describe("query context", function() {
     let ok = false;
     queryContext.getSubContext("Parent").forEachElementaryPropertyOfResult(answer, function() { ok = true; });
 
-    expect(ok).toEqual(true);
+    assert.strictEqual(ok, true);
   });
 });
 
@@ -47,9 +49,9 @@ describe("match evaluator", function() {
     responses[0][idVar.substr(1)] = { token: "literal", value: "1" };
     let results = evaluator.run(responses, queryContext);
 
-    expect(results[0].Content).toBeUndefined();
-    expect(results[0].Id).toEqual("1");
-    expect(results[0].Parent.Id).toEqual("5");
+    assert.isUndefined(results[0].Content);
+    assert.strictEqual(results[0].Id, "1");
+    assert.strictEqual(results[0].Parent.Id, "5");
   });
   it("should only include complex properties which are in the expand tree", function() {
     let mapping = mhelper.createStructuredMapping("?post");
@@ -64,7 +66,7 @@ describe("match evaluator", function() {
     responses[0][parentIdVar.substr(1)] = { token: "literal", value: "5" };
     let results = resultBuilder.run(responses, queryContext);
 
-    expect(results[0].Parent).toBeUndefined();
+    assert.isUndefined(results[0].Parent);
   });
   it("should include complex properties of quantity one", function() {
     let mapping = mhelper.createStructuredMapping("?post");
@@ -80,9 +82,9 @@ describe("match evaluator", function() {
     responses[1][contentIdVar.substr(1)] = { token: "literal", value: "2" };
     let results = evaluator.run(responses, queryContext);
 
-    expect(results.length).toEqual(1);
-    expect(results[0].Id).toEqual("1");
-    expect(results[0].Content.Id).toEqual("2");
+    assert.strictEqual(results.length, 1);
+    assert.strictEqual(results[0].Id, "1");
+    assert.strictEqual(results[0].Content.Id, "2");
   });
   it("should support expand trees of depth two", function() {
     let mapping = mhelper.createStructuredMapping("?post");
@@ -102,7 +104,7 @@ describe("match evaluator", function() {
     response2[ccidVar.substr(1)] = makeLiteral("3");
     let results = evaluator.run(responses, queryContext);
 
-    expect(results.length).toEqual(1);
+    assert.strictEqual(results.length, 1);
   });
   it("should set unbound elementary properties to null", function() {
     /* @todo should this only apply to optional props? */
@@ -118,8 +120,8 @@ describe("match evaluator", function() {
     response[cidVar.substr(1)] = makeLiteral("2");
     let results = evaluator.run([response], queryContext);
 
-    expect(results.length).toBe(1);
-    expect(results[0]).toEqual({
+    assert.strictEqual(results.length, 1);
+    assert.deepEqual(results[0], {
       Id: "1", ContentId: "2", ParentId: null,
     });
   });

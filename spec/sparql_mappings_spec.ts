@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import helper = require("./helpers/sparql_mappings");
 import mappings = require("../src/adapter/mappings");
 import schemaModule = require("../src/odata/schema");
@@ -7,16 +9,16 @@ describe("unstructured odata to sparql mappings", function() {
   it("should not exist entries until they were accessed", function() {
     let mapping = helper.createUnstructuredMapping();
 
-    expect(mapping.mappingExists("Id")).toEqual(false);
+    assert.strictEqual(mapping.mappingExists("Id"), false);
     mapping.getPropertyVariable("Id");
-    expect(mapping.mappingExists("Id")).toEqual(true);
+    assert.strictEqual(mapping.mappingExists("Id"), true);
   });
 
   it("should call the first variable ?x0", function() {
     let mapping = helper.createUnstructuredMapping();
     let first = mapping.getPropertyVariable("Id");
 
-    expect(first).toEqual("?x0");
+    assert.strictEqual(first, "?x0");
   });
 
   it("should always return the same variable name for the same entry", function() {
@@ -24,7 +26,7 @@ describe("unstructured odata to sparql mappings", function() {
     let first = mapping.getPropertyVariable("Id");
     let second = mapping.getPropertyVariable("Id");
 
-    expect(first).toEqual(second);
+    assert.strictEqual(first, second);
   });
 
   it("should always return a different variable name for different entries", function() {
@@ -32,7 +34,7 @@ describe("unstructured odata to sparql mappings", function() {
     let a = mapping.getPropertyVariable("A");
     let b = mapping.getPropertyVariable("B");
 
-    expect(a).not.toEqual(b);
+    assert.notStrictEqual(a, b);
   });
 });
 
@@ -41,21 +43,21 @@ describe("structured odata to sparql mappings", function() {
     let mapping = helper.createStructuredMapping("?root");
     let variable = mapping.getVariable();
 
-    expect(variable).toEqual("?root");
+    assert.strictEqual(variable, "?root");
   });
 
   it("should call the first elementary property variable ?x0", function() {
     let mapping = helper.createStructuredMapping("?root");
     let variable = mapping.getElementaryPropertyVariable("Id");
 
-    expect(variable).toEqual("?x0");
+    assert.strictEqual(variable, "?x0");
   });
 
   it("should call the first complex property variable ?x0", function() {
     let mapping = helper.createStructuredMapping("?root");
     let variable = mapping.getComplexProperty("Content").getVariable();
 
-    expect(variable).toEqual("?x0");
+    assert.strictEqual(variable, "?x0");
   });
 
   it("should nest the mappings using complex properties", function() {
@@ -66,16 +68,16 @@ describe("structured odata to sparql mappings", function() {
       .getElementaryPropertyVariable("Id");
     let id = mapping.getElementaryPropertyVariable("Id");
 
-    expect(contentContentId1).toEqual(contentContentId2);
-    expect(contentContentId1).not.toEqual(id);
+    assert.strictEqual(contentContentId1, contentContentId2);
+    assert.notStrictEqual(contentContentId1, id);
   });
 
   it("should not exist elementary properties until they were accessed", function() {
     let mapping = helper.createStructuredMapping("?root");
 
-    expect(mapping.elementaryPropertyExists("Id")).toEqual(false);
+    assert.strictEqual(mapping.elementaryPropertyExists("Id"), false);
     mapping.getElementaryPropertyVariable("Id");
-    expect(mapping.elementaryPropertyExists("Id")).toEqual(true);
+    assert.strictEqual(mapping.elementaryPropertyExists("Id"), true);
   });
 });
 
@@ -88,8 +90,8 @@ describe("scoped mappings", () => {
     let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
 
     let id = new mappings.UniqueScopeIdentifier("any");
-    expect(mapping.scope(id).unscoped() === mapping.unscoped());
-    expect(() => mapping.getNamespace("it")).toThrow();
+    assert.strictEqual(mapping.scope(id).unscoped(), mapping.unscoped());
+    assert.throws(() => mapping.getNamespace("it"));
   });
 
   it("should access namespaces of parents", () => {
@@ -98,6 +100,6 @@ describe("scoped mappings", () => {
 
     mapping.setNamespace("it", schema.getEntityType("Post"));
 
-    expect(mapping.scope(scopeId).getNamespace("it")).toBeDefined();
+    assert.isDefined(mapping.scope(scopeId).getNamespace("it"));
   });
 });

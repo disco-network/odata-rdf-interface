@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import odataQueryEngine = require("../src/adapter/query_engine");
 import sparqlProviderModule = require("../src/sparql/sparql_provider");
 import rdfstore = require("rdfstore");
@@ -8,9 +10,9 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts", answer => {
     let result = answer.result();
     expectSuccess(answer);
-    expect(result.length).toBe(2);
-    expect(result[0].Id).toBe("1");
-    expect(result[1].Id).toBe("2");
+    assert.strictEqual(result.length, 2);
+    assert.strictEqual(result[0].Id, "1");
+    assert.strictEqual(result[1].Id, "2");
   }, () => {
     "before spec";
   });
@@ -18,7 +20,7 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts?$expand=Content", answer => {
     let result = answer.result();
     expectSuccess(answer);
-    expect(result).toEqual([
+    assert.deepEqual(result, [
       {
         Id: "1",
         ContentId: "1",
@@ -45,7 +47,7 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts?$expand=Parent", answer => {
     let result = answer.result();
     expectSuccess(answer);
-    expect(result).toEqual([
+    assert.deepEqual(result, [
       {
         Id: "1",
         ContentId: "1",
@@ -68,7 +70,7 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts?$expand=Children", answer => {
     let result = answer.result();
     expectSuccess(answer);
-    expect(result).toEqual([
+    assert.deepEqual(result, [
       {
         Id: "1",
         ContentId: "1",
@@ -95,7 +97,7 @@ describe("The query engine should evaluate", () => {
   createQuerySpec("/Posts?$expand=Children/Parent", answer => {
     let result = answer.result();
     expectSuccess(answer);
-    expect(result).toEqual([
+    assert.deepEqual(result, [
       {
         Id: "1",
         ContentId: "1",
@@ -126,72 +128,72 @@ describe("The query engine should evaluate", () => {
 
   createQuerySpec("/Posts?$filter='0' eq '1'", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(0);
+    assert.strictEqual(answer.result().length, 0);
   });
 
   createQuerySpec("/Posts?$filter=Id eq '1'", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   });
 
   createQuerySpec("/Posts?$filter=Id eq '0'", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(0);
+    assert.strictEqual(answer.result().length, 0);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq '1')", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   });
 
   createQuerySpec("/Posts?$filter=Id eq 1", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(2);
+    assert.strictEqual(answer.result().length, 2);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq 1) and ((Id eq 2) or (Id eq 1))", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   });
 
   createQuerySpec("/Posts?$filter=(Id eq 1) or (Id eq 2) and (Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(2);
+    assert.strictEqual(answer.result().length, 2);
   });
 
   createQuerySpec("/Posts?$filter=Content/Id eq 1", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
-    expect(answer.result()[0].ContentId).toBe("1");
+    assert.strictEqual(answer.result().length, 1);
+    assert.strictEqual(answer.result()[0].ContentId, "1");
   }, () => {
     "before spec";
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: 1 eq 1)", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   }, () => {
     "before spec";
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: it/Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: Id eq 1)", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(1);
+    assert.strictEqual(answer.result().length, 1);
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: Id eq 2)", answer => {
     expectSuccess(answer);
-    expect(answer.result().length).toBe(0);
+    assert.strictEqual(answer.result().length, 0);
   });
 
   createQuerySpec("/Posts?$filter=Children/any(it: it/Children/any(it2: 1 eq 1))", answer => {
@@ -216,44 +218,9 @@ describe("The query engine should evaluate", () => {
             done();
           }); }
           catch (e) {
-            expect(e.stack || e).toBe("no exception");
+            assert.strictEqual(e.stack || e, "no exception");
             done();
           }
-        });
-      });
-    });
-  }
-
-  function createMultiQuerySpec(query: string[], cb: ((results) => void), before: () => void = () => null,
-                                pending: boolean = false) {
-    let fn = pending ? xit : it;
-    let ret = [];
-    fn(query, (done) => {
-      before();
-      rdfstore.create((error, store) => {
-        let graphName = "http://example.org/";
-        storeSeed(store, graphName, () => {
-          let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-          let engine = new odataQueryEngine.QueryEngine();
-          engine.setSparqlProvider(sparqlProvider);
-          let i = -1;
-          function iteration() {
-            if (i >= query.length) {
-              done();
-              return;
-            }
-            try {
-              engine.query(query[++i], results => {
-                ret.push(results);
-                iteration();
-              });
-            }
-            catch (e) {
-              expect(e.stack || e).toBe("no exception in iteration " + i);
-              done();
-            }
-          }
-          iteration();
         });
       });
     });
@@ -261,8 +228,8 @@ describe("The query engine should evaluate", () => {
 });
 
 function expectSuccess(answer) {
-  expect(answer.error()).toBeUndefined();
-  expect(answer.result()).toBeDefined();
+  assert.isUndefined(answer.error());
+  assert.isDefined(answer.result());
 }
 
 function storeSeed(store, graphName, cb) {

@@ -1,3 +1,5 @@
+import { assert } from "chai";
+
 import gpatterns = require("../src/sparql/graphpatterns");
 import qbuilder = require("../src/sparql/querystringbuilder");
 
@@ -10,7 +12,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
-    expect(queryString).toEqual(
+    assert.strictEqual(queryString,
       "{ ?root disco:id \"1\" . " +
       "?root disco:refersTo ?ref . ?ref disco:referree \"2\" }");
   });
@@ -23,7 +25,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
-    expect(queryString).toEqual(
+    assert.strictEqual(queryString,
       "{ ?root disco:id \"1\" . " +
       "{ ?root disco:parent ?parent } UNION { ?child disco:parent ?root } }"
     );
@@ -35,7 +37,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
-    expect(queryString).toEqual(
+    assert.strictEqual(queryString,
       "{ { { ?root disco:id \"1\" } } }"
     );
   });
@@ -46,7 +48,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
-    expect(queryString).toEqual(
+    assert.strictEqual(queryString,
       "{ ?root disco:content ?cnt . { ?cnt disco:id ?id } }"
     );
   });
@@ -57,7 +59,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
-    expect(queryString).toEqual(
+    assert.strictEqual(queryString,
       "{ OPTIONAL { ?root disco:parent ?par . ?par disco:id ?id } }"
     );
   });
@@ -68,7 +70,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let queryString = builder.buildGraphPatternString(pattern);
 
-    expect(queryString).toEqual(
+    assert.strictEqual(queryString,
       "{ { ?rootB disco:id ?id } }"
     );
   });
@@ -79,7 +81,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let query = builder.buildGraphPatternStringAmendFilterExpression(pattern, { toSparql: () => "{filter}" });
 
-    expect(query).toBe("{ FILTER({filter}) }");
+    assert.strictEqual(query, "{ FILTER({filter}) }");
   });
 
   it("should amend FILTER expressions after patterns", () => {
@@ -89,7 +91,7 @@ describe("the graph pattern string builder", function() {
     let builder = new qbuilder.GraphPatternStringBuilder();
     let query = builder.buildGraphPatternStringAmendFilterExpression(pattern, { toSparql: () => "{filter}" });
 
-    expect(query).toBe("{ {subject} {predicate} {object} . FILTER({filter}) }");
+    assert.strictEqual(query, "{ {subject} {predicate} {object} . FILTER({filter}) }");
   });
 });
 
@@ -99,7 +101,7 @@ describe("SelectSkeletonBuilder:", () => {
 
     let query = builder.buildSkeleton("", "{graphPattern}");
 
-    expect(query).toBe("SELECT * WHERE {graphPattern}");
+    assert.strictEqual(query, "SELECT * WHERE {graphPattern}");
   });
 
   it("build a query skeleton with prefixes", () => {
@@ -107,7 +109,7 @@ describe("SelectSkeletonBuilder:", () => {
 
     let query = builder.buildSkeleton("{prefixes}", "{graphPattern}");
 
-    expect(query).toBe("{prefixes} SELECT * WHERE {graphPattern}");
+    assert.strictEqual(query, "{prefixes} SELECT * WHERE {graphPattern}");
   });
 });
 
@@ -137,21 +139,21 @@ describe("SelectQueryStringBuilder:", () => {
     it(name, () => {
       let patternBuilder = new GraphPatternStringBuilder();
       patternBuilder.buildGraphPatternStringAmendFilterExpression = (pat, filter?) => {
-        expect(pat).toBe(args.pattern);
-        expect(filter).toBe(args.filter);
+        assert.strictEqual(pat, args.pattern);
+        assert.strictEqual(filter, args.filter);
         return args.patternString;
       };
       let skeletonBuilder = new SelectSkeletonBuilder();
       skeletonBuilder.buildSkeleton = (prefixes, pat) => {
-        expect(prefixes).toEqual(args.prefixString);
-        expect(pat).toBe(args.patternString);
+        assert.strictEqual(prefixes, args.prefixString);
+        assert.strictEqual(pat, args.patternString);
         return args.queryString;
       };
       let builder = new qbuilder.SelectQueryStringBuilder(skeletonBuilder, patternBuilder);
 
       let query = builder.fromGraphPatternAndFilterExpression(args.prefixes, args.pattern, args.filter);
 
-      expect(query).toBe(args.queryString);
+      assert.strictEqual(query, args.queryString);
     });
   }
 });
