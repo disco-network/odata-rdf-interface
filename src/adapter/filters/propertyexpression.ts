@@ -36,10 +36,6 @@ export class PropertyValueTranslator implements filters.IExpressionTranslator {
     this.factory = args.factory;
   }
 
-  public getSubExpressions(): filters.IExpressionTranslator[] {
-    return [];
-  }
-
   public getPropertyTree(): filters.ScopedPropertyTree {
     return this.getPropertyPathSegmentRelevantForPropertyTree()
       .toScopedPropertyTree();
@@ -67,10 +63,6 @@ export class AnyExpression implements filters.IExpressionTranslator {
     this.filterContext = args.filterContext;
     this.factory = args.factory;
     this.propertyPath = propertyPath;
-  }
-
-  public getSubExpressions(): filters.IExpressionTranslator[] {
-    return [];
   }
 
   public getPropertyTree(): filters.ScopedPropertyTree {

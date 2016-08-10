@@ -3,7 +3,6 @@ import schema = require("../odata/schema");
 import propertyExpr = require("./filters/propertyexpression");
 
 export interface IExpressionTranslator {
-  getSubExpressions(): IExpressionTranslator[];
   getPropertyTree(): ScopedPropertyTree;
   toSparqlFilterClause(): string;
 }
@@ -219,10 +218,6 @@ export class LiteralTranslator<ValueType> implements IExpressionTranslator {
       this.value = value;
     }
 
-    public getSubExpressions(): IExpressionTranslator[] {
-      return [];
-    }
-
     public getPropertyTree(): ScopedPropertyTree {
       return ScopedPropertyTree.create();
     }
@@ -248,12 +243,8 @@ export class BinaryOperatorTranslator implements IExpressionTranslator {
       this.rhs = expressionFactory.fromRaw(raw.rhs);
     }
 
-    public getSubExpressions(): IExpressionTranslator[] {
-      return [ this.lhs, this.rhs ];
-    }
-
     public getPropertyTree(): ScopedPropertyTree {
-      return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
+      return FilterExpressionHelper.getPropertyTree([ this.lhs, this.rhs ]);
     }
 
     public toSparqlFilterClause(): string {
