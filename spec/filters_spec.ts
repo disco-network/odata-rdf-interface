@@ -20,9 +20,9 @@ describe("A filter factory", () => {
     let factory = createFilterExpressionFactory();
     let filter = factory.fromRaw(raw);
 
-    assert.strictEqual(filter instanceof filters.BinaryOperatorExpression, true);
-    assert.strictEqual(filter["lhs"] instanceof filters.LiteralExpression, true);
-    assert.strictEqual(filter["rhs"] instanceof filters.LiteralExpression, true);
+    assert.strictEqual(filter instanceof filters.BinaryOperatorTranslator, true);
+    assert.strictEqual(filter["lhs"] instanceof filters.LiteralTranslator, true);
+    assert.strictEqual(filter["rhs"] instanceof filters.LiteralTranslator, true);
   });
   it("should throw if there's no matching expression", () => {
     let raw = { type: "is-42", value: "4*2" };
@@ -42,8 +42,8 @@ describe("A filter factory", () => {
 
 describe("A StringLiteralExpression", () => {
   it("should render to a SPARQL string", () => {
-    let expr = filters.StringLiteralExpressionFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
-    assert.strictEqual(expr.toSparql(), "'cat'");
+    let expr = filters.StringLiteralTranslatorFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
+    assert.strictEqual(expr.toSparqlFilterClause(), "'cat'");
   });
 
   xit("should escape special characters", () => undefined);
@@ -51,19 +51,19 @@ describe("A StringLiteralExpression", () => {
 
 describe("A NumberLiteralExpression", () => {
   it("should apply to numbers", () => {
-    assert.strictEqual(filters.NumberLiteralExpressionFactory.doesApplyToRaw(
+    assert.strictEqual(filters.NumericLiteralTranslatorFactory.doesApplyToRaw(
       { type: "decimalValue", value: "1" }
     ), true);
   });
 
   it("should render to a SPARQL string", () => {
-    let expr = filters.NumberLiteralExpressionFactory.fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
-    assert.strictEqual(expr.toSparql(), "'1'");
+    let expr = filters.NumericLiteralTranslatorFactory.fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
+    assert.strictEqual(expr.toSparqlFilterClause(), "'1'");
   });
 
   it("should disallow non-number values", () => {
     assert.throws(() => {
-      filters.NumberLiteralExpressionFactory.fromRaw({
+      filters.NumericLiteralTranslatorFactory.fromRaw({
         type: "decimalValue", value: "cat",
       },
       { factory: null, filterContext: null });
@@ -79,7 +79,7 @@ describe("An EqExpression", () => {
       rhs: { type: "test", value: "(rhs)" },
     });
 
-    assert.strictEqual(expr.toSparql(), "((lhs) = (rhs))");
+    assert.strictEqual(expr.toSparqlFilterClause(), "((lhs) = (rhs))");
   });
 });
 
@@ -91,7 +91,7 @@ describe("An OrExpression", () => {
       rhs: { type: "test", value: "(rhs)" },
     });
 
-    assert.strictEqual(expr.toSparql(), "((lhs) || (rhs))");
+    assert.strictEqual(expr.toSparqlFilterClause(), "((lhs) || (rhs))");
   });
 });
 
@@ -127,7 +127,7 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    assert.strictEqual(expr.toSparql(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
+    assert.strictEqual(expr.toSparqlFilterClause(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
   });
 
   it("should not insert the collection property of 'any' operations into the property tree", () => {
@@ -159,38 +159,15 @@ describe("A PropertyExpression", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
-    let factory = new filters.FilterExpressionIoCContainer()
-      .registerFilterExpression(createPropertyExpressionFactory())
-      .setStandardFilterContext({
-        scope: {
-          entityType: schema.getEntityType("Post"),
-          unscopedEntityType: schema.getEntityType("Post"),
-          lambdaVariableScope: new filters.LambdaVariableScope(),
-        },
-        mapping: {
-          mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
-        },
-      });
+    let factory = new filters.ExpressionTranslatorCreationChainOfResponsibility()
+      .pushHandler(createPropertyExpressionFactory());
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "member-expression", operation: "property-value",
           path: [ "Id" ] },
       },
-    });
-
-    assert.strictEqual(expr.toSparql(), "EXISTS { { OPTIONAL { ?root disco:id ?x1 } . "
-      + "{ OPTIONAL { ?x0 disco:parent ?root } } } . FILTER(?x1) }");
-  });
-
-  it("should process properties of the lambda entity in 'any' expessions", () => {
-    let mapping = new mappings.Mapping(
-      new mappings.PropertyMapping(schema.getEntityType("Post")),
-      new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
-    );
-    let factory = new filters.FilterExpressionIoCContainer()
-      .registerFilterExpression(createPropertyExpressionFactory())
-      .setStandardFilterContext({
+    }, {
       scope: {
         entityType: schema.getEntityType("Post"),
         unscopedEntityType: schema.getEntityType("Post"),
@@ -200,16 +177,37 @@ describe("A PropertyExpression", () => {
         mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
       },
     });
+
+    assert.strictEqual(expr.toSparqlFilterClause(), "EXISTS { { OPTIONAL { ?root disco:id ?x1 } . "
+      + "{ OPTIONAL { ?x0 disco:parent ?root } } } . FILTER(?x1) }");
+  });
+
+  it("should process properties of the lambda entity in 'any' expessions", () => {
+    let mapping = new mappings.Mapping(
+      new mappings.PropertyMapping(schema.getEntityType("Post")),
+      new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
+    );
+    let factory = new filters.ExpressionTranslatorCreationChainOfResponsibility()
+      .pushHandler(createPropertyExpressionFactory());
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "member-expression", operation: "property-value",
           path: [ "it", "Id" ] },
       },
+    }, {
+      scope: {
+        entityType: schema.getEntityType("Post"),
+        unscopedEntityType: schema.getEntityType("Post"),
+        lambdaVariableScope: new filters.LambdaVariableScope(),
+      },
+      mapping: {
+        mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
+      },
     });
 
     /* @todo is it a good idea to use _OPTIONAL_ { ?x0 disco:parent ?root } ? */
-    assert.strictEqual(expr.toSparql(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } . "
+    assert.strictEqual(expr.toSparqlFilterClause(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } . "
       + "{ OPTIONAL { ?x0 disco:id ?x1 } } } . FILTER(?x1) }");
   });
 });
@@ -335,14 +333,14 @@ function createBranchFactory() {
 }
 
 function createFilterExpressionFactory() {
-  let factory = new filters.FilterExpressionIoCContainer()
-    .registerFilterExpressions([
-      filters.StringLiteralExpressionFactory, filters.NumberLiteralExpressionFactory,
-      filters.AndExpressionFactory, filters.OrExpressionFactory,
-      filters.EqExpressionFactory, filters.ParenthesesExpressionFactory,
+  let factory = new filters.ExpressionTranslatorCreationChainOfResponsibility()
+    .pushHandlers([
+      filters.StringLiteralTranslatorFactory, filters.NumericLiteralTranslatorFactory,
+      filters.AndTranslatorFactory, filters.OrTranslatorFactory,
+      filters.EqTranslatorFactory, filters.ParenthesesTranslatorFactory,
       TestFilterExpression,
     ])
-    .setStandardFilterContext({
+    .createFactoryWithFilterContext({
       scope: {
         entityType: null,
         unscopedEntityType: null,
@@ -359,12 +357,12 @@ function createNullArgs() {
   return { mapping: null, entityType: null, factory: null };
 }
 
-class TestFilterExpression implements filters.IFilterExpression {
+class TestFilterExpression implements filters.IExpressionTranslator {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
-  public static fromRaw(raw, args: filters.IFilterExpressionArgs) { return new TestFilterExpression(raw.value, args); }
+  public static fromRaw(raw, args: filters.IExpressionTranslatorArgs) { return new TestFilterExpression(raw.value, args); }
 
-  constructor(public value, public args: filters.IFilterExpressionArgs) {}
-  public getSubExpressions(): filters.IFilterExpression[] { return []; }
+  constructor(public value, public args: filters.IExpressionTranslatorArgs) {}
+  public getSubExpressions(): filters.IExpressionTranslator[] { return []; }
   public getPropertyTree(): filters.ScopedPropertyTree { return new filters.ScopedPropertyTree(); }
-  public toSparql(): string { return this.value.toString(); }
+  public toSparqlFilterClause(): string { return this.value.toString(); }
 }

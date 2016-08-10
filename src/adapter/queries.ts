@@ -61,7 +61,7 @@ export interface IEntitySetQueryStringBuilder {
 
 export class EntitySetQueryStringBuilder {
 
-  constructor(private filterExpressionFactory: filters.FilterExpressionIoCContainer,
+  constructor(private filterExpressionFactory: filters.IExpressionTranslatorFactory,
               private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
               private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
               private sparqlSelectBuilder: psBuilder.ISelectQueryStringBuilder) {
@@ -91,7 +91,7 @@ export class EntitySetQueryStringBuilder {
   }
 
   private createFilterGraphPattern(model: IQueryAdapterModel,
-                                   filterExpression?: filters.IFilterExpression): gpatterns.TreeGraphPattern {
+                                   filterExpression?: filters.IExpressionTranslator): gpatterns.TreeGraphPattern {
     if (filterExpression) {
 
       let filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
@@ -100,10 +100,9 @@ export class EntitySetQueryStringBuilder {
     }
   }
 
-  private createFilterExpression(model: IQueryAdapterModel): filters.IFilterExpression {
+  private createFilterExpression(model: IQueryAdapterModel): filters.IExpressionTranslator {
     if (model.getRawFilter() !== undefined) {
-      this.filterExpressionFactory.setStandardFilterContext(model.getFilterContext());
-      return this.filterExpressionFactory.fromRaw(model.getRawFilter());
+      return this.filterExpressionFactory.fromRaw(model.getRawFilter(), model.getFilterContext());
     }
   }
 }

@@ -35,13 +35,13 @@ export class QueryFactory extends base.QueryFactory {
   }
 }
 
-export class FilterExpressionFactory extends filters.FilterExpressionIoCContainer {
+export class FilterExpressionFactory extends filters.ExpressionTranslatorCreationChainOfResponsibility {
   constructor() {
     super();
-    this.registerFilterExpressions([
-      filters.AndExpressionFactory, filters.OrExpressionFactory, filters.EqExpressionFactory,
-      filters.StringLiteralExpressionFactory, filters.NumberLiteralExpressionFactory,
-      filters.ParenthesesExpressionFactory,
+    this.pushHandlers([
+      filters.AndTranslatorFactory, filters.OrTranslatorFactory, filters.EqTranslatorFactory,
+      filters.StringLiteralTranslatorFactory, filters.NumericLiteralTranslatorFactory,
+      filters.ParenthesesTranslatorFactory,
       new filters.PropertyExpressionFactory(propertyTreeConfig.getFilterGraphPatternStrategy()),
     ]);
   }

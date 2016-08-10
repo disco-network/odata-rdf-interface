@@ -79,7 +79,8 @@ describe("the graph pattern string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
 
     let builder = new qbuilder.GraphPatternStringBuilder();
-    let query = builder.buildGraphPatternStringAmendFilterExpression(pattern, { toSparql: () => "{filter}" });
+    let query = builder.buildGraphPatternStringAmendFilterExpression
+      (pattern, { toSparqlFilterClause: () => "{filter}" });
 
     assert.strictEqual(query, "{ FILTER({filter}) }");
   });
@@ -89,7 +90,8 @@ describe("the graph pattern string builder", function() {
     pattern.branch("{predicate}", "{object}");
 
     let builder = new qbuilder.GraphPatternStringBuilder();
-    let query = builder.buildGraphPatternStringAmendFilterExpression(pattern, { toSparql: () => "{filter}" });
+    let query = builder.buildGraphPatternStringAmendFilterExpression
+      (pattern, { toSparqlFilterClause: () => "{filter}" });
 
     assert.strictEqual(query, "{ {subject} {predicate} {object} . FILTER({filter}) }");
   });

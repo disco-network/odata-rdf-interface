@@ -4,7 +4,7 @@ import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 import mappings = require("../mappings");
 
-export class PropertyExpressionFactory {
+export class PropertyTranslatorFactory {
 
   constructor(private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy) {}
 
@@ -12,11 +12,11 @@ export class PropertyExpressionFactory {
     return raw.type === "member-expression";
   }
 
-  public fromRaw(raw, args: filters.IFilterExpressionArgs): filters.IFilterExpression {
+  public fromRaw(raw, args: filters.IExpressionTranslatorArgs): filters.IExpressionTranslator {
     let propertyPath = new PropertyPath(raw.path, args.filterContext);
     switch (raw.operation) {
       case "property-value":
-        return new PropertyValueExpression(propertyPath, args);
+        return new PropertyValueTranslator(propertyPath, args);
       case "any":
         return new AnyExpression(raw, propertyPath, args, this.filterPatternStrategy);
       default:
@@ -25,18 +25,18 @@ export class PropertyExpressionFactory {
   }
 }
 
-export class PropertyValueExpression implements filters.IFilterExpression {
+export class PropertyValueTranslator implements filters.IExpressionTranslator {
   private filterContext: filters.IFilterContext;
-  private factory: filters.IFilterExpressionFactory;
+  private factory: filters.IExpressionTranslatorFactory;
   private propertyPath: PropertyPath;
 
-  constructor(propertyPath: PropertyPath, args: filters.IFilterExpressionArgs) {
+  constructor(propertyPath: PropertyPath, args: filters.IExpressionTranslatorArgs) {
     this.propertyPath = propertyPath;
     this.filterContext = args.filterContext;
     this.factory = args.factory;
   }
 
-  public getSubExpressions(): filters.IFilterExpression[] {
+  public getSubExpressions(): filters.IExpressionTranslator[] {
     return [];
   }
 
@@ -45,7 +45,7 @@ export class PropertyValueExpression implements filters.IFilterExpression {
       .toScopedPropertyTree();
   }
 
-  public toSparql(): string {
+  public toSparqlFilterClause(): string {
     return this.propertyPath.getFinalElementaryPropertyVariable();
   }
 
@@ -54,14 +54,14 @@ export class PropertyValueExpression implements filters.IFilterExpression {
   }
 }
 
-export class AnyExpression {
+export class AnyExpression implements filters.IExpressionTranslator {
   private raw: any;
   private filterContext: filters.IFilterContext;
   private innerScopeId = new mappings.UniqueScopeIdentifier("any");
-  private factory: filters.IFilterExpressionFactory;
+  private factory: filters.IExpressionTranslatorFactory;
   private propertyPath: PropertyPath;
 
-  constructor(raw: any, propertyPath: PropertyPath, args: filters.IFilterExpressionArgs,
+  constructor(raw: any, propertyPath: PropertyPath, args: filters.IExpressionTranslatorArgs,
               private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy) {
     this.raw = raw;
     this.filterContext = args.filterContext;
@@ -69,7 +69,7 @@ export class AnyExpression {
     this.propertyPath = propertyPath;
   }
 
-  public getSubExpressions(): filters.IFilterExpression[] {
+  public getSubExpressions(): filters.IExpressionTranslator[] {
     return [];
   }
 
@@ -78,7 +78,7 @@ export class AnyExpression {
       .toScopedPropertyTree();
   }
 
-  public toSparql(): string {
+  public toSparqlFilterClause(): string {
     /* @smell inner filter context is created twice: here and in filterpatterns.ts */
     let innerFilterExpression = this.factory.fromRaw(this.raw.lambdaExpression.predicateExpression,
       this.createFilterContextInsideLambda());
@@ -86,7 +86,7 @@ export class AnyExpression {
     return `EXISTS ${this.buildFilterPatternString(innerFilterExpression)}`;
   }
 
-  private buildFilterPatternString(innerFilterExpression: filters.IFilterExpression) {
+  private buildFilterPatternString(innerFilterExpression: filters.IExpressionTranslator) {
     let filterPattern = this.filterPatternStrategy.createAnyExpressionPattern(this.filterContext,
       innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath);
     let queryStringBuilder = new qsBuilder.GraphPatternStringBuilder();

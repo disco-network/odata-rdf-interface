@@ -2,14 +2,14 @@ import mappings = require("./mappings");
 import schema = require("../odata/schema");
 import propertyExpr = require("./filters/propertyexpression");
 
-export interface IFilterExpression {
-  getSubExpressions(): IFilterExpression[];
+export interface IExpressionTranslator {
+  getSubExpressions(): IExpressionTranslator[];
   getPropertyTree(): ScopedPropertyTree;
-  toSparql(): string;
+  toSparqlFilterClause(): string;
 }
 
-export interface IFilterExpressionArgs {
-  factory: IFilterExpressionFactory;
+export interface IExpressionTranslatorArgs {
+  factory: IExpressionTranslatorFactory;
   filterContext?: IFilterContext;
 }
 
@@ -35,8 +35,8 @@ export interface ILambdaExpression {
   scopeId: mappings.UniqueScopeIdentifier;
 }
 
-export interface IFilterExpressionFactory {
-  fromRaw(raw, context?: IFilterContext): IFilterExpression;
+export interface IExpressionTranslatorFactory {
+  fromRaw(raw, context?: IFilterContext): IExpressionTranslator;
 }
 
 export class LambdaVariableScope {
@@ -68,25 +68,19 @@ export class LambdaVariableScope {
 }
 
 /**
- * Creates appropriate FilterExpressions from raw data.
+ * Selects the appropriate FilterExpression implementation from raw data.
  */
-export class FilterExpressionIoCContainer {
-  private registeredFilterExpressions: IFilterExpressionCandidateFactory[] = [];
-  private standardFilterContext: IFilterContext;
+export class ExpressionTranslatorCreationChainOfResponsibility {
+  private registeredFilterExpressions: ITranslatorFromRawHandler[] = [];
 
-  public setStandardFilterContext(filterContext: IFilterContext) {
-    this.standardFilterContext = filterContext;
-    return this;
-  }
-
-  public registerFilterExpressions(types: IFilterExpressionCandidateFactory[]) {
+  public pushHandlers(types: ITranslatorFromRawHandler[]) {
     for (let i = 0; i < types.length; ++i) {
-      this.registerFilterExpression(types[i]);
+      this.pushHandler(types[i]);
     }
     return this;
   }
 
-  public registerFilterExpression(Type: IFilterExpressionCandidateFactory) {
+  public pushHandler(Type: ITranslatorFromRawHandler) {
     if (this.registeredFilterExpressions.indexOf(Type) === -1)
       this.registeredFilterExpressions.push(Type);
     return this;
@@ -97,16 +91,22 @@ export class FilterExpressionIoCContainer {
    * The FilterContext will be also used as default value for child expressions -
    * see this.creationArgs(...).
    */
-  public fromRaw(raw: any, filterContext = this.standardFilterContext): IFilterExpression {
-    if (this.validateCreationArgs()) {
+  public fromRaw(raw: any, filterContext): IExpressionTranslator {
+    if (this.validateFilterContext(filterContext)) {
       return this.fromRawNoValidations(raw, filterContext);
     }
     else {
-      throw new Error("Can't create filter expressions with incomplete creation args.");
+      throw new Error("Can't create filter expressions with invalid filter context.");
     }
   }
 
-  private fromRawNoValidations(raw, filterContext: IFilterContext): IFilterExpression {
+  public createFactoryWithFilterContext(filterContext: IFilterContext): IExpressionTranslatorFactory {
+    return {
+      fromRaw: (raw, context = filterContext) => this.fromRaw(raw, context),
+    };
+  }
+
+  private fromRawNoValidations(raw, filterContext: IFilterContext): IExpressionTranslator {
       for (let i = 0; i < this.registeredFilterExpressions.length; ++i) {
         let SelectedFilterExpression = this.registeredFilterExpressions[i];
         if (SelectedFilterExpression.doesApplyToRaw(raw))
@@ -115,15 +115,11 @@ export class FilterExpressionIoCContainer {
       throw new Error("filter expression is not supported: " + JSON.stringify(raw));
   }
 
-  private createCreationArgs(filterContext: IFilterContext): IFilterExpressionArgs {
+  private createCreationArgs(filterContext: IFilterContext): IExpressionTranslatorArgs {
     return {
-      factory: { fromRaw: (raw, context = filterContext) => this.fromRaw(raw, context) },
+      factory: this.createFactoryWithFilterContext(filterContext),
       filterContext: filterContext,
     };
-  }
-
-  private validateCreationArgs(): boolean {
-    return this.validateFilterContext(this.standardFilterContext);
   }
 
   private validateFilterContext(filterContext: IFilterContext) {
@@ -143,18 +139,18 @@ export class FilterExpressionIoCContainer {
   }
 }
 
-export interface IFilterExpressionCandidateFactory {
-  fromRaw(raw, args: IFilterExpressionArgs): IFilterExpression;
+export interface ITranslatorFromRawHandler {
+  fromRaw(raw, args: IExpressionTranslatorArgs): IExpressionTranslator;
   doesApplyToRaw(raw): boolean;
 }
 
-export let PropertyExpressionFactory = propertyExpr.PropertyExpressionFactory;
+export let PropertyExpressionFactory = propertyExpr.PropertyTranslatorFactory;
 
-export class LiteralExpressionFactory<ValueType> implements IFilterExpressionCandidateFactory {
+export class LiteralTranslatorFactory<ValueType> implements ITranslatorFromRawHandler {
   constructor(private config: ILiteralExpressionConfig<ValueType>) {}
 
-  public fromRaw(raw, args: IFilterExpressionArgs): IFilterExpression {
-    return new LiteralExpression(this.config.parse(raw), this.config);
+  public fromRaw(raw, args: IExpressionTranslatorArgs): IExpressionTranslator {
+    return new LiteralTranslator(this.config.parse(raw), this.config);
   }
 
   public doesApplyToRaw(raw) {
@@ -162,13 +158,13 @@ export class LiteralExpressionFactory<ValueType> implements IFilterExpressionCan
   }
 }
 
-export let StringLiteralExpressionFactory = new LiteralExpressionFactory<string>({
+export let StringLiteralTranslatorFactory = new LiteralTranslatorFactory<string>({
   typeName: "string",
   parse: raw => raw.value,
   toSparql: value => "'" + value + "'",
 });
 
-export let NumberLiteralExpressionFactory = new LiteralExpressionFactory<number>({
+export let NumericLiteralTranslatorFactory = new LiteralTranslatorFactory<number>({
   typeName: "decimalValue",
   parse: raw => {
     let ret = parseInt(raw.value, 10);
@@ -178,7 +174,7 @@ export let NumberLiteralExpressionFactory = new LiteralExpressionFactory<number>
   toSparql: value => "'" + value + "'",
 });
 
-export class BinaryOperatorExpressionFactory implements IFilterExpressionCandidateFactory {
+export class BinaryOperatorTranslatorFactory implements ITranslatorFromRawHandler {
 
   constructor(private config: IBinaryOperatorExpressionConfig) {}
 
@@ -186,24 +182,24 @@ export class BinaryOperatorExpressionFactory implements IFilterExpressionCandida
     return raw.type === "operator" && raw.op === this.config.opName;
   }
 
-  public fromRaw(raw, args: IFilterExpressionArgs) {
-    return new BinaryOperatorExpression(raw, this.config, args.factory);
+  public fromRaw(raw, args: IExpressionTranslatorArgs) {
+    return new BinaryOperatorTranslator(raw, this.config, args.factory);
   }
 }
 
-export let OrExpressionFactory = new BinaryOperatorExpressionFactory({ opName: "or", sparql: "||" });
+export let OrTranslatorFactory = new BinaryOperatorTranslatorFactory({ opName: "or", sparql: "||" });
 
-export let AndExpressionFactory = new BinaryOperatorExpressionFactory({ opName: "and", sparql: "&&" });
+export let AndTranslatorFactory = new BinaryOperatorTranslatorFactory({ opName: "and", sparql: "&&" });
 
-export let EqExpressionFactory = new BinaryOperatorExpressionFactory({ opName: "eq", sparql: "=" });
+export let EqTranslatorFactory = new BinaryOperatorTranslatorFactory({ opName: "eq", sparql: "=" });
 
-export class ParenthesesExpressionFactory {
+export class ParenthesesTranslatorFactory {
 
   public static doesApplyToRaw(raw) {
     return raw.type === "parentheses-expression";
   }
 
-  public static fromRaw(raw, args: IFilterExpressionArgs) {
+  public static fromRaw(raw, args: IExpressionTranslatorArgs) {
     // We don't have to return a ParenthesesExpression, let's choose the direct way
     return args.factory.fromRaw(raw.inner);
   }
@@ -215,7 +211,7 @@ export interface ILiteralExpressionConfig<ValueType> {
   toSparql: (value: ValueType) => string;
 };
 
-export class LiteralExpression<ValueType> implements IFilterExpression {
+export class LiteralTranslator<ValueType> implements IExpressionTranslator {
 
     private value: ValueType;
 
@@ -223,7 +219,7 @@ export class LiteralExpression<ValueType> implements IFilterExpression {
       this.value = value;
     }
 
-    public getSubExpressions(): IFilterExpression[] {
+    public getSubExpressions(): IExpressionTranslator[] {
       return [];
     }
 
@@ -231,7 +227,7 @@ export class LiteralExpression<ValueType> implements IFilterExpression {
       return ScopedPropertyTree.create();
     }
 
-    public toSparql(): string {
+    public toSparqlFilterClause(): string {
       return this.config.toSparql(this.value);
     }
 }
@@ -241,18 +237,18 @@ export interface IBinaryOperatorExpressionConfig {
   sparql: string;
 }
 
-export class BinaryOperatorExpression {
+export class BinaryOperatorTranslator implements IExpressionTranslator {
 
-    private lhs: IFilterExpression;
-    private rhs: IFilterExpression;
+    private lhs: IExpressionTranslator;
+    private rhs: IExpressionTranslator;
 
     constructor(raw, private config: IBinaryOperatorExpressionConfig,
-                expressionFactory: IFilterExpressionFactory) {
+                expressionFactory: IExpressionTranslatorFactory) {
       this.lhs = expressionFactory.fromRaw(raw.lhs);
       this.rhs = expressionFactory.fromRaw(raw.rhs);
     }
 
-    public getSubExpressions(): IFilterExpression[] {
+    public getSubExpressions(): IExpressionTranslator[] {
       return [ this.lhs, this.rhs ];
     }
 
@@ -260,8 +256,8 @@ export class BinaryOperatorExpression {
       return FilterExpressionHelper.getPropertyTree(this.getSubExpressions());
     }
 
-    public toSparql(): string {
-      return "(" + this.lhs.toSparql() + " " + this.config.sparql + " " + this.rhs.toSparql() + ")";
+    public toSparqlFilterClause(): string {
+      return `(${this.lhs.toSparqlFilterClause()} ${this.config.sparql} ${this.rhs.toSparqlFilterClause()})`;
     }
 }
 
@@ -368,7 +364,7 @@ export interface IIterator<T> {
 }
 
 export class FilterExpressionHelper {
-  public static getPropertyTree(subExpressions: IFilterExpression[]): ScopedPropertyTree {
+  public static getPropertyTree(subExpressions: IExpressionTranslator[]): ScopedPropertyTree {
     let propertyTrees = subExpressions.map(se => se.getPropertyTree());
     let result = ScopedPropertyTree.create();
     propertyTrees.forEach(tree => {

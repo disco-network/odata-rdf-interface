@@ -15,7 +15,7 @@ export interface ISelectSkeletonBuilder {
 }
 
 export interface IFilterExpression {
-  toSparql(): string;
+  toSparqlFilterClause(): string;
 }
 
 export interface IPrefix {
@@ -51,7 +51,7 @@ export class GraphPatternStringBuilder implements IGraphPatternStringBuilder {
   public buildGraphPatternStringAmendFilterExpression(pattern: gpatterns.TreeGraphPattern, filter?: IFilterExpression) {
     let patternStr = this.buildPatternContent(pattern);
     let filterStr = filter
-      ? ((patternStr && patternStr.length > 0 ? " . " : "") + `FILTER(${filter.toSparql()})`)
+      ? ((patternStr && patternStr.length > 0 ? " . " : "") + `FILTER(${filter.toSparqlFilterClause()})`)
       : "";
     return `{ ${patternStr}${filterStr} }`;
   }
