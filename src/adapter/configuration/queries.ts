@@ -35,14 +35,14 @@ export class QueryFactory extends base.QueryFactory {
   }
 }
 
-export class FilterExpressionFactory extends filters.ExpressionTranslatorCreationChainOfResponsibility {
+export class FilterExpressionFactory extends filters.FilterToTranslatorChainOfResponsibility {
   constructor() {
     super();
     this.pushHandlers([
       filters.AndTranslatorFactory, filters.OrTranslatorFactory, filters.EqTranslatorFactory,
       filters.StringLiteralTranslatorFactory, filters.NumericLiteralTranslatorFactory,
       filters.ParenthesesTranslatorFactory,
-      new filters.PropertyExpressionFactory(propertyTreeConfig.getFilterGraphPatternStrategy()),
+      new filters.PropertyTranslatorFactory(propertyTreeConfig.getFilterGraphPatternStrategy()),
     ]);
   }
 }

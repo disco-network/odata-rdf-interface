@@ -70,7 +70,7 @@ export class LambdaVariableScope {
 /**
  * Selects the appropriate FilterExpression implementation from raw data.
  */
-export class ExpressionTranslatorCreationChainOfResponsibility {
+export class FilterToTranslatorChainOfResponsibility {
   private registeredFilterExpressions: ITranslatorFromRawHandler[] = [];
 
   public pushHandlers(types: ITranslatorFromRawHandler[]) {
@@ -144,7 +144,7 @@ export interface ITranslatorFromRawHandler {
   doesApplyToRaw(raw): boolean;
 }
 
-export let PropertyExpressionFactory = propertyExpr.PropertyTranslatorFactory;
+export let PropertyTranslatorFactory = propertyExpr.PropertyTranslatorFactory;
 
 export class LiteralTranslatorFactory<ValueType> implements ITranslatorFromRawHandler {
   constructor(private config: ILiteralExpressionConfig<ValueType>) {}

@@ -8,8 +8,8 @@ import propertyTreeImpl = require("../src/adapter/propertytree/propertytree_impl
 import filterPatterns = require("../src/adapter/filterpatterns");
 let schema = new schemaModule.Schema();
 
-describe("A filter factory", () => {
-  it("should choose the right FilterExpression-implementing class", () => {
+describe("Filters.FilterToTranslatorChainOfResponsibility", () => {
+  it("should choose the right IExpressionTranslator-implementing class", () => {
     let raw = {
       type: "operator",
       op: "eq",
@@ -17,22 +17,22 @@ describe("A filter factory", () => {
       rhs: { type: "string", value: "2" },
     };
 
-    let factory = createFilterExpressionFactory();
+    let factory = createExpressionTranslatorFactory();
     let filter = factory.fromRaw(raw);
 
     assert.strictEqual(filter instanceof filters.BinaryOperatorTranslator, true);
     assert.strictEqual(filter["lhs"] instanceof filters.LiteralTranslator, true);
     assert.strictEqual(filter["rhs"] instanceof filters.LiteralTranslator, true);
   });
-  it("should throw if there's no matching expression", () => {
+  it("should throw if there's no matching translator", () => {
     let raw = { type: "is-42", value: "4*2" };
-    let factory = createFilterExpressionFactory();
+    let factory = createExpressionTranslatorFactory();
 
     assert.throws(() => factory.fromRaw(raw));
   });
-  it("should pass a factory to the FilterExpression", () => {
+  it("should pass a factory to the ExpressionTranslator", () => {
     let raw = { type: "test" };
-    let factory = createFilterExpressionFactory();
+    let factory = createExpressionTranslatorFactory();
     let args = (factory.fromRaw(raw) as TestFilterExpression).args;
 
     assert.isDefined(args.factory);
@@ -40,7 +40,7 @@ describe("A filter factory", () => {
   xit("should be clonable", () => undefined);
 });
 
-describe("A StringLiteralExpression", () => {
+describe("A StringLiteralTranslator", () => {
   it("should render to a SPARQL string", () => {
     let expr = filters.StringLiteralTranslatorFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
     assert.strictEqual(expr.toSparqlFilterClause(), "'cat'");
@@ -49,14 +49,14 @@ describe("A StringLiteralExpression", () => {
   xit("should escape special characters", () => undefined);
 });
 
-describe("A NumberLiteralExpression", () => {
+describe("A NumberLiteralTranslator", () => {
   it("should apply to numbers", () => {
     assert.strictEqual(filters.NumericLiteralTranslatorFactory.doesApplyToRaw(
       { type: "decimalValue", value: "1" }
     ), true);
   });
 
-  it("should render to a SPARQL string", () => {
+  it("should render to a SPARQL filter clause", () => {
     let expr = filters.NumericLiteralTranslatorFactory.fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
     assert.strictEqual(expr.toSparqlFilterClause(), "'1'");
   });
@@ -71,9 +71,9 @@ describe("A NumberLiteralExpression", () => {
   });
 });
 
-describe("An EqExpression", () => {
+describe("An EqTranslator", () => {
   it("should render to a SPARQL string", () => {
-    let factory = createFilterExpressionFactory();
+    let factory = createExpressionTranslatorFactory();
     let expr = factory.fromRaw({ type: "operator", op: "eq",
       lhs: { type: "test", value: "(lhs)" },
       rhs: { type: "test", value: "(rhs)" },
@@ -83,9 +83,9 @@ describe("An EqExpression", () => {
   });
 });
 
-describe("An OrExpression", () => {
+describe("An OrTranslator", () => {
   it("should render to SPARQL", () => {
-    let factory = createFilterExpressionFactory();
+    let factory = createExpressionTranslatorFactory();
     let expr = factory.fromRaw({ type: "operator", op: "or",
       lhs: { type: "test", value: "(lhs)" },
       rhs: { type: "test", value: "(rhs)" },
@@ -95,9 +95,9 @@ describe("An OrExpression", () => {
   });
 });
 
-describe("A PropertyExpression", () => {
+describe("A PropertyTranslator", () => {
   it("should apply to OData member expressions", () => {
-    assert.strictEqual(new filters.PropertyExpressionFactory(null).doesApplyToRaw({
+    assert.strictEqual(new filters.PropertyTranslatorFactory(null).doesApplyToRaw({
       type: "member-expression",
     }), true);
   });
@@ -108,13 +108,13 @@ describe("A PropertyExpression", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", vargen)
     );
-    let expr = createPropertyExpressionFactory().fromRaw({
+    let expr = createPropertyTranslatorFactory().fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
       },
     }, {
-      factory: createFilterExpressionFactory(),
+      factory: createExpressionTranslatorFactory(),
       filterContext: {
         scope: {
           entityType: schema.getEntityType("Post"),
@@ -127,17 +127,18 @@ describe("A PropertyExpression", () => {
       },
     });
 
-    assert.strictEqual(expr.toSparqlFilterClause(), "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
+    assert.strictEqual(expr.toSparqlFilterClause(),
+      "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER({test}) }");
   });
 
-  it("should not insert the collection property of 'any' operations into the property tree", () => {
-    let expr = createPropertyExpressionFactory().fromRaw({
+  it("should not include the last property before 'any' into the property tree of the lambda expression", () => {
+    let expr = createPropertyTranslatorFactory().fromRaw({
       type: "member-expression", operation: "any", path: [ "A", "B", "Children" ],
       lambdaExpression: {
         variable: "it", predicateExpression: { type: "test", value: "{test}" },
       },
     }, {
-      factory: createFilterExpressionFactory(),
+      factory: createExpressionTranslatorFactory(),
       filterContext: {
         scope: {
           entityType: null,
@@ -159,8 +160,8 @@ describe("A PropertyExpression", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
-    let factory = new filters.ExpressionTranslatorCreationChainOfResponsibility()
-      .pushHandler(createPropertyExpressionFactory());
+    let factory = new filters.FilterToTranslatorChainOfResponsibility()
+      .pushHandler(createPropertyTranslatorFactory());
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
@@ -187,8 +188,8 @@ describe("A PropertyExpression", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
-    let factory = new filters.ExpressionTranslatorCreationChainOfResponsibility()
-      .pushHandler(createPropertyExpressionFactory());
+    let factory = new filters.FilterToTranslatorChainOfResponsibility()
+      .pushHandler(createPropertyTranslatorFactory());
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
       lambdaExpression: {
@@ -314,8 +315,8 @@ describe("A property path", () => {
   });
 });
 
-function createPropertyExpressionFactory() {
-  return new filters.PropertyExpressionFactory(createFilterPatternStrategy());
+function createPropertyTranslatorFactory() {
+  return new filters.PropertyTranslatorFactory(createFilterPatternStrategy());
 }
 
 function createFilterPatternStrategy() {
@@ -332,8 +333,8 @@ function createBranchFactory() {
       );
 }
 
-function createFilterExpressionFactory() {
-  let factory = new filters.ExpressionTranslatorCreationChainOfResponsibility()
+function createExpressionTranslatorFactory() {
+  let factory = new filters.FilterToTranslatorChainOfResponsibility()
     .pushHandlers([
       filters.StringLiteralTranslatorFactory, filters.NumericLiteralTranslatorFactory,
       filters.AndTranslatorFactory, filters.OrTranslatorFactory,
@@ -359,7 +360,9 @@ function createNullArgs() {
 
 class TestFilterExpression implements filters.IExpressionTranslator {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
-  public static fromRaw(raw, args: filters.IExpressionTranslatorArgs) { return new TestFilterExpression(raw.value, args); }
+  public static fromRaw(raw, args: filters.IExpressionTranslatorArgs) {
+    return new TestFilterExpression(raw.value, args);
+  }
 
   constructor(public value, public args: filters.IExpressionTranslatorArgs) {}
   public getSubExpressions(): filters.IExpressionTranslator[] { return []; }
