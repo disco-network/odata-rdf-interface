@@ -10,8 +10,27 @@ import schema = require("../src/odata/schema");
 import queryTestCases = require("./helpers/querytestcases");
 
 describe("OData.QueryEngine:", () => {
-  queryAstTypeJsonEntity("process a POST query", queryTestCases.postQueryTests[0]);
-  function queryAstTypeJsonEntity(test: string, args: queryTestCases.IPostQueryTestCase) {
+  xit("process a GET query", () => {
+    let parser = new ODataParser();
+    parser.parse = query => {
+      assert.strictEqual(query, "/Posts");
+      return { type: "resourceQuery" };
+    };
+    let repository = new Repository();
+    /* @construction add getEntities() method to IRepository */
+    let engine = new queryEngine.QueryEngine(parser, new EntityReader(), repository);
+
+    engine.queryGET("/Posts", result => {
+      assert.isDefined(result.result());
+      assert.isUndefined(result.error());
+      assert.deepEqual(result.result(), {
+        bla: "blub",
+      });
+    });
+  });
+
+  postQuery("process a POST query", queryTestCases.postQueryTests[0]);
+  function postQuery(test: string, args: queryTestCases.IPostQueryTestCase) {
     it(test, done => {
       let parser = new ODataParser();
       parser.parse = query => {
