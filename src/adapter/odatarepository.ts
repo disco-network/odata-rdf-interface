@@ -10,6 +10,11 @@ export class ODataRepository implements base.IRepository {
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private postQueryStringBuilder: postQueries.IQueryStringBuilder) {}
 
+  public getEntities(entityType: schema.EntityType, expandTree: any, filterTree: any,
+                     cb: (result: results.Result<any[], any>) => void) {
+    // @construction
+  }
+
   public insertEntity(entity: any, type: schema.EntityType, cb: (result: results.AnyResult) => void) {
     this.sparqlProvider.query(this.postQueryStringBuilder.build(entity, type), result => {
       cb(result.process(res => "ok", err => ({ message: "sparql error", error: err })));

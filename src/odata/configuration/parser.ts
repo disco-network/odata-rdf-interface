@@ -1,1 +1,1 @@
-export { ODataParser } from "../parser";
+export { PostRequestParser } from "../parser";

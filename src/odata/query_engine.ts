@@ -1,38 +1,55 @@
-import results = require("../result");
 import odataParser = require("../odata/parser");
 import entityReader = require("../odata/entity_reader_base");
-import repository = require("../odata/repository");
-import schema = require("../odata/schema");
+import { IRepository }  from "../odata/repository";
+import { Schema } from "../odata/schema";
+import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
 
-export interface IQueryEngine {
-  queryGET(query: string, cb: (result: results.AnyResult) => void): void;
-  queryPOST(query: string, body: string, cb: (result: results.AnyResult) => void): void;
+export interface IGetHandler extends IHttpRequestHandler {
 }
 
-export class QueryEngine implements IQueryEngine {
+export interface IPostHandler extends IHttpRequestHandler {
+}
 
-  private schema: schema.Schema;
+export interface IPostRequestResult {
+  success: boolean;
+}
 
-  constructor(private odataParser: odataParser.IODataParser,
-              private entityReader: entityReader.IEntityReader,
-              private repository: repository.IRepository) {
+export class GetHandler implements IGetHandler {
+
+  constructor(private schema: Schema,
+              private parser: odataParser.IGetRequestParser, private repository: IRepository) {}
+
+  public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
+    let parsed = this.parser.parse(request);
+    let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
+    this.repository.getEntities(type, parsed.expandTree, parsed.filterTree, result => {
+      responseSender.sendBody(JSON.stringify(result.result()));
+      responseSender.finishResponse();
+    });
+  }
+}
+
+export class PostHandler implements IPostHandler {
+
+  private schema: Schema;
+
+  constructor(private parser: odataParser.IPostRequestParser,
+              private entityInitializer: entityReader.IEntityInitializer,
+              private repository: IRepository) {
   }
 
-  public queryGET(query: string, cb: (result: results.AnyResult) => void) {
-    // @todo
-  }
-
-  public queryPOST(query: string, body: string, cb: (result: results.AnyResult) => void) {
+  public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
     /* @todo verify AST */
-    let ast = this.odataParser.parse(query);
-    let type = this.schema.getEntitySet(ast.resourcePath.entitySetName).getEntityType();
-    let entity = this.entityReader.fromJson(body, type);
+    let parsed = this.parser.parse(request);
+    let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
+    let entity = this.entityInitializer.fromParsed(parsed.entity, type);
     this.repository.insertEntity(entity, type, result => {
-      cb(result);
+      responseSender.sendBody(result.toString());
+      responseSender.finishResponse();
     });
   }
 
-  public setSchema(schm: schema.Schema) {
+  public setSchema(schm: Schema) {
     this.schema = schm;
   }
 }

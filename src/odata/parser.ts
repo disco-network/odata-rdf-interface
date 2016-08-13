@@ -2,9 +2,42 @@ import abnfTokenizer = require("abnfjs/tokenizer");
 import abnfParser = require("abnfjs/parser");
 import abnfInterpreter = require("abnfjs/interpreter");
 import fs = require("fs");
+import { IHttpRequest } from "./http";
+
+export interface IPostRequestParser {
+  parse(request: IHttpRequest): IParsedPostRequest;
+}
+
+export interface IParsedPostRequest {
+  entitySetName: string;
+  entity: any;
+}
+
+export interface IGetRequestParser {
+  parse(request: IHttpRequest): IParsedGetRequest;
+}
+
+export interface IParsedGetRequest {
+  entitySetName: string;
+  expandTree: any;
+  filterTree: any;
+}
 
 export interface IODataParser {
   parse(query: string): any;
+}
+
+export class PostRequestParser implements IPostRequestParser {
+
+  private odataParser = new ODataParser();
+
+  public parse(request: IHttpRequest): IParsedPostRequest {
+    let ast = this.odataParser.parse(request.relativeUrl);
+    return {
+      entitySetName: ast.resourcePath.entitySetName,
+      entity: JSON.stringify(request.body),
+    };
+  }
 }
 
 export class ODataParser implements IODataParser {

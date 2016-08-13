@@ -5,14 +5,16 @@ let queries = [
   "/Content",
 ];
 
-let jsonStrings = [
-  JSON.stringify({
+let parsedEntities = [
+  {
     ContentId: "1",
-  }),
-  JSON.stringify({
+  },
+  {
     Title: "MyContent",
-  }),
+  },
 ];
+
+let jsonStrings = parsedEntities.map(e => JSON.stringify(e));
 
 let asts = [
   {
@@ -44,10 +46,11 @@ let entities = [
   },
 ];
 
-let types = [
-  new schema.Schema().getEntityType("Post"),
-  new schema.Schema().getEntityType("Content"),
+let entitySetNames = [
+  "Posts", "Content",
 ];
+
+let types = entitySetNames.map(set => new schema.Schema().getEntitySet(set).getEntityType());
 
 let sparqlStrings = [
   "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
@@ -59,30 +62,31 @@ let sparqlStrings = [
 ];
 
 export let postQueryTests: IPostQueryTestCase[] = [
-  { query: queries[0], body: jsonStrings[0], ast: asts[0], entity: entities[0], entityType: types[0],
-    sparql: sparqlStrings[0] },
-  { query: queries[1], body: jsonStrings[1], ast: asts[1], entity: entities[1], entityType: types[1],
-    sparql: sparqlStrings[1] },
+  { query: queries[0], body: jsonStrings[0], entity: entities[0], entityType: types[0],
+    sparql: sparqlStrings[0], parsedEntity: parsedEntities[0], entitySetName: entitySetNames[0] },
+  { query: queries[1], body: jsonStrings[1], entity: entities[1], entityType: types[1],
+    sparql: sparqlStrings[1], parsedEntity: parsedEntities[1], entitySetName: entitySetNames[1] },
 ];
 
 export let odataRepositoryQueryTests: IODataRepositoryTestCase[] = [
   { entity: entities[0], entityType: types[0], sparql: sparqlStrings[0] },
 ];
 
-export let odataParserTests: IODataParserTestCase[] = [
-  { query: queries[0], ast: asts[0] },
+export let odataParserTests: IPostRequestParserTestCase[] = [
+  { query: queries[0], body: jsonStrings[0], parsedEntity: entities[0], entitySetName: entitySetNames[0] },
 ];
 
 export let entityReaderTests: IEntityReaderTestCase[] = [
-  { input: jsonStrings[0], type: types[0], outputEntity: entities[0] },
+  { input: parsedEntities[0], type: types[0], outputEntity: entities[0] },
 ];
 
 export interface IPostQueryTestCase {
-  query: string; body: string; ast: any; entity: any; entityType: schema.EntityType; sparql: string;
+  query: string; body: string; entity: any; entityType: schema.EntityType; sparql: string;
+  parsedEntity: any; entitySetName: string;
 }
 
-export interface IODataParserTestCase {
-  query: string; ast: any;
+export interface IPostRequestParserTestCase {
+  query: string; body: string; parsedEntity: any; entitySetName: string;
 }
 
 export interface IODataRepositoryTestCase {
@@ -90,5 +94,5 @@ export interface IODataRepositoryTestCase {
 }
 
 export interface IEntityReaderTestCase {
-  input: string; type: schema.EntityType; outputEntity: any;
+  input: any; type: schema.EntityType; outputEntity: any;
 }

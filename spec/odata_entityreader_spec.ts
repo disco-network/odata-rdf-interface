@@ -12,7 +12,7 @@ describe("OData.EntityReader", () => {
     it(name, () => {
       let entityReader = create();
 
-      let entity = entityReader.fromJson(args.input, args.type);
+      let entity = entityReader.fromParsed(args.input, args.type);
 
       assert.deepEqual(entity, args.outputEntity);
     });

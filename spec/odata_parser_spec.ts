@@ -3,7 +3,7 @@ import { assert } from "chai";
 import odataParser = require("../src/odata/parser");
 import queryTestCases = require("./helpers/querytestcases");
 
-describe("ODataParser", function() {
+describe("ODataParser @todo inject this dependency @todo create abstraction", function() {
   it("should parse an OData filter expression", function() {
     let parser = initODataParser();
     let evaluated = parser.parse("Posts?$filter=a/b/c eq 1");
@@ -73,16 +73,20 @@ describe("ODataParser (generated tests)", () => {
     (args, i) => spec(`#${i}`, args)
   );
 
-  function spec(name: string, args: queryTestCases.IODataParserTestCase) {
+  function spec(name: string, args: queryTestCases.IPostRequestParserTestCase) {
     it(name, () => {
-      let parser = initODataParser();
+      let parser = initPostRequestParser();
 
-      let ast = parser.parse(args.query);
+      let parsed = parser.parse({ relativeUrl: args.query, body: args.body });
 
-      assert.deepEqual(ast, args.ast);
+      assert.strictEqual(parsed.entitySetName, args.entitySetName);
     });
   }
 });
+
+function initPostRequestParser(): odataParser.IPostRequestParser {
+  return new odataParser.PostRequestParser();
+}
 
 function initODataParser(): odataParser.IODataParser {
   return new odataParser.ODataParser();
