@@ -5,7 +5,9 @@ import providerModule = require("./sparql/sparql_provider");
 
 import rdfstore = require("rdfstore");
 
-import queryEngine = require("./adapter/query_engine");
+import { GetHandler } from "./adapter/configuration/queryengine";
+import { Schema } from "./odata/schema";
+import { Result } from "./result";
 
 let store = null;
 let provider;
@@ -13,13 +15,24 @@ let storeName = "http://datokrat.sirius.uberspace.de/disco-test";
 
 let app = connect();
 
+class ResponseSender {
+  private body: string;
+
+  constructor(private res) {}
+
+  public sendBody(body: string) {
+    this.body = body;
+  }
+
+  public finishResponse() {
+    sendResults(this.res, Result.success(this.body));
+  }
+}
+
 app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
   if (req.method === "GET") {
-    let engine = new queryEngine.QueryEngine();
-    engine.setSparqlProvider(provider);
-    engine.query(req.url, result => {
-      sendResults(res, result);
-    });
+    let engine = new GetHandler(new Schema(), provider);
+    engine.query(req.url, new ResponseSender(res));
   }
   else if (req.method === "OPTIONS") {
     res.writeHeader(200, {
@@ -38,7 +51,7 @@ function sendResults(res, result): void {
   if (!result.error()) {
     let content = JSON.stringify({
       "odata.metadata": config.publicRootDirectory + config.publicRelativeServiceDirectory + "/",
-      "value": result.result(),
+      "value": JSON.parse(result.result()),
     }, null, 2);
 
     res.writeHeader(200, {

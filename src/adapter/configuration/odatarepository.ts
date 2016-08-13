@@ -1,15 +1,17 @@
-import base = require("../queries");
+import base = require("../odatarepository");
 import filters = require("../filters");
 import propertyTreeConfig = require("./propertytree");
 import sparqlBuilderConfig = require("../../sparql/configuration/querystringbuilder");
+import postQueries = require("../postquery");
+import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 
-export class EntitySetQuery extends base.EntitySetQuery {
-  constructor(model: base.IQueryAdapterModel) {
-    super(model, new EntitySetQueryStringBuilder());
+export class ODataRepository extends base.ODataRepository {
+  constructor(sparqlProvider: ISparqlProvider) {
+    super(sparqlProvider, new GetQueryStringBuilder(), new PostQueryStringBuilder());
   }
 }
 
-export class EntitySetQueryStringBuilder extends base.EntitySetQueryStringBuilder {
+export class GetQueryStringBuilder extends base.GetQueryStringBuilder {
   constructor() {
     super(new FilterExpressionFactory(),
       propertyTreeConfig.getFilterGraphPatternStrategy(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(),
@@ -17,9 +19,9 @@ export class EntitySetQueryStringBuilder extends base.EntitySetQueryStringBuilde
   }
 }
 
-export class QueryFactory extends base.QueryFactory {
-  constructor(model: base.IQueryAdapterModel) {
-    super(model, m => new EntitySetQuery(m));
+export class PostQueryStringBuilder extends postQueries.QueryStringBuilder {
+  constructor() {
+    super();
   }
 }
 

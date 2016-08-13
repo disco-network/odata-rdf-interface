@@ -1,10 +1,10 @@
 import { assert } from "chai";
 import { stub, match } from "sinon";
 
-import odataParser = require("../src/odata/parser");
-import entityReader = require("../src/odata/entity_reader_base");
-import repository = require("../src/odata/repository");
-import queryEngine = require("../src/odata/query_engine");
+import { GetHandler, PostHandler } from "../src/odata/query_engine";
+import { IPostRequestParser, IGetRequestParser } from "../src/odata/parser";
+import { IEntityInitializer } from "../src/odata/entity_reader_base";
+import { IRepository } from "../src/odata/repository";
 import { Result, AnyResult } from "../src/result";
 import { Schema, EntityType } from "../src/odata/schema";
 import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";
@@ -40,7 +40,7 @@ describe("OData.PostHandler:", () => {
         done();
       });
 
-      let engine = new queryEngine.PostHandler(parser, entityReader, repository);
+      let engine = new PostHandler(parser, entityReader, repository);
       engine.setSchema(new Schema());
 
       engine.query({ relativeUrl: args.query, body: args.body }, responseSender);
@@ -64,7 +64,7 @@ describe("OData.GetHandler", () => {
       .callsArgWith(3, Result.success([ { Id: "1" } ]));
 
     let schema = new Schema();
-    let getHandler: queryEngine.IGetHandler = new queryEngine.GetHandler(schema, parser, repository);
+    let getHandler = new GetHandler(schema, parser, repository);
 
     getHandler.query({ relativeUrl: "/Posts", body: "" }, responseSenderWithAssertions());
 
@@ -97,7 +97,7 @@ describe("OData.GetHandler", () => {
       .callsArgWith(3, Result.success([ { Id: "2" } ]));
 
     let schema = new Schema();
-    let getHandler: queryEngine.IGetHandler = new queryEngine.GetHandler(schema, parser, repository);
+    let getHandler = new GetHandler(schema, parser, repository);
 
     getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, responseSenderWithAssertions());
 
@@ -115,19 +115,19 @@ describe("OData.GetHandler", () => {
   });
 });
 
-class PostRequestParser implements odataParser.IPostRequestParser {
+class PostRequestParser implements IPostRequestParser {
   public parse(request: IHttpRequest): any {
     //
   }
 }
 
-class GetRequestParser implements odataParser.IGetRequestParser {
+class GetRequestParser implements IGetRequestParser {
   public parse(request: IHttpRequest): any {
     //
   }
 }
 
-class EntityInitializer implements entityReader.IEntityInitializer {
+class EntityInitializer implements IEntityInitializer {
   public fromParsed(entity: any, entityType: EntityType): any {
     //
   }
@@ -143,7 +143,7 @@ class HttpResponseSender implements IHttpResponseSender {
   }
 }
 
-class Repository implements repository.IRepository {
+class Repository implements IRepository {
 
   public getEntities(entityType: EntityType, filterAst: any, cb: (result: Result<any[], any>) => void) {
     //

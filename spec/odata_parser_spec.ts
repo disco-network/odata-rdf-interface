@@ -1,6 +1,9 @@
 import { assert } from "chai";
 
-import odataParser = require("../src/odata/parser");
+import {
+  IPostRequestParser, PostRequestParser, IGetRequestParser, GetRequestParser,
+  IODataParser, ODataParser,
+} from "../src/odata/parser";
 import queryTestCases = require("./helpers/querytestcases");
 
 describe("ODataParser @todo inject this dependency @todo create abstraction", function() {
@@ -68,7 +71,7 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
   });
 });
 
-describe("ODataParser (generated tests)", () => {
+describe("PostRequestParser (generated tests)", () => {
   queryTestCases.odataParserTests.forEach(
     (args, i) => spec(`#${i}`, args)
   );
@@ -84,10 +87,52 @@ describe("ODataParser (generated tests)", () => {
   }
 });
 
-function initPostRequestParser(): odataParser.IPostRequestParser {
-  return new odataParser.PostRequestParser();
+describe("GetRequestParser:", () => {
+  it("should also return the correct entity set name", () => {
+    let parser = initGetRequestParser();
+
+    let parsed = parser.parse({ relativeUrl: "/Posts", body: "" });
+
+    assert.strictEqual(parsed.entitySetName, "Posts");
+  });
+
+  it("should also return the filter tree", () => {
+    let parser = initGetRequestParser();
+
+    let parsed = parser.parse({ relativeUrl: "/Posts?$filter=a/b/c eq 1", body: "" });
+
+    assert.deepEqual(parsed.filterTree, {
+      type: "operator",
+      op: "eq",
+      lhs: {
+        type: "member-expression",
+        operation: "property-value",
+        path: ["a", "b", "c"],
+      },
+      rhs: {
+        type: "decimalValue",
+        value: "1",
+      },
+    });
+  });
+
+  it("should also return the expand tree", () => {
+    let parser = initGetRequestParser();
+
+    let parsed = parser.parse({ relativeUrl: "/Posts?$expand=Children", body: "" });
+
+    assert.deepEqual(parsed.expandTree, { Children: {} });
+  });
+});
+
+function initPostRequestParser(): IPostRequestParser {
+  return new PostRequestParser();
 }
 
-function initODataParser(): odataParser.IODataParser {
-  return new odataParser.ODataParser();
+function initGetRequestParser(): IGetRequestParser {
+  return new GetRequestParser();
+}
+
+function initODataParser(): IODataParser {
+  return new ODataParser();
 }

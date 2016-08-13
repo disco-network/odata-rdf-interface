@@ -7,7 +7,6 @@ export interface IQuery {
 
 export interface IQueryModel {
   entitySetType: Schema.EntityType;
-  path: any[]; /** navigation path */
   filterOption: any;
   expandTree: any;
 }

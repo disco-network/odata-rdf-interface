@@ -1,8 +1,8 @@
 import { assert } from "chai";
-import base = require("../src/adapter/odatarepository");
 import results = require("../src/result");
 import schema = require("../src/odata/schema");
 import postQueries = require("../src/adapter/postquery");
+import { ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel } from "../src/adapter/odatarepository";
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
 
 import queryTestCases = require("./helpers/querytestcases");
@@ -28,7 +28,7 @@ describe("Adapter.ODataRepository (generated insertion tests):", () => {
         cb(results.Result.success("ok"));
       };
 
-      let myODataProvider = create(mySparqlProvider, myPostQueryStringBuilder);
+      let myODataProvider = create(mySparqlProvider, new GetQueryStringBuilder(), myPostQueryStringBuilder);
       myODataProvider.insertEntity(args.entity, args.entityType, result => {
         assert.strictEqual(result.success(), true);
         assert.strictEqual(sparqlQueryCount, 1);
@@ -39,12 +39,19 @@ describe("Adapter.ODataRepository (generated insertion tests):", () => {
 });
 
 function create(sparqlProvider: sparqlProviderBase.ISparqlProvider,
+                getQueryStringBuilder: IGetQueryStringBuilder,
                 postQueryStringBuilder: postQueries.IQueryStringBuilder) {
-  return new base.ODataRepository(sparqlProvider, postQueryStringBuilder);
+  return new ODataRepository(sparqlProvider, getQueryStringBuilder, postQueryStringBuilder);
 }
 
 class PostQueryStringBuilder /*implements postQueries.IQueryStringBuilder*/ {
   public build(entity, type: schema.EntityType): any {
+    //
+  }
+}
+
+class GetQueryStringBuilder implements IGetQueryStringBuilder {
+  public fromQueryAdapterModel(model: IQueryAdapterModel) {
     //
   }
 }

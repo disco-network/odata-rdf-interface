@@ -2,11 +2,11 @@ import { assert } from "chai";
 
 import SchemaModule = require("../src/odata/schema");
 let schema = new SchemaModule.Schema();
-import queryAdapter = require("../src/adapter/queries");
+import queryAdapter = require("../src/adapter/odatarepository");
 import odataQueries = require("../src/odata/queries");
 import mhelper = require("./helpers/sparql_mappings");
 
-describe("query context", function() {
+describe("Adapter.SparqlQueryContext", function() {
   it("should recognize and enumerate over elementary properties", function() {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.SparqlQueryContext(mapping, schema.getEntityType("Post"), { });

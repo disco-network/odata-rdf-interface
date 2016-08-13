@@ -1,6 +1,8 @@
 import { assert } from "chai";
 
-import odataQueryEngine = require("../src/adapter/query_engine");
+import { GetHandler } from "../src/adapter/configuration/queryengine";
+import { Schema } from "../src/odata/schema";
+import { Result } from "../src/result";
 import sparqlProviderModule = require("../src/sparql/sparql_provider");
 import rdfstore = require("rdfstore");
 
@@ -211,12 +213,14 @@ describe("The query engine should evaluate", () => {
         let graphName = "http://example.org/";
         storeSeed(store, graphName, () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-          let engine = new odataQueryEngine.QueryEngine();
-          engine.setSparqlProvider(sparqlProvider);
-          try { engine.query(query, results => {
-            cb(results);
-            done();
-          }); }
+          let getHandler = new GetHandler(new Schema(), sparqlProvider);
+          let responseSender = {
+            sendBody: function(body) { this.result = Result.success(JSON.parse(body)); },
+            finishResponse: function() {
+              cb(this.result); done();
+            },
+          };
+          try { getHandler.query({ relativeUrl: query, body: "" }, responseSender); }
           catch (e) {
             assert.strictEqual(e.stack || e, "no exception");
             done();

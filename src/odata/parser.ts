@@ -40,6 +40,26 @@ export class PostRequestParser implements IPostRequestParser {
   }
 }
 
+export class GetRequestParser implements IGetRequestParser {
+
+  private odataParser = new ODataParser();
+
+  public parse(request: IHttpRequest): IParsedGetRequest {
+    let ast = this.odataParser.parse(request.relativeUrl);
+    let expandTree = {};
+    (ast.queryOptions.expand || []).forEach(e => {
+      let currentBranch = expandTree;
+      e.path.forEach(prop => currentBranch = currentBranch[prop] = currentBranch[prop] || {});
+    });
+    let filterTree = ast.queryOptions.filter || null;
+    return {
+      entitySetName: ast.resourcePath.entitySetName,
+      expandTree: expandTree,
+      filterTree: filterTree,
+    };
+  }
+}
+
 export class ODataParser implements IODataParser {
 
   private interpreter: abnfInterpreter.Interpreter;
