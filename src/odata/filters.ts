@@ -5,10 +5,10 @@ export interface IScope {
   lambdaVariableScope: LambdaVariableScope;
 }
 
-export interface ILambdaExpression {
-  variable: string;
+export interface ILambdaVariable {
+  name: string;
   entityType: EntityType;
-  scopeId: UniqueScopeIdentifier; /* @construction right place? */
+  scopeId: UniqueScopeIdentifier;
 }
 
 export class UniqueScopeIdentifier {
@@ -19,21 +19,21 @@ export class UniqueScopeIdentifier {
 }
 
 export class LambdaVariableScope {
-  private data: { [id: string]: ILambdaExpression } = {};
+  private data: { [id: string]: ILambdaVariable } = {};
 
-  public add(lambdaExpression: ILambdaExpression) {
-    if (this.exists(lambdaExpression.variable) === false) {
-      this.data[lambdaExpression.variable] = lambdaExpression;
+  public add(lambdaExpression: ILambdaVariable) {
+    if (this.exists(lambdaExpression.name) === false) {
+      this.data[lambdaExpression.name] = lambdaExpression;
       return this;
     }
-    else throw new Error("Variable " + lambdaExpression.variable + " was assigned twice");
+    else throw new Error("Variable " + lambdaExpression.name + " was assigned twice");
   }
 
   public exists(variable: string): boolean {
     return this.data[variable] !== undefined;
   }
 
-  public get(variable: string): ILambdaExpression {
+  public get(variable: string): ILambdaVariable {
     return this.data[variable];
   }
 

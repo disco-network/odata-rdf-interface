@@ -1,6 +1,6 @@
 import { assert } from "chai";
 
-import { LambdaVariableScope, ILambdaExpression } from "../src/odata/filters";
+import { LambdaVariableScope, ILambdaVariable } from "../src/odata/filters";
 import { Schema } from "../src/odata/schema";
 
 import * as translators from "../src/adapter/filtertranslators";
@@ -248,8 +248,8 @@ describe("A flat property tree", () => {
 
 describe("A lambda variable scope", () => {
   it("should recall lambda expressions", () => {
-    let lambda: ILambdaExpression = {
-      variable: "it",
+    let lambda: ILambdaVariable = {
+      name: "it",
       entityType: null,
       scopeId: null,
     };
@@ -264,7 +264,7 @@ describe("A lambda variable scope", () => {
   it("should be cloneable", () => {
     let scope = new LambdaVariableScope();
     scope.add({
-      variable: "it",
+      name: "it",
       entityType: null,
       scopeId: null,
     });
@@ -277,8 +277,8 @@ describe("A lambda variable scope", () => {
     let scope = new LambdaVariableScope();
     let cloned = scope.clone();
 
-    scope.add({ variable: "a", entityType: null, scopeId: null });
-    cloned.add({ variable: "b", entityType: null, scopeId: null });
+    scope.add({ name: "a", entityType: null, scopeId: null });
+    cloned.add({ name: "b", entityType: null, scopeId: null });
 
     assert.strictEqual(cloned.exists("a"), false);
     assert.strictEqual(scope.exists("b"), false);
@@ -286,14 +286,14 @@ describe("A lambda variable scope", () => {
 
   it("should have chainable write methods", () => {
     assert.strictEqual(new LambdaVariableScope()
-      .add({ variable: "a", entityType: null, scopeId: null })
+      .add({ name: "a", entityType: null, scopeId: null })
       .exists("a"), true);
   });
 
   it("should throw when assigning a variable twice", () => {
     assert.throws(() => new LambdaVariableScope()
-      .add({ variable: "it", entityType: null, scopeId: null })
-      .add({ variable: "it", entityType: null, scopeId: null }));
+      .add({ name: "it", entityType: null, scopeId: null })
+      .add({ name: "it", entityType: null, scopeId: null }));
   });
 });
 
@@ -303,7 +303,7 @@ describe("A property path", () => {
       scope: {
         entityType: null,
         lambdaVariableScope: new LambdaVariableScope().add({
-        variable: "it", entityType: null, scopeId: null,
+        name: "it", entityType: null, scopeId: null,
       }),
       },
       mapping: {

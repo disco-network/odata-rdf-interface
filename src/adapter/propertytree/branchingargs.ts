@@ -1,5 +1,5 @@
 import schema = require("../../odata/schema");
-import { ILambdaExpression } from "../../odata/filters";
+import { ILambdaVariable } from "../../odata/filters";
 
 export type IBranchingArgs = IPropertyBranchingArgs | IInScopeVariableBranchingArgs | IAnyBranchingArgs;
 
@@ -49,7 +49,7 @@ export interface IInScopeVariableBranchingArgs {
 export interface IAnyBranchingArgs {
   type: "any";
   name: string;
-  lambdaExpression: ILambdaExpression;
+  lambdaVariable: ILambdaVariable;
   inverse: boolean;
 }
 
@@ -156,7 +156,7 @@ class AnyBranchingArgsBuilderTemplate<Value extends { type: "any" }> {
     this.set({ name: value });
   }
 
-  public lambdaExpression(value: ILambdaExpression) {
+  public lambdaExpression(value: ILambdaVariable) {
     this.set({ lambdaExpression: value });
   }
 

@@ -1,4 +1,4 @@
-import { LambdaVariableScope, ILambdaExpression, UniqueScopeIdentifier } from "../../odata/filters";
+import { LambdaVariableScope, ILambdaVariable, UniqueScopeIdentifier } from "../../odata/filters";
 import filterTranslators = require("../filtertranslators");
 import qsBuilder = require("../../sparql/configuration/querystringbuilder"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
@@ -81,13 +81,13 @@ export class AnyExpression implements filterTranslators.IExpressionTranslator {
 
   private buildFilterPatternString(innerFilterExpression: filterTranslators.IExpressionTranslator) {
     let filterPattern = this.filterPatternStrategy.createAnyExpressionPattern(this.filterContext,
-      innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath);
+      innerFilterExpression.getPropertyTree(), this.createLambdaVariable(), this.propertyPath);
     let queryStringBuilder = new qsBuilder.GraphPatternStringBuilder();
     return queryStringBuilder.buildGraphPatternStringAmendFilterExpression(filterPattern, innerFilterExpression);
   }
 
   private createFilterContextInsideLambda(): filterTranslators.IFilterContext {
-    let lambdaExpression = this.createLambdaExpression();
+    let lambdaVariable = this.createLambdaVariable();
     return {
       mapping: {
         mapping: this.filterContext.mapping.mapping,
@@ -95,14 +95,14 @@ export class AnyExpression implements filterTranslators.IExpressionTranslator {
       },
       scope: {
         entityType: this.filterContext.scope.entityType,
-        lambdaVariableScope: this.filterContext.scope.lambdaVariableScope.clone().add(lambdaExpression),
+        lambdaVariableScope: this.filterContext.scope.lambdaVariableScope.clone().add(lambdaVariable),
       },
     };
   }
 
-  private createLambdaExpression(): ILambdaExpression {
+  private createLambdaVariable(): ILambdaVariable {
     return {
-      variable: this.raw.lambdaExpression.variable,
+      name: this.raw.lambdaExpression.variable,
       entityType: this.propertyPath.getFinalEntityType(),
       scopeId: this.innerScopeId,
     };
@@ -225,7 +225,7 @@ export class PropertyPath {
 
   public getEntityTypeAfterLambdaPrefix() {
     if (this.pathStartsWithLambdaPrefix()) {
-      return this.getPrefixLambdaExpression().entityType;
+      return this.getPrefixLambdaVariable().entityType;
     }
     else {
       return this.filterContext.scope.entityType;
@@ -233,16 +233,16 @@ export class PropertyPath {
   }
 
   public pathStartsWithLambdaPrefix() {
-    return this.getPrefixLambdaExpression() !== undefined;
+    return this.getPrefixLambdaVariable() !== undefined;
   }
 
-  public getPrefixLambdaExpression() {
+  public getPrefixLambdaVariable() {
     return this.propertyNames[0] && this.getLambdaVariableScope().get(this.propertyNames[0]);
   }
 
   private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: filterTranslators.ScopedPropertyTree) {
     if (this.pathStartsWithLambdaPrefix()) {
-      let inScopeVar = this.getPrefixLambdaExpression().variable;
+      let inScopeVar = this.getPrefixLambdaVariable().name;
       return tree.inScopeVariables.createBranch(inScopeVar);
     }
     else {

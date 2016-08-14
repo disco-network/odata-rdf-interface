@@ -1,5 +1,5 @@
 import schema = require("../odata/schema");
-import { ILambdaExpression, IScope, LambdaVariableScope } from "../odata/filters";
+import { ILambdaVariable, IScope, LambdaVariableScope } from "../odata/filters";
 import gpatterns = require("../sparql/graphpatterns");
 import translators = require("./filtertranslators");
 import propertyTrees = require("./propertytree/propertytree");
@@ -13,7 +13,7 @@ export class FilterGraphPatternStrategy {
 
   public createAnyExpressionPattern(outerFilterContext: translators.IFilterContext,
                                     innerLowLevelPropertyTree: translators.ScopedPropertyTree,
-                                    innerLambdaExpression: ILambdaExpression,
+                                    lambdaVariable: ILambdaVariable,
                                     propertyPathToExpr: translators.PropertyPath) {
 
     let propertyPathWithoutCollectionProperty = propertyPathToExpr.getPropertyPathWithoutFinalSegments(1);
@@ -26,13 +26,13 @@ export class FilterGraphPatternStrategy {
     let branch = tree.branch(this.branchFactory.create({
       type: "any",
       name: collectionPropertyName,
-      lambdaExpression: innerLambdaExpression,
+      lambdaVariable: lambdaVariable,
       inverse: !collectionProperty.hasDirectRdfRepresentation(),
     }));
 
     let innerFilterContext: IScope = {
       entityType: outerFilterContext.scope.entityType,
-      lambdaVariableScope: outerFilterContext.scope.lambdaVariableScope.clone().add(innerLambdaExpression),
+      lambdaVariableScope: outerFilterContext.scope.lambdaVariableScope.clone().add(lambdaVariable),
     };
     let innerMapping = propertyPathWithoutCollectionProperty.getFinalMapping();
     let innerTree = this.createPropertyTree(innerFilterContext, innerLowLevelPropertyTree);

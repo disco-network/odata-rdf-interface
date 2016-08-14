@@ -285,20 +285,20 @@ export class AnyBranch extends base.Branch<IAnyBranchingArgs> {
     let collectionPropertyOData = this.branchingArgs.name;
     let collectionPropertyUri = mapping.properties.getNamespacedUriOfProperty(collectionPropertyOData);
 
-    let lambdaExpression = this.branchingArgs.lambdaExpression;
-    let innerScopedMapping = args.scopedMapping.scope(lambdaExpression.scopeId);
-    innerScopedMapping.setNamespace(lambdaExpression.variable, lambdaExpression.entityType);
-    let lambdaVariableName = innerScopedMapping.getNamespace(lambdaExpression.variable).variables.getVariable();
+    let lambdaVariable = this.branchingArgs.lambdaVariable;
+    let innerScopedMapping = args.scopedMapping.scope(lambdaVariable.scopeId);
+    innerScopedMapping.setNamespace(lambdaVariable.name, lambdaVariable.entityType);
+    let lambdaSparqlVariable = innerScopedMapping.getNamespace(lambdaVariable.name).variables.getVariable();
 
     if (this.branchingArgs.inverse) {
       basePattern
         .looseBranch(rootVariableName)
-        .optionalInverseBranch(collectionPropertyUri, lambdaVariableName);
+        .optionalInverseBranch(collectionPropertyUri, lambdaSparqlVariable);
     }
     else {
       basePattern
         .looseBranch(rootVariableName)
-        .optionalBranch(collectionPropertyUri, lambdaVariableName);
+        .optionalBranch(collectionPropertyUri, lambdaSparqlVariable);
     }
 
     let result = args.clone();
