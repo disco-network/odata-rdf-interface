@@ -5,19 +5,6 @@ export interface IScope {
   lambdaVariableScope: LambdaVariableScope;
 }
 
-export interface ILambdaVariable {
-  name: string;
-  entityType: EntityType;
-  scopeId: UniqueScopeIdentifier;
-}
-
-export class UniqueScopeIdentifier {
-  constructor(public debugString: string) {}
-  public toString() {
-    return "UniqueScopeIdentifier(" + this.debugString + ")";
-  }
-}
-
 export class LambdaVariableScope {
   private data: { [id: string]: ILambdaVariable } = {};
 
@@ -43,5 +30,18 @@ export class LambdaVariableScope {
       cloned.add(this.get(key));
     }
     return cloned;
+  }
+}
+
+export interface ILambdaVariable {
+  name: string;
+  entityType: EntityType;
+  scopeId: UniqueScopeIdentifier;
+}
+
+export class UniqueScopeIdentifier {
+  constructor(public debugString: string) {}
+  public toString() {
+    return "UniqueScopeIdentifier(" + this.debugString + ")";
   }
 }
