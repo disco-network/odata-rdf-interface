@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { stub, match } from "sinon";
 
-import { GetHandler, PostHandler } from "../src/odata/query_engine";
+import { GetHandler, PostHandler } from "../src/odata/queryengine";
 import { IPostRequestParser, IGetRequestParser } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
 import { IRepository } from "../src/odata/repository";
@@ -134,6 +134,10 @@ class EntityInitializer implements IEntityInitializer {
 }
 
 class HttpResponseSender implements IHttpResponseSender {
+  public sendHeader(key: string, value: string) {
+    //
+  }
+
   public sendBody(body: string) {
     //
   }

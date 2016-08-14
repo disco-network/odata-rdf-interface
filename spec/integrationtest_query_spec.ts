@@ -215,6 +215,7 @@ describe("The query engine should evaluate", () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
           let getHandler = new GetHandler(new Schema(), sparqlProvider);
           let responseSender = {
+            sendHeader: header => undefined,
             sendBody: function(body) { this.result = Result.success(JSON.parse(body)); },
             finishResponse: function() {
               cb(this.result); done();

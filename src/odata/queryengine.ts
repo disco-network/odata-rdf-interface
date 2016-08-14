@@ -10,6 +10,9 @@ export interface IGetHandler extends IHttpRequestHandler {
 export interface IPostHandler extends IHttpRequestHandler {
 }
 
+export interface IOptionsHandler extends IHttpRequestHandler {
+}
+
 export interface IPostRequestResult {
   success: boolean;
 }
@@ -51,5 +54,15 @@ export class PostHandler implements IPostHandler {
 
   public setSchema(schm: Schema) {
     this.schema = schm;
+  }
+}
+
+export class OptionsHandler implements IOptionsHandler {
+
+  public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
+    responseSender.sendHeader("Access-Control-Allow-Origin", "*");
+    responseSender.sendHeader("Access-Control-Allow-Headers",
+      "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization, odata-maxversion");
+    responseSender.finishResponse();
   }
 }

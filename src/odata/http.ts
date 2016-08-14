@@ -8,6 +8,7 @@ export interface IHttpRequest {
 }
 
 export interface IHttpResponseSender {
-  sendBody(body: string);
-  finishResponse();
+  sendHeader(key: string, value: string): void;
+  sendBody(body: string): void;
+  finishResponse(): void;
 }

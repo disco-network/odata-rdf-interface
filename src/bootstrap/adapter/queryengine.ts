@@ -1,4 +1,4 @@
-import base = require("../../odata/query_engine");
+import base = require("../../odata/queryengine");
 import { Schema } from "../../odata/schema";
 import { GetRequestParser } from "../odata/parser";
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
@@ -9,3 +9,5 @@ export class GetHandler extends base.GetHandler {
     super(schema, new GetRequestParser(), new ODataRepository(sparqlProvider));
   }
 }
+
+export let OptionsHandler = base.OptionsHandler;

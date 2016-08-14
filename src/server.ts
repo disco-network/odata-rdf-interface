@@ -5,17 +5,34 @@ import providerModule = require("./sparql/sparql_provider");
 
 import rdfstore = require("rdfstore");
 
-import { GetHandler } from "./bootstrap/adapter/queryengine";
+import { IHttpRequestHandler, IHttpResponseSender } from "./odata/http";
+import { GetHandler, OptionsHandler } from "./bootstrap/adapter/queryengine";
 import { Schema } from "./odata/schema";
 import { Result } from "./result";
 
 let store = null;
 let provider;
 let storeName = "http://datokrat.sirius.uberspace.de/disco-test";
+let schema = new Schema();
 
 let app = connect();
 
-class ResponseSender {
+app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
+  let engine: IHttpRequestHandler;
+  let responseSender: IHttpResponseSender;
+  if (req.method === "GET") {
+    engine = new GetHandler(schema, provider);
+    responseSender = new ResponseSender(res);
+  }
+  else if (req.method === "OPTIONS") {
+    engine = new OptionsHandler();
+    responseSender = new OptionsResponseSender(res);
+  }
+  else res.send(403);
+  engine.query(convertHttpRequest(req), responseSender);
+});
+
+class ResponseSender implements IHttpResponseSender {
   private body: string;
 
   constructor(private res) {}
@@ -24,25 +41,41 @@ class ResponseSender {
     this.body = body;
   }
 
+  public sendHeader(key: string, value: string) {
+    throw new Error("Headers are not yet implemented.");
+  }
+
   public finishResponse() {
     sendResults(this.res, Result.success(this.body));
   }
 }
 
-app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
-  if (req.method === "GET") {
-    let engine = new GetHandler(new Schema(), provider);
-    engine.query(req.url, new ResponseSender(res));
+class OptionsResponseSender implements IHttpResponseSender {
+  private body: string;
+  private headers: { [id: string]: string } = {};
+
+  constructor(private res) {}
+
+  public sendBody(body: string) {
+    this.body = body;
   }
-  else if (req.method === "OPTIONS") {
-    res.writeHeader(200, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers":
-        "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization, odata-maxversion",
-    });
-    res.end();
+
+  public sendHeader(key: string, value: string) {
+    this.headers[key] = value;
   }
-});
+
+  public finishResponse() {
+    this.res.writeHeader(200, this.headers);
+    this.res.end(this.body);
+  }
+}
+
+function convertHttpRequest(req) {
+  return {
+    relativeUrl: req.url,
+    body: "@todo",
+  };
+}
 
 /**
  * Pass the results of the query to the HTTP response object
