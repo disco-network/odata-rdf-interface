@@ -131,7 +131,7 @@ export class ComplexEntity implements IEntityValue {
 }
 
 export class ElementaryEntity implements IEntityValue {
-  private value: any = undefined;
+  private value: any;
 
   public applyResult(value: any): void {
     if (this.value === undefined) {

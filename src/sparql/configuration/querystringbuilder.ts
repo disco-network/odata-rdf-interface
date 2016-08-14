@@ -6,8 +6,5 @@ export class SelectQueryStringBuilder extends base.SelectQueryStringBuilder {
   }
 }
 
-export class SelectSkeletonBuilder extends base.SelectSkeletonBuilder {
-}
-
-export class GraphPatternStringBuilder extends base.GraphPatternStringBuilder {
-}
+export let SelectSkeletonBuilder = base.SelectSkeletonBuilder;
+export let GraphPatternStringBuilder = base.GraphPatternStringBuilder;

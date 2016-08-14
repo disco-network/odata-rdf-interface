@@ -69,7 +69,6 @@ export interface IPropertyMapping {
   getSubMappingByComplexProperty(property: string): IPropertyMapping;
   createMappingFromEntityType(entityType: schema.EntityType): IPropertyMapping;
   getNamespacedUriOfProperty(property: string): string;
-  getUriOfProperty(property: string): string;
   getDirectionOfProperty(property: string): PropertyDirection;
 }
 
@@ -87,10 +86,6 @@ export class PropertyMapping implements IPropertyMapping {
 
   public getNamespacedUriOfProperty(property: string) {
     return this.getPropertySchemaWithDirection(property, this.getDirectionOfProperty(property)).getNamespacedUri();
-  }
-
-  public getUriOfProperty(property: string) {
-    return this.getPropertySchemaWithDirection(property, this.getDirectionOfProperty(property)).getUri();
   }
 
   public getDirectionOfProperty(property: string): PropertyDirection {

@@ -91,7 +91,7 @@ export class TreeGraphPattern {
       case "undefined":
       case "object":
         if (arg instanceof ValueLeaf) {
-          if (this.valueLeaves[property] !== undefined)
+          if (Object.prototype.hasOwnProperty.call(this.valueLeaves, property))
             this.valueLeaves[property].push(arg);
           else
             this.valueLeaves[property] = [ arg as ValueLeaf ];
