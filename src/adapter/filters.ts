@@ -19,7 +19,6 @@ export interface IFilterContext {
 
 export interface IFilterScopeContext {
   entityType: schema.EntityType;
-  unscopedEntityType: schema.EntityType;
   lambdaVariableScope: LambdaVariableScope;
 }
 
@@ -129,8 +128,7 @@ export class FilterToTranslatorChainOfResponsibility {
 
   private validateFilterScopeContext(context: IFilterScopeContext) {
     return context.entityType !== undefined &&
-      context.lambdaVariableScope !== undefined &&
-      context.unscopedEntityType !== undefined;
+      context.lambdaVariableScope !== undefined;
   }
 
   private validateFilterMappingContext(context: IFilterMappingContext) {

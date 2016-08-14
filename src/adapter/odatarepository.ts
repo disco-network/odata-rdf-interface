@@ -137,7 +137,6 @@ export class QueryAdapterModel implements IQueryAdapterModel {
       this.filterContext = {
         scope: {
           entityType: this.getEntitySetType(),
-          unscopedEntityType: this.getEntitySetType(),
           lambdaVariableScope: new filters.LambdaVariableScope(),
         },
         mapping: {

@@ -118,7 +118,6 @@ describe("A PropertyTranslator", () => {
       filterContext: {
         scope: {
           entityType: schema.getEntityType("Post"),
-          unscopedEntityType: schema.getEntityType("Post"),
           lambdaVariableScope: new filters.LambdaVariableScope(),
         },
         mapping: {
@@ -142,7 +141,6 @@ describe("A PropertyTranslator", () => {
       filterContext: {
         scope: {
           entityType: null,
-          unscopedEntityType: null,
           lambdaVariableScope: new filters.LambdaVariableScope(),
         },
         mapping: {
@@ -301,7 +299,6 @@ describe("A property path", () => {
     let path = new filters.PropertyPath([ "it" ], {
       scope: {
         entityType: null,
-        unscopedEntityType: null,
         lambdaVariableScope: new filters.LambdaVariableScope().add({
         variable: "it", entityType: null, scopeId: null,
       }),
@@ -344,7 +341,6 @@ function createExpressionTranslatorFactory() {
     .createFactoryWithFilterContext({
       scope: {
         entityType: null,
-        unscopedEntityType: null,
         lambdaVariableScope: new filters.LambdaVariableScope(),
       },
       mapping: {

@@ -31,7 +31,6 @@ export class FilterGraphPatternStrategy {
 
     let innerFilterContext: filters.IFilterScopeContext = {
       entityType: outerFilterContext.scope.entityType,
-      unscopedEntityType: outerFilterContext.scope.unscopedEntityType,
       lambdaVariableScope: outerFilterContext.scope.lambdaVariableScope.clone().add(innerLambdaExpression),
     };
     let innerMapping = propertyPathWithoutCollectionProperty.getFinalMapping();
@@ -65,11 +64,11 @@ export class FilterGraphPatternStrategy {
 
   public createPropertyTree(filterContext: filters.IFilterScopeContext,
                             lowLevelPropertyTree: filters.ScopedPropertyTree): propertyTrees.Tree {
-    return this.createPropertyBranch(filterContext, filterContext, lowLevelPropertyTree);
+    return this.createPropertyBranch(filterContext, filterContext.entityType, lowLevelPropertyTree);
   }
 
-  private createPropertyBranch(filterContextOfRoot: filters.IFilterScopeContext,
-                               filterContextOfBranch: filters.IFilterScopeContext,
+  private createPropertyBranch(filterContextOfBranch: filters.IFilterScopeContext,
+                               unscopedEntityType: schema.EntityType,
                                lowLevelPropertyTree: filters.ScopedPropertyTree) {
     let entityType = filterContextOfBranch.entityType;
     let scope = filterContextOfBranch.lambdaVariableScope;
@@ -95,10 +94,9 @@ export class FilterGraphPatternStrategy {
       let subPropertyTree = filters.ScopedPropertyTree.create(flatTree);
       let subContext: filters.IFilterScopeContext = {
         entityType: lambdaExpression.entityType,
-        unscopedEntityType: filterContextOfBranch.unscopedEntityType,
         lambdaVariableScope: new filters.LambdaVariableScope(),
       };
-      this.createPropertyBranch(filterContextOfRoot, subContext, subPropertyTree)
+      this.createPropertyBranch(subContext, unscopedEntityType, subPropertyTree)
         .copyTo(branch);
     }
 
@@ -122,7 +120,6 @@ export class FilterGraphPatternStrategy {
 
     let subContext: filters.IFilterScopeContext = {
       entityType: property.getEntityType(),
-      unscopedEntityType: /* @todo */ null,
       lambdaVariableScope: new filters.LambdaVariableScope(),
     };
     let scopedPropertyTree = filters.ScopedPropertyTree.create();

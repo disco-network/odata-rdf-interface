@@ -94,7 +94,6 @@ export class AnyExpression implements filters.IExpressionTranslator {
       },
       scope: {
         entityType: this.filterContext.scope.entityType,
-        unscopedEntityType: this.filterContext.scope.unscopedEntityType,
         lambdaVariableScope: this.filterContext.scope.lambdaVariableScope.clone().add(lambdaExpression),
       },
     };
@@ -188,7 +187,6 @@ export class PropertyPath {
     return {
       scope: {
         entityType: this.getEntityTypeAfterLambdaPrefix(),
-        unscopedEntityType: this.filterContext.scope.unscopedEntityType,
         lambdaVariableScope: new filters.LambdaVariableScope(),
       },
       mapping: {
