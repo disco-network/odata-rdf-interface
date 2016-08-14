@@ -1,12 +1,14 @@
 import { assert } from "chai";
 
-import filters = require("../src/adapter/filters");
+import { LambdaVariableScope, ILambdaExpression } from "../src/odata/filters";
+import { Schema } from "../src/odata/schema";
+
+import * as translators from "../src/adapter/filtertranslators";
 import mappings = require("../src/adapter/mappings");
-import schemaModule = require("../src/odata/schema");
 import propertyTree = require("../src/adapter/propertytree/propertytree");
 import propertyTreeImpl = require("../src/adapter/propertytree/propertytree_impl");
 import filterPatterns = require("../src/adapter/filterpatterns");
-let schema = new schemaModule.Schema();
+let schema = new Schema();
 
 describe("Filters.FilterToTranslatorChainOfResponsibility", () => {
   it("should choose the right IExpressionTranslator-implementing class", () => {
@@ -20,9 +22,9 @@ describe("Filters.FilterToTranslatorChainOfResponsibility", () => {
     let factory = createExpressionTranslatorFactory();
     let filter = factory.fromRaw(raw);
 
-    assert.strictEqual(filter instanceof filters.BinaryOperatorTranslator, true);
-    assert.strictEqual(filter["lhs"] instanceof filters.LiteralTranslator, true);
-    assert.strictEqual(filter["rhs"] instanceof filters.LiteralTranslator, true);
+    assert.strictEqual(filter instanceof translators.BinaryOperatorTranslator, true);
+    assert.strictEqual(filter["lhs"] instanceof translators.LiteralTranslator, true);
+    assert.strictEqual(filter["rhs"] instanceof translators.LiteralTranslator, true);
   });
   it("should throw if there's no matching translator", () => {
     let raw = { type: "is-42", value: "4*2" };
@@ -42,7 +44,7 @@ describe("Filters.FilterToTranslatorChainOfResponsibility", () => {
 
 describe("A StringLiteralTranslator", () => {
   it("should render to a SPARQL string", () => {
-    let expr = filters.StringLiteralTranslatorFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
+    let expr = translators.StringLiteralTranslatorFactory.fromRaw({ type: "string", value: "cat" }, createNullArgs());
     assert.strictEqual(expr.toSparqlFilterClause(), "'cat'");
   });
 
@@ -51,19 +53,20 @@ describe("A StringLiteralTranslator", () => {
 
 describe("A NumberLiteralTranslator", () => {
   it("should apply to numbers", () => {
-    assert.strictEqual(filters.NumericLiteralTranslatorFactory.doesApplyToRaw(
+    assert.strictEqual(translators.NumericLiteralTranslatorFactory.doesApplyToRaw(
       { type: "decimalValue", value: "1" }
     ), true);
   });
 
   it("should render to a SPARQL filter clause", () => {
-    let expr = filters.NumericLiteralTranslatorFactory.fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
+    let expr = translators.NumericLiteralTranslatorFactory
+      .fromRaw({ type: "decimalValue", value: "1" }, createNullArgs());
     assert.strictEqual(expr.toSparqlFilterClause(), "'1'");
   });
 
   it("should disallow non-number values", () => {
     assert.throws(() => {
-      filters.NumericLiteralTranslatorFactory.fromRaw({
+      translators.NumericLiteralTranslatorFactory.fromRaw({
         type: "decimalValue", value: "cat",
       },
       { factory: null, filterContext: null });
@@ -97,7 +100,7 @@ describe("An OrTranslator", () => {
 
 describe("A PropertyTranslator", () => {
   it("should apply to OData member expressions", () => {
-    assert.strictEqual(new filters.PropertyTranslatorFactory(null).doesApplyToRaw({
+    assert.strictEqual(new translators.PropertyTranslatorFactory(null).doesApplyToRaw({
       type: "member-expression",
     }), true);
   });
@@ -118,7 +121,7 @@ describe("A PropertyTranslator", () => {
       filterContext: {
         scope: {
           entityType: schema.getEntityType("Post"),
-          lambdaVariableScope: new filters.LambdaVariableScope(),
+          lambdaVariableScope: new LambdaVariableScope(),
         },
         mapping: {
           mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
@@ -141,7 +144,7 @@ describe("A PropertyTranslator", () => {
       filterContext: {
         scope: {
           entityType: null,
-          lambdaVariableScope: new filters.LambdaVariableScope(),
+          lambdaVariableScope: new LambdaVariableScope(),
         },
         mapping: {
           mapping: null, scopedMapping: null,
@@ -158,7 +161,7 @@ describe("A PropertyTranslator", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
-    let factory = new filters.FilterToTranslatorChainOfResponsibility()
+    let factory = new translators.FilterToTranslatorChainOfResponsibility()
       .pushHandler(createPropertyTranslatorFactory());
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -170,7 +173,7 @@ describe("A PropertyTranslator", () => {
       scope: {
         entityType: schema.getEntityType("Post"),
         unscopedEntityType: schema.getEntityType("Post"),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        lambdaVariableScope: new LambdaVariableScope(),
       },
       mapping: {
         mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
@@ -186,7 +189,7 @@ describe("A PropertyTranslator", () => {
       new mappings.PropertyMapping(schema.getEntityType("Post")),
       new mappings.StructuredSparqlVariableMapping("?root", new mappings.SparqlVariableGenerator())
     );
-    let factory = new filters.FilterToTranslatorChainOfResponsibility()
+    let factory = new translators.FilterToTranslatorChainOfResponsibility()
       .pushHandler(createPropertyTranslatorFactory());
     let expr = factory.fromRaw({
       type: "member-expression", operation: "any", path: [ "Children" ],
@@ -198,7 +201,7 @@ describe("A PropertyTranslator", () => {
       scope: {
         entityType: schema.getEntityType("Post"),
         unscopedEntityType: schema.getEntityType("Post"),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        lambdaVariableScope: new LambdaVariableScope(),
       },
       mapping: {
         mapping: mapping, scopedMapping: new mappings.ScopedMapping(mapping),
@@ -213,7 +216,7 @@ describe("A PropertyTranslator", () => {
 
 describe("A flat property tree", () => {
   it("should recall saved entries", () => {
-    let tree = filters.FlatPropertyTree.empty();
+    let tree = translators.FlatPropertyTree.empty();
     tree.createBranch("PropertyName").createBranch("SubProperty");
     assert.strictEqual(tree.branchExists("PropertyName"), true);
     assert.strictEqual(tree.branchExists("AsdfGhjk"), false);
@@ -223,7 +226,7 @@ describe("A flat property tree", () => {
   });
 
   xit("should be cloneable", () => {
-    let tree = filters.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
+    let tree = translators.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
 
     assert.strictEqual(tree.clone().branchExists("Content"), true);
     assert.strictEqual(tree.clone().branchExists("Id"), true);
@@ -232,8 +235,8 @@ describe("A flat property tree", () => {
   });
 
   it("should be mergeable", () => {
-    let treeA = filters.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
-    let treeB = filters.FlatPropertyTree.fromDataObject({ "Content": { "Title": {} } });
+    let treeA = translators.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
+    let treeB = translators.FlatPropertyTree.fromDataObject({ "Content": { "Title": {} } });
     treeA.merge(treeB);
 
     assert.strictEqual(treeA.branchExists("Content"), true);
@@ -245,12 +248,12 @@ describe("A flat property tree", () => {
 
 describe("A lambda variable scope", () => {
   it("should recall lambda expressions", () => {
-    let lambda: filters.ILambdaExpression = {
+    let lambda: ILambdaExpression = {
       variable: "it",
       entityType: null,
       scopeId: null,
     };
-    let scope = new filters.LambdaVariableScope();
+    let scope = new LambdaVariableScope();
     scope.add(lambda);
 
     assert.strictEqual(scope.exists("it"), true);
@@ -259,7 +262,7 @@ describe("A lambda variable scope", () => {
   });
 
   it("should be cloneable", () => {
-    let scope = new filters.LambdaVariableScope();
+    let scope = new LambdaVariableScope();
     scope.add({
       variable: "it",
       entityType: null,
@@ -271,7 +274,7 @@ describe("A lambda variable scope", () => {
   });
 
   it("should make clones independently changeable", () => {
-    let scope = new filters.LambdaVariableScope();
+    let scope = new LambdaVariableScope();
     let cloned = scope.clone();
 
     scope.add({ variable: "a", entityType: null, scopeId: null });
@@ -282,13 +285,13 @@ describe("A lambda variable scope", () => {
   });
 
   it("should have chainable write methods", () => {
-    assert.strictEqual(new filters.LambdaVariableScope()
+    assert.strictEqual(new LambdaVariableScope()
       .add({ variable: "a", entityType: null, scopeId: null })
       .exists("a"), true);
   });
 
   it("should throw when assigning a variable twice", () => {
-    assert.throws(() => new filters.LambdaVariableScope()
+    assert.throws(() => new LambdaVariableScope()
       .add({ variable: "it", entityType: null, scopeId: null })
       .add({ variable: "it", entityType: null, scopeId: null }));
   });
@@ -296,10 +299,10 @@ describe("A lambda variable scope", () => {
 
 describe("A property path", () => {
   it("should detect the in-scope variable prefix", () => {
-    let path = new filters.PropertyPath([ "it" ], {
+    let path = new translators.PropertyPath([ "it" ], {
       scope: {
         entityType: null,
-        lambdaVariableScope: new filters.LambdaVariableScope().add({
+        lambdaVariableScope: new LambdaVariableScope().add({
         variable: "it", entityType: null, scopeId: null,
       }),
       },
@@ -313,7 +316,7 @@ describe("A property path", () => {
 });
 
 function createPropertyTranslatorFactory() {
-  return new filters.PropertyTranslatorFactory(createFilterPatternStrategy());
+  return new translators.PropertyTranslatorFactory(createFilterPatternStrategy());
 }
 
 function createFilterPatternStrategy() {
@@ -331,17 +334,17 @@ function createBranchFactory() {
 }
 
 function createExpressionTranslatorFactory() {
-  let factory = new filters.FilterToTranslatorChainOfResponsibility()
+  let factory = new translators.FilterToTranslatorChainOfResponsibility()
     .pushHandlers([
-      filters.StringLiteralTranslatorFactory, filters.NumericLiteralTranslatorFactory,
-      filters.AndTranslatorFactory, filters.OrTranslatorFactory,
-      filters.EqTranslatorFactory, filters.ParenthesesTranslatorFactory,
+      translators.StringLiteralTranslatorFactory, translators.NumericLiteralTranslatorFactory,
+      translators.AndTranslatorFactory, translators.OrTranslatorFactory,
+      translators.EqTranslatorFactory, translators.ParenthesesTranslatorFactory,
       TestFilterExpression,
     ])
     .createFactoryWithFilterContext({
       scope: {
         entityType: null,
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        lambdaVariableScope: new LambdaVariableScope(),
       },
       mapping: {
         mapping: null, scopedMapping: null,
@@ -354,14 +357,14 @@ function createNullArgs() {
   return { mapping: null, entityType: null, factory: null };
 }
 
-class TestFilterExpression implements filters.IExpressionTranslator {
+class TestFilterExpression implements translators.IExpressionTranslator {
   public static doesApplyToRaw(raw) { return raw.type === "test"; }
-  public static fromRaw(raw, args: filters.IExpressionTranslatorArgs) {
+  public static fromRaw(raw, args: translators.IExpressionTranslatorArgs) {
     return new TestFilterExpression(raw.value, args);
   }
 
-  constructor(public value, public args: filters.IExpressionTranslatorArgs) {}
-  public getSubExpressions(): filters.IExpressionTranslator[] { return []; }
-  public getPropertyTree(): filters.ScopedPropertyTree { return new filters.ScopedPropertyTree(); }
+  constructor(public value, public args: translators.IExpressionTranslatorArgs) {}
+  public getSubExpressions(): translators.IExpressionTranslator[] { return []; }
+  public getPropertyTree(): translators.ScopedPropertyTree { return new translators.ScopedPropertyTree(); }
   public toSparqlFilterClause(): string { return this.value.toString(); }
 }

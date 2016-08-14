@@ -1,4 +1,5 @@
-import filters = require("../filters");
+import { LambdaVariableScope, ILambdaExpression, UniqueScopeIdentifier } from "../../odata/filters";
+import filterTranslators = require("../filtertranslators");
 import qsBuilder = require("../../sparql/configuration/querystringbuilder"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
@@ -12,7 +13,7 @@ export class PropertyTranslatorFactory {
     return raw.type === "member-expression";
   }
 
-  public fromRaw(raw, args: filters.IExpressionTranslatorArgs): filters.IExpressionTranslator {
+  public fromRaw(raw, args: filterTranslators.IExpressionTranslatorArgs): filterTranslators.IExpressionTranslator {
     let propertyPath = new PropertyPath(raw.path, args.filterContext);
     switch (raw.operation) {
       case "property-value":
@@ -25,18 +26,18 @@ export class PropertyTranslatorFactory {
   }
 }
 
-export class PropertyValueTranslator implements filters.IExpressionTranslator {
-  private filterContext: filters.IFilterContext;
-  private factory: filters.IExpressionTranslatorFactory;
+export class PropertyValueTranslator implements filterTranslators.IExpressionTranslator {
+  private filterContext: filterTranslators.IFilterContext;
+  private factory: filterTranslators.IExpressionTranslatorFactory;
   private propertyPath: PropertyPath;
 
-  constructor(propertyPath: PropertyPath, args: filters.IExpressionTranslatorArgs) {
+  constructor(propertyPath: PropertyPath, args: filterTranslators.IExpressionTranslatorArgs) {
     this.propertyPath = propertyPath;
     this.filterContext = args.filterContext;
     this.factory = args.factory;
   }
 
-  public getPropertyTree(): filters.ScopedPropertyTree {
+  public getPropertyTree(): filterTranslators.ScopedPropertyTree {
     return this.getPropertyPathSegmentRelevantForPropertyTree()
       .toScopedPropertyTree();
   }
@@ -50,14 +51,14 @@ export class PropertyValueTranslator implements filters.IExpressionTranslator {
   }
 }
 
-export class AnyExpression implements filters.IExpressionTranslator {
+export class AnyExpression implements filterTranslators.IExpressionTranslator {
   private raw: any;
-  private filterContext: filters.IFilterContext;
-  private innerScopeId = new mappings.UniqueScopeIdentifier("any");
-  private factory: filters.IExpressionTranslatorFactory;
+  private filterContext: filterTranslators.IFilterContext;
+  private innerScopeId = new UniqueScopeIdentifier("any");
+  private factory: filterTranslators.IExpressionTranslatorFactory;
   private propertyPath: PropertyPath;
 
-  constructor(raw: any, propertyPath: PropertyPath, args: filters.IExpressionTranslatorArgs,
+  constructor(raw: any, propertyPath: PropertyPath, args: filterTranslators.IExpressionTranslatorArgs,
               private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy) {
     this.raw = raw;
     this.filterContext = args.filterContext;
@@ -65,7 +66,7 @@ export class AnyExpression implements filters.IExpressionTranslator {
     this.propertyPath = propertyPath;
   }
 
-  public getPropertyTree(): filters.ScopedPropertyTree {
+  public getPropertyTree(): filterTranslators.ScopedPropertyTree {
     return this.getPropertyPathSegmentRelevantForPropertyTree()
       .toScopedPropertyTree();
   }
@@ -78,14 +79,14 @@ export class AnyExpression implements filters.IExpressionTranslator {
     return `EXISTS ${this.buildFilterPatternString(innerFilterExpression)}`;
   }
 
-  private buildFilterPatternString(innerFilterExpression: filters.IExpressionTranslator) {
+  private buildFilterPatternString(innerFilterExpression: filterTranslators.IExpressionTranslator) {
     let filterPattern = this.filterPatternStrategy.createAnyExpressionPattern(this.filterContext,
       innerFilterExpression.getPropertyTree(), this.createLambdaExpression(), this.propertyPath);
     let queryStringBuilder = new qsBuilder.GraphPatternStringBuilder();
     return queryStringBuilder.buildGraphPatternStringAmendFilterExpression(filterPattern, innerFilterExpression);
   }
 
-  private createFilterContextInsideLambda(): filters.IFilterContext {
+  private createFilterContextInsideLambda(): filterTranslators.IFilterContext {
     let lambdaExpression = this.createLambdaExpression();
     return {
       mapping: {
@@ -99,7 +100,7 @@ export class AnyExpression implements filters.IExpressionTranslator {
     };
   }
 
-  private createLambdaExpression(): filters.ILambdaExpression {
+  private createLambdaExpression(): ILambdaExpression {
     return {
       variable: this.raw.lambdaExpression.variable,
       entityType: this.propertyPath.getFinalEntityType(),
@@ -115,7 +116,7 @@ export class AnyExpression implements filters.IExpressionTranslator {
 
 export class PropertyPath {
 
-  constructor(private propertyNames?: string[], private filterContext?: filters.IFilterContext) {}
+  constructor(private propertyNames?: string[], private filterContext?: filterTranslators.IFilterContext) {}
 
   public getFinalElementaryPropertyVariable() {
     let mapping = this.getVariableMappingAfterLambdaPrefix();
@@ -147,7 +148,7 @@ export class PropertyPath {
   }
 
   public toScopedPropertyTree() {
-    let tree = filters.ScopedPropertyTree.create();
+    let tree = filterTranslators.ScopedPropertyTree.create();
     let branch = this.createAndReturnPropertyTreeBranchOfLambdaPrefix(tree);
     let propertiesToInclude = this.getPropertyNamesWithoutLambdaPrefix();
     for (let i = 0; i < propertiesToInclude.length; ++i) {
@@ -183,11 +184,11 @@ export class PropertyPath {
       this.propertyNames.slice(1) : this.propertyNames;
   }
 
-  public getFilterContextAfterLambdaPrefix(): filters.IFilterContext {
+  public getFilterContextAfterLambdaPrefix(): filterTranslators.IFilterContext {
     return {
       scope: {
         entityType: this.getEntityTypeAfterLambdaPrefix(),
-        lambdaVariableScope: new filters.LambdaVariableScope(),
+        lambdaVariableScope: new LambdaVariableScope(),
       },
       mapping: {
         mapping: this.getMappingAfterLambdaPrefix(),
@@ -239,7 +240,7 @@ export class PropertyPath {
     return this.propertyNames[0] && this.getLambdaVariableScope().get(this.propertyNames[0]);
   }
 
-  private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: filters.ScopedPropertyTree) {
+  private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: filterTranslators.ScopedPropertyTree) {
     if (this.pathStartsWithLambdaPrefix()) {
       let inScopeVar = this.getPrefixLambdaExpression().variable;
       return tree.inScopeVariables.createBranch(inScopeVar);

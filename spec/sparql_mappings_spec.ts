@@ -1,9 +1,11 @@
 import { assert } from "chai";
 
+import { UniqueScopeIdentifier } from "../src/odata/filters";
+import { Schema } from "../src/odata/schema";
+
 import helper = require("./helpers/sparql_mappings");
-import mappings = require("../src/adapter/mappings");
-import schemaModule = require("../src/odata/schema");
-let schema = new schemaModule.Schema();
+
+let schema = new Schema();
 
 describe("unstructured odata to sparql mappings", function() {
   it("should not exist entries until they were accessed", function() {
@@ -89,14 +91,14 @@ describe("scoped mappings", () => {
   it("should work", () => {
     let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
 
-    let id = new mappings.UniqueScopeIdentifier("any");
+    let id = new UniqueScopeIdentifier("any");
     assert.strictEqual(mapping.scope(id).unscoped(), mapping.unscoped());
     assert.throws(() => mapping.getNamespace("it"));
   });
 
   it("should access namespaces of parents", () => {
     let mapping = helper.createScopedMapping(schema.getEntityType("Post"), "?root");
-    let scopeId = new mappings.UniqueScopeIdentifier("any");
+    let scopeId = new UniqueScopeIdentifier("any");
 
     mapping.setNamespace("it", schema.getEntityType("Post"));
 

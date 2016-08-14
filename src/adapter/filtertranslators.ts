@@ -1,5 +1,5 @@
 import mappings = require("./mappings");
-import schema = require("../odata/schema");
+import { IScope } from "../odata/filters";
 import propertyExpr = require("./filters/propertyexpression");
 
 export interface IExpressionTranslator {
@@ -13,13 +13,8 @@ export interface IExpressionTranslatorArgs {
 }
 
 export interface IFilterContext {
-  scope: IFilterScopeContext;
+  scope: IScope;
   mapping: IFilterMappingContext;
-}
-
-export interface IFilterScopeContext {
-  entityType: schema.EntityType;
-  lambdaVariableScope: LambdaVariableScope;
 }
 
 export interface IFilterMappingContext {
@@ -27,42 +22,8 @@ export interface IFilterMappingContext {
   scopedMapping: mappings.ScopedMapping;
 }
 
-export interface ILambdaExpression {
-  variable: string;
-  entityType: schema.EntityType;
-  scopeId: mappings.UniqueScopeIdentifier;
-}
-
 export interface IExpressionTranslatorFactory {
   fromRaw(raw, context?: IFilterContext): IExpressionTranslator;
-}
-
-export class LambdaVariableScope {
-  private data: { [id: string]: ILambdaExpression } = {};
-
-  public add(lambdaExpression: ILambdaExpression) {
-    if (this.exists(lambdaExpression.variable) === false) {
-      this.data[lambdaExpression.variable] = lambdaExpression;
-      return this;
-    }
-    else throw new Error("Variable " + lambdaExpression.variable + " was assigned twice");
-  }
-
-  public exists(variable: string): boolean {
-    return this.data[variable] !== undefined;
-  }
-
-  public get(variable: string): ILambdaExpression {
-    return this.data[variable];
-  }
-
-  public clone(): LambdaVariableScope {
-    let cloned = new LambdaVariableScope();
-    for (let key of Object.keys(this.data)) {
-      cloned.add(this.get(key));
-    }
-    return cloned;
-  }
 }
 
 /**
@@ -126,7 +87,7 @@ export class FilterToTranslatorChainOfResponsibility {
       this.validateFilterMappingContext(filterContext.mapping);
   }
 
-  private validateFilterScopeContext(context: IFilterScopeContext) {
+  private validateFilterScopeContext(context: IScope) {
     return context.entityType !== undefined &&
       context.lambdaVariableScope !== undefined;
   }

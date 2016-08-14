@@ -1,5 +1,6 @@
 import base = require("../odata/repository");
 import { EntityType, Property } from "../odata/schema";
+import { LambdaVariableScope } from "../odata/filters";
 import {
   IQueryModel as IODataQueryModel, IQueryContext as IODataQueryContext, JsonResultBuilder,
 } from "../odata/queries";
@@ -9,7 +10,7 @@ import gpatterns = require("../sparql/graphpatterns");
 import { ISelectQueryStringBuilder } from "../sparql/querystringbuilder";
 
 import postQueries = require("../adapter/postquery");
-import filters = require("../adapter/filters");
+import translators = require("../adapter/filtertranslators");
 import filterPatterns = require("../adapter/filterpatterns");
 import expandTreePatterns = require("../adapter/expandtree");
 import mappings = require("../adapter/mappings");
@@ -71,7 +72,7 @@ export interface IGetQueryStringBuilder {
 
 export class GetQueryStringBuilder implements IGetQueryStringBuilder {
 
-  constructor(private filterExpressionFactory: filters.IExpressionTranslatorFactory,
+  constructor(private filterExpressionFactory: translators.IExpressionTranslatorFactory,
               private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
               private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
               private sparqlSelectBuilder: ISelectQueryStringBuilder) {
@@ -101,7 +102,7 @@ export class GetQueryStringBuilder implements IGetQueryStringBuilder {
   }
 
   private createFilterGraphPattern(model: IQueryAdapterModel,
-                                   filterExpression?: filters.IExpressionTranslator): gpatterns.TreeGraphPattern {
+                                   filterExpression?: translators.IExpressionTranslator): gpatterns.TreeGraphPattern {
     if (filterExpression) {
 
       let filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
@@ -110,7 +111,7 @@ export class GetQueryStringBuilder implements IGetQueryStringBuilder {
     }
   }
 
-  private createFilterExpression(model: IQueryAdapterModel): filters.IExpressionTranslator {
+  private createFilterExpression(model: IQueryAdapterModel): translators.IExpressionTranslator {
     if (model.getRawFilter() !== null) {
       return this.filterExpressionFactory.fromRaw(model.getRawFilter(), model.getFilterContext());
     }
@@ -118,7 +119,7 @@ export class GetQueryStringBuilder implements IGetQueryStringBuilder {
 }
 
 export interface IQueryAdapterModel {
-  getFilterContext(): filters.IFilterContext;
+  getFilterContext(): translators.IFilterContext;
   getMapping(): mappings.Mapping;
   getEntitySetType(): EntityType;
   getExpandTree(): any;
@@ -128,16 +129,16 @@ export interface IQueryAdapterModel {
 export class QueryAdapterModel implements IQueryAdapterModel {
 
   private mapping: mappings.Mapping;
-  private filterContext: filters.IFilterContext;
+  private filterContext: translators.IFilterContext;
 
   constructor(private odata: IODataQueryModel) {}
 
-  public getFilterContext(): filters.IFilterContext {
+  public getFilterContext(): translators.IFilterContext {
     if (this.filterContext === undefined) {
       this.filterContext = {
         scope: {
           entityType: this.getEntitySetType(),
-          lambdaVariableScope: new filters.LambdaVariableScope(),
+          lambdaVariableScope: new LambdaVariableScope(),
         },
         mapping: {
           mapping: this.getMapping(),

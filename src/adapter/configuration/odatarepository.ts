@@ -1,5 +1,5 @@
 import base = require("../odatarepository");
-import filters = require("../filters");
+import filterTranslators = require("../filtertranslators");
 import propertyTreeConfig = require("./propertytree");
 import sparqlBuilderConfig = require("../../sparql/configuration/querystringbuilder");
 import postQueries = require("../postquery");
@@ -25,14 +25,15 @@ export class PostQueryStringBuilder extends postQueries.QueryStringBuilder {
   }
 }
 
-export class FilterExpressionFactory extends filters.FilterToTranslatorChainOfResponsibility {
+export class FilterExpressionFactory extends filterTranslators.FilterToTranslatorChainOfResponsibility {
   constructor() {
     super();
     this.pushHandlers([
-      filters.AndTranslatorFactory, filters.OrTranslatorFactory, filters.EqTranslatorFactory,
-      filters.StringLiteralTranslatorFactory, filters.NumericLiteralTranslatorFactory,
-      filters.ParenthesesTranslatorFactory,
-      new filters.PropertyTranslatorFactory(propertyTreeConfig.getFilterGraphPatternStrategy()),
+      filterTranslators.AndTranslatorFactory, filterTranslators.OrTranslatorFactory,
+      filterTranslators.EqTranslatorFactory,
+      filterTranslators.StringLiteralTranslatorFactory, filterTranslators.NumericLiteralTranslatorFactory,
+      filterTranslators.ParenthesesTranslatorFactory,
+      new filterTranslators.PropertyTranslatorFactory(propertyTreeConfig.getFilterGraphPatternStrategy()),
     ]);
   }
 }

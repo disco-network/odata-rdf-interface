@@ -1,4 +1,6 @@
 import schema = require("../odata/schema");
+import { UniqueScopeIdentifier } from "../odata/filters";
+
 declare class Map<Key, Value> {
   public set(key: Key, value: Value);
   public get(key: Key): Value;
@@ -39,13 +41,6 @@ export class ScopedMapping {
   public scope(id: UniqueScopeIdentifier) {
     if (!this.scopes.has(id)) this.scopes.set(id, new ScopedMapping(this.root, this));
     return this.scopes.get(id);
-  }
-}
-
-export class UniqueScopeIdentifier {
-  constructor(public debugString: string) {}
-  public toString() {
-    return "UniqueScopeIdentifier(" + this.debugString + ")";
   }
 }
 
