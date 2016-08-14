@@ -1,8 +1,8 @@
-import base = require("../odatarepository");
-import filterTranslators = require("../filtertranslators");
+import base = require("../../adapter/odatarepository");
+import filterTranslators = require("../../adapter/filtertranslators");
 import propertyTreeConfig = require("./propertytree");
-import sparqlBuilderConfig = require("../../sparql/configuration/querystringbuilder");
-import postQueries = require("../postquery");
+import sparqlBuilderConfig = require("../sparql/querystringbuilder");
+import postQueries = require("../../adapter/postquery");
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 
 export class ODataRepository extends base.ODataRepository {

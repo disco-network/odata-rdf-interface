@@ -5,7 +5,7 @@ import providerModule = require("./sparql/sparql_provider");
 
 import rdfstore = require("rdfstore");
 
-import { GetHandler } from "./adapter/configuration/queryengine";
+import { GetHandler } from "./bootstrap/adapter/queryengine";
 import { Schema } from "./odata/schema";
 import { Result } from "./result";
 

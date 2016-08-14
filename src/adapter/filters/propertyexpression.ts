@@ -1,6 +1,6 @@
 import { LambdaVariableScope, ILambdaVariable, UniqueScopeIdentifier } from "../../odata/filters";
 import filterTranslators = require("../filtertranslators");
-import qsBuilder = require("../../sparql/configuration/querystringbuilder"); /* @smell, @todo */
+import qsBuilder = require("../../bootstrap/sparql/querystringbuilder"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 import mappings = require("../mappings");

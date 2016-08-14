@@ -3,7 +3,7 @@ import { assert } from "chai";
 import schemaModule = require("../src/odata/schema");
 let schema = new schemaModule.Schema();
 import gpatterns = require("../src/sparql/graphpatterns");
-import propertyTreeConfiguration = require("../src/adapter/configuration/propertytree");
+import propertyTreeConfiguration = require("../src/bootstrap/adapter/propertytree");
 import mhelper = require("./helpers/sparql_mappings");
 
 describe("tree graph patterns", function() {

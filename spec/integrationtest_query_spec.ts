@@ -1,6 +1,6 @@
 import { assert } from "chai";
 
-import { GetHandler } from "../src/adapter/configuration/queryengine";
+import { GetHandler } from "../src/bootstrap/adapter/queryengine";
 import { Schema } from "../src/odata/schema";
 import { Result } from "../src/result";
 import sparqlProviderModule = require("../src/sparql/sparql_provider");

@@ -1,9 +1,9 @@
-import propertyTrees = require("../propertytree/propertytree");
-import propertyTreesImpl = require("../propertytree/propertytree_impl");
-import propertyMirroring = require("../propertymirroring");
-import expandTreePatterns = require("../expandtree");
-import filterPatterns = require("../filterpatterns");
-import { PropertyBranchingArgsFactory } from "../propertytree/branchingargs";
+import propertyTrees = require("../../adapter/propertytree/propertytree");
+import propertyTreesImpl = require("../../adapter/propertytree/propertytree_impl");
+import propertyMirroring = require("../../adapter/propertymirroring");
+import expandTreePatterns = require("../../adapter/expandtree");
+import filterPatterns = require("../../adapter/filterpatterns");
+import { PropertyBranchingArgsFactory } from "../../adapter/propertytree/branchingargs";
 
 export function getExpandTreeGraphPatternStrategy(): expandTreePatterns.ExpandTreeGraphPatternStrategy {
   return new expandTreePatterns.ExpandTreeGraphPatternStrategy(

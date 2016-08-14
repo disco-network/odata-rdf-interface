@@ -1,4 +1,4 @@
-import base = require("../querystringbuilder");
+import base = require("../../sparql/querystringbuilder");
 
 export class SelectQueryStringBuilder extends base.SelectQueryStringBuilder {
   constructor() {
