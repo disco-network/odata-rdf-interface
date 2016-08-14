@@ -1,5 +1,5 @@
 export interface IHttpRequestHandler {
-  query(request: IHttpRequest, responseSender: IHttpResponseSender);
+  query(request: IHttpRequest);
 }
 
 export interface IHttpRequest {
@@ -8,6 +8,7 @@ export interface IHttpRequest {
 }
 
 export interface IHttpResponseSender {
+  sendStatusCode(code: number): void;
   sendHeader(key: string, value: string): void;
   sendBody(body: string): void;
   finishResponse(): void;

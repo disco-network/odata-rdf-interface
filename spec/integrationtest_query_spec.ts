@@ -1,6 +1,8 @@
 import { assert } from "chai";
 
-import { GetHandler } from "../src/bootstrap/adapter/queryengine";
+import { GetHandler } from "../src/odata/queryengine";
+import { ODataRepository } from "../src/bootstrap/adapter/odatarepository";
+import { GetRequestParser } from "../src/bootstrap/odata/parser";
 import { Schema } from "../src/odata/schema";
 import { Result } from "../src/result";
 import sparqlProviderModule = require("../src/sparql/sparql_provider");
@@ -213,15 +215,14 @@ describe("The query engine should evaluate", () => {
         let graphName = "http://example.org/";
         storeSeed(store, graphName, () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-          let getHandler = new GetHandler(new Schema(), sparqlProvider);
+          let repository = new ODataRepository(sparqlProvider);
           let responseSender = {
-            sendHeader: header => undefined,
-            sendBody: function(body) { this.result = Result.success(JSON.parse(body)); },
-            finishResponse: function() {
-              cb(this.result); done();
+            success: function(entities) {
+              cb(Result.success(entities)); done();
             },
           };
-          try { getHandler.query({ relativeUrl: query, body: "" }, responseSender); }
+          let getHandler = new GetHandler(new Schema(), new GetRequestParser(), repository, responseSender);
+          try { getHandler.query({ relativeUrl: query, body: "" }); }
           catch (e) {
             assert.strictEqual(e.stack || e, "no exception");
             done();

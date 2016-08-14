@@ -8,7 +8,6 @@ import rdfstore = require("rdfstore");
 import { IHttpRequestHandler, IHttpResponseSender } from "./odata/http";
 import { GetHandler, OptionsHandler } from "./bootstrap/adapter/queryengine";
 import { Schema } from "./odata/schema";
-import { Result } from "./result";
 
 let store = null;
 let provider;
@@ -19,42 +18,27 @@ let app = connect();
 
 app.use(config.publicRelativeServiceDirectory + "/", function(req, res, next) {
   let engine: IHttpRequestHandler;
-  let responseSender: IHttpResponseSender;
+  let responseSender: IHttpResponseSender = new ResponseSender(res);
   if (req.method === "GET") {
-    engine = new GetHandler(schema, provider);
-    responseSender = new ResponseSender(res);
+    engine = new GetHandler(schema, provider, responseSender);
   }
   else if (req.method === "OPTIONS") {
-    engine = new OptionsHandler();
-    responseSender = new OptionsResponseSender(res);
+    engine = new OptionsHandler(responseSender);
   }
   else res.send(403);
-  engine.query(convertHttpRequest(req), responseSender);
+  engine.query(convertHttpRequest(req));
 });
 
 class ResponseSender implements IHttpResponseSender {
   private body: string;
-
-  constructor(private res) {}
-
-  public sendBody(body: string) {
-    this.body = body;
-  }
-
-  public sendHeader(key: string, value: string) {
-    throw new Error("Headers are not yet implemented.");
-  }
-
-  public finishResponse() {
-    sendResults(this.res, Result.success(this.body));
-  }
-}
-
-class OptionsResponseSender implements IHttpResponseSender {
-  private body: string;
+  private code: number;
   private headers: { [id: string]: string } = {};
 
   constructor(private res) {}
+
+  public sendStatusCode(code: number) {
+    this.code = code;
+  }
 
   public sendBody(body: string) {
     this.body = body;
@@ -65,7 +49,7 @@ class OptionsResponseSender implements IHttpResponseSender {
   }
 
   public finishResponse() {
-    this.res.writeHeader(200, this.headers);
+    this.res.writeHeader(this.code, this.headers);
     this.res.end(this.body);
   }
 }
@@ -75,32 +59,6 @@ function convertHttpRequest(req) {
     relativeUrl: req.url,
     body: "@todo",
   };
-}
-
-/**
- * Pass the results of the query to the HTTP response object
- */
-function sendResults(res, result): void {
-  if (!result.error()) {
-    let content = JSON.stringify({
-      "odata.metadata": config.publicRootDirectory + config.publicRelativeServiceDirectory + "/",
-      "value": JSON.parse(result.result()),
-    }, null, 2);
-
-    res.writeHeader(200, {
-      "Content-Type": "application/json;charset=utf-8",
-      "Content-Length": content.length.toString(),
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Expose-Headers": "MaxDataServiceVersion, DataServiceVersion",
-    });
-    res.end(content);
-  }
-  else {
-    handleErrors(this.result, res);
-  }
-}
-function handleErrors(result, res) {
-  res.end("error: " + result.error().stack || result.error());
 }
 
 rdfstore.create(function(error, st) {
