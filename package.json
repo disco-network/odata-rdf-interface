@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "dependencies": {
     "connect": "~3.4.1",
-    "abnfjs": "git+https://git@github.com/datokrat/abnfjs",
+    "abnfjs": "git+https://git@github.com/datokrat/abnfjs.git",
     "rdfstore": "git+https://git@github.com/disco-network/rdfstore-js.git"
   },
   "devDependencies": {
@@ -20,5 +20,27 @@
     "stryker-mocha-runner": "^0.1.0",
     "tslint": "~3.13.0",
     "typescript": "~1.8.10"
-  }
+  },
+  "description": "This project is supposed to become a Node.js-based OData endpoint working on top of an RDF store.",
+  "main": "lib/src/index.js",
+  "scripts": {
+    "test": "gulp specs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/disco-network/odata-rdf-interface.git"
+  },
+  "keywords": [
+    "odata",
+    "rdf",
+    "sparql",
+    "disco",
+    "server"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/disco-network/odata-rdf-interface/issues"
+  },
+  "homepage": "https://github.com/disco-network/odata-rdf-interface#readme"
 }
