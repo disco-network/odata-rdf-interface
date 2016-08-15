@@ -82,7 +82,7 @@ export class BranchingArgsGuard {
   }
 }
 
-class PropertyBranchingArgsBuilderTemplate<Value extends { type: "property" }> {
+export class PropertyBranchingArgsBuilderTemplate<Value extends { type: "property" }> {
   public value: Value;
 
   public name(name: string) {
@@ -126,7 +126,7 @@ export class PropertyBranchingArgsBuilder
   public value = { type: <"property"> "property", mirroredIdFrom: undefined };
 }
 
-class InScopeBranchingArgsBuilderTemplate<Value extends { type: "inScopeVariable" }> {
+export class InScopeBranchingArgsBuilderTemplate<Value extends { type: "inScopeVariable" }> {
   public value: Value;
 
   public name(name: string) {
@@ -149,7 +149,7 @@ export class InScopeBranchingArgsBuilder extends InScopeBranchingArgsBuilderTemp
   public value = { type: <"inScopeVariable"> "inScopeVariable" };
 }
 
-class AnyBranchingArgsBuilderTemplate<Value extends { type: "any" }> {
+export class AnyBranchingArgsBuilderTemplate<Value extends { type: "any" }> {
   public value: Value;
 
   public name(value: string) {

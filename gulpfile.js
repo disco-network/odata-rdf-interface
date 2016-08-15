@@ -1,3 +1,4 @@
+"use strict";
 var gulp = require('gulp'),
   mocha = require('gulp-mocha'),
   tslint = require('gulp-tslint'),
@@ -14,14 +15,17 @@ gulp.task('lint', function () {
     .pipe(tslint.report('verbose'));
 });
 
-var tsProject = tsc.createProject("tsconfig.json");
-gulp.task('build', function () {
+var tsProjectForJs = tsc.createProject("tsconfig.json");
+var tsProjectForDts = tsc.createProject("tsconfig.json");
+gulp.task('build', ['build-js']);
+gulp.task('build-js', function () {
   return gulp.src([
     './**/**.ts',
+    '!./lib/**',
     '!./node_modules/**'
   ])
     .pipe(sourcemaps.init())
-    .pipe(tsc(tsProject))
+    .pipe(tsc(tsProjectForJs))
     .js
     .pipe(sourcemaps.write('../maps', {
       includeContent: false,
@@ -32,6 +36,17 @@ gulp.task('build', function () {
       }
     }))
     .pipe(gulp.dest('lib'));
+})
+
+gulp.task('build-dts', function () {
+  return gulp.src([
+    './**/**.ts',
+    '!./lib/**',
+    '!./node_modules/**'
+  ])
+    .pipe(tsc(tsProjectForDts))
+    .dts
+    .pipe(gulp.dest('lib/typings'));
 })
 
 gulp.task('tests-no-build', function () {

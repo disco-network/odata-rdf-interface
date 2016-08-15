@@ -1,7 +1,7 @@
 export class Result<Res, Err> {
 
-  public static success<Result>(res: Result) {
-    return new Result<Result, any>(res);
+  public static success<Res>(res: Res) {
+    return new Result<Res, any>(res);
   }
 
   public static error<Error>(err: Error) {
