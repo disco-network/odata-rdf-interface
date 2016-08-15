@@ -18,6 +18,7 @@ gulp.task('lint', function () {
 var tsProjectForJs = tsc.createProject("tsconfig.json");
 var tsProjectForDts = tsc.createProject("tsconfig.json");
 gulp.task('build', ['build-js']);
+gulp.task('dist', ['build-js', 'build-dts']);
 gulp.task('build-js', function () {
   return gulp.src([
     './**/**.ts',
@@ -46,7 +47,7 @@ gulp.task('build-dts', function () {
   ])
     .pipe(tsc(tsProjectForDts))
     .dts
-    .pipe(gulp.dest('lib/typings'));
+    .pipe(gulp.dest('lib'));
 })
 
 gulp.task('tests-no-build', function () {

@@ -1,5 +1,5 @@
 # odata-rdf-interface [![Build status](https://travis-ci.org/disco-network/odata-rdf-interface.svg)](https://travis-ci.org/disco-network/odata-rdf-interface)
-This project is supposed to become a Node.js-based OData endpoint working on top of an RDF store.
+This project is supposed to become a Node.js-based OData engine working on top of an RDF store.
 
 # dependencies
 This project depends on various packages.

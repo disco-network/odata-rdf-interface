@@ -22,8 +22,6 @@
     "typescript": "~1.8.10"
   },
   "description": "This project is supposed to become a Node.js-based OData endpoint working on top of an RDF store.",
-  "main": "lib/src/index.js",
-  "typings": "lib/typings/src/index.d.ts",
   "scripts": {
     "test": "gulp specs"
   },

@@ -1,3 +1,0 @@
-/**
- * Inversion of Control
- */
