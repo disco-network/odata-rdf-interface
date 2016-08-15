@@ -4,6 +4,8 @@ import abnfInterpreter = require("abnfjs/interpreter");
 import fs = require("fs");
 import { IHttpRequest } from "./http";
 
+declare let __dirname;
+
 export interface IPostRequestParser {
   parse(request: IHttpRequest): IParsedPostRequest;
 }
@@ -65,7 +67,7 @@ export class ODataParser implements IODataParser {
   private interpreter: abnfInterpreter.Interpreter;
 
   constructor() {
-    let abnf = fs.readFileSync("./src/odata/odata4-mod.abnf", "utf8");
+    let abnf = fs.readFileSync(__dirname + "/odata4-mod.abnf", "utf8");
     let tokens = new abnfTokenizer.tokenize(abnf);
     let grammar = new abnfParser.parse(tokens);
     this.interpreter = new abnfInterpreter.Interpreter(grammar);
