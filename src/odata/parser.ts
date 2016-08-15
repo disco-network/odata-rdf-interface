@@ -67,7 +67,7 @@ export class ODataParser implements IODataParser {
   private interpreter: abnfInterpreter.Interpreter;
 
   constructor() {
-    let abnf = fs.readFileSync(__dirname + "/odata4-mod.abnf", "utf8");
+    let abnf = fs.readFileSync(__dirname + "/../../../odata4-mod.abnf", "utf8");
     let tokens = new abnfTokenizer.tokenize(abnf);
     let grammar = new abnfParser.parse(tokens);
     this.interpreter = new abnfInterpreter.Interpreter(grammar);
