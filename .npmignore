@@ -1,0 +1,6 @@
+src/
+spec/
+typings/
+maps/
+.stryker-tmp/
+.stryker.conf.js
