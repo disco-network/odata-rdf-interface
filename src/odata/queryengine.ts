@@ -91,6 +91,7 @@ export class OptionsHandler implements IOptionsHandler {
   constructor(private responseSender: IHttpResponseSender) {}
 
   public query(request: IHttpRequest) {
+    this.responseSender.sendStatusCode(200);
     this.responseSender.sendHeader("Access-Control-Allow-Origin", "*");
     this.responseSender.sendHeader("Access-Control-Allow-Headers",
       "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization, odata-maxversion");
