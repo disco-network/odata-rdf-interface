@@ -8,7 +8,7 @@ export interface IHttpRequest {
 }
 
 export interface IHttpResponseSender {
-  sendStatusCode(code: number): void;
+  sendStatusCode(code: number, message?: string): void;
   sendHeader(key: string, value: string): void;
   sendBody(body: string): void;
   finishResponse(): void;

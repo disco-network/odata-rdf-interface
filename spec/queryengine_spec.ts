@@ -13,6 +13,20 @@ import queryTestCases = require("./helpers/querytestcases");
 
 describe("OData.PostHandler:", () => {
 
+  it("should send 201 Created", done => {
+    let parser = new PostRequestParser();
+    stub(parser, "parse").returns({ entitySetName: "Posts", entity: {} });
+    let entityInitializer = new EntityInitializer();
+    stub(entityInitializer, "fromParsed").returns({});
+    let repository = new Repository();
+    stub(repository, "insertEntity").callsArgWith(2, Result.success("ok"));
+
+    let engine = new PostHandler(parser, entityInitializer, repository, new Schema(),
+      httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
+
+    engine.query({ relativeUrl: "/Posts", body: "{}" });
+  });
+
   postQuery("should insert an entity and send an empty response, sending exactly one body",
     queryTestCases.postQueryTests[0]);
   function postQuery(test: string, args: queryTestCases.IPostQueryTestCase) {
@@ -40,8 +54,7 @@ describe("OData.PostHandler:", () => {
         done();
       });
 
-      let engine = new PostHandler(parser, entityReader, repository, responseSender);
-      engine.setSchema(new Schema());
+      let engine = new PostHandler(parser, entityReader, repository, new Schema(), responseSender);
 
       engine.query({ relativeUrl: args.query, body: args.body });
     });
@@ -114,7 +127,7 @@ describe("OData.GetResponseSender", () => {
       assert.strictEqual(storedCode, 200);
       done();
     });
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetResponseSender(httpSenderThatShouldReceiveStatusCode(200, done));
 
     responseSender.success([]);
   });
@@ -166,6 +179,22 @@ function httpSenderThatShouldReceiveHeaders(expectedHeaders: { key: string; valu
       assert.strictEqual(headers[header.key], header.value);
     }
 
+    done();
+  });
+  return httpSender;
+}
+
+function httpSenderThatShouldReceiveStatusCode(code: number, done: () => void, message?: string) {
+  let storedCode;
+  let storedMessage;
+  let httpSender: IHttpResponseSender = new HttpResponseSender();
+  stub(httpSender, "sendStatusCode", (c, m?) => {
+    storedCode = code;
+    storedMessage = m;
+  });
+  stub(httpSender, "finishResponse", () => {
+    assert.strictEqual(storedCode, code);
+    if (message !== undefined) assert.strictEqual(storedMessage, message);
     done();
   });
   return httpSender;

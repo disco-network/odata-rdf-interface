@@ -62,11 +62,10 @@ export class GetResponseSender implements IGetResponseSender {
 
 export class PostHandler implements IPostHandler {
 
-  private schema: Schema;
-
   constructor(private parser: odataParser.IPostRequestParser,
               private entityInitializer: entityReader.IEntityInitializer,
               private repository: IRepository,
+              private schema: Schema,
               private responseSender: IHttpResponseSender) {
   }
 
@@ -76,13 +75,10 @@ export class PostHandler implements IPostHandler {
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     let entity = this.entityInitializer.fromParsed(parsed.entity, type);
     this.repository.insertEntity(entity, type, result => {
-      this.responseSender.sendBody(result.toString());
+      this.responseSender.sendStatusCode(201, "Created");
+      this.responseSender.sendBody("@todo");
       this.responseSender.finishResponse();
     });
-  }
-
-  public setSchema(schm: Schema) {
-    this.schema = schm;
   }
 }
 
