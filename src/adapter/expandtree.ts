@@ -1,10 +1,10 @@
 import gpatterns = require("../sparql/graphpatterns");
 import mappings = require("./mappings");
 import schema = require("../odata/schema");
-import propertyTree = require("./propertytree/propertytree");
+import { IBranchFactory, Tree, RootTree } from "./propertytree/propertytree";
 import propertyTreeImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs } from "./propertytree/traversingargs";
-import { PropertyBranchingArgsFactory } from "./propertytree/branchingargs";
+import { IBranchingArgs, PropertyBranchingArgsFactory } from "./propertytree/branchingargs";
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -13,12 +13,13 @@ import { PropertyBranchingArgsFactory } from "./propertytree/branchingargs";
  */
 export class DirectPropertiesTreeStrategy {
 
-  constructor(private branchFactory: propertyTree.BranchFactory, private argsFactory: PropertyBranchingArgsFactory) {}
+  constructor(private branchFactory: IBranchFactory<IBranchingArgs>,
+              private argsFactory: PropertyBranchingArgsFactory) {}
 
   public create(entityType: schema.EntityType,
-                options: string): propertyTree.Tree {
+                options: string): Tree {
 
-    let tree = new propertyTree.RootTree();
+    let tree = new RootTree();
 
     let propertyNames = entityType.getPropertyNames();
     let properties = propertyNames.map(p => entityType.getProperty(p));
@@ -46,7 +47,8 @@ export class ExpandTreeGraphPatternStrategy {
 
   private directPropertiesStrategy: DirectPropertiesTreeStrategy;
 
-  constructor(private branchFactory: propertyTree.BranchFactory, private argsFactory: PropertyBranchingArgsFactory) {
+  constructor(private branchFactory: IBranchFactory<IBranchingArgs>,
+              private argsFactory: PropertyBranchingArgsFactory) {
     this.directPropertiesStrategy = new DirectPropertiesTreeStrategy(this.branchFactory, this.argsFactory);
   }
 
@@ -68,7 +70,7 @@ export class ExpandTreeGraphPatternStrategy {
 
   private createTree(entityType: schema.EntityType, expandTree) {
 
-    let tree = new propertyTree.RootTree();
+    let tree = new RootTree();
 
     let idProperty = entityType.getProperty("Id");
     tree.branch(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));

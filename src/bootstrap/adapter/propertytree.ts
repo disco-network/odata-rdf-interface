@@ -3,7 +3,7 @@ import propertyTreesImpl = require("../../adapter/propertytree/propertytree_impl
 import propertyMirroring = require("../../adapter/propertymirroring");
 import expandTreePatterns = require("../../adapter/expandtree");
 import filterPatterns = require("../../adapter/filterpatterns");
-import { PropertyBranchingArgsFactory } from "../../adapter/propertytree/branchingargs";
+import { PropertyBranchingArgsFactory, IBranchingArgs } from "../../adapter/propertytree/branchingargs";
 
 export function getExpandTreeGraphPatternStrategy(): expandTreePatterns.ExpandTreeGraphPatternStrategy {
   return new expandTreePatterns.ExpandTreeGraphPatternStrategy(
@@ -15,7 +15,7 @@ export function getFilterGraphPatternStrategy(): filterPatterns.FilterGraphPatte
     getBranchFactoryForFiltering());
 }
 
-function getBranchFactoryForFiltering(): propertyTrees.BranchFactory {
+function getBranchFactoryForFiltering(): propertyTrees.IBranchFactory<IBranchingArgs> {
   return new propertyTrees.TreeDependencyInjector()
     .registerFactoryCandidates(
       new propertyTreesImpl.ComplexBranchFactoryForFiltering(),
@@ -29,11 +29,11 @@ function getBranchingArgsFactory(): PropertyBranchingArgsFactory {
   return new PropertyBranchingArgsFactory();
 }
 
-function getBranchFactoryForExpanding(): propertyTrees.BranchFactory {
+function getBranchFactoryForExpanding(): propertyTrees.IBranchFactory<IBranchingArgs> {
   return new propertyTrees.TreeDependencyInjector()
     .registerFactoryCandidates(
       new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
       new propertyTreesImpl.ComplexBranchFactory(),
-      new propertyMirroring.ElementarySingleValuedMirroredBranchFactory()
+      new propertyMirroring.SingleValuedMirrorBranchFactory()
     );
 }

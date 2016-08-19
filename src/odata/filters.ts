@@ -40,6 +40,10 @@ export interface ILambdaVariable {
 }
 
 export class UniqueScopeIdentifier {
+  private static i = -1;
+
+  public  idNumber = ++UniqueScopeIdentifier.i;
+
   constructor(public debugString: string) {}
   public toString() {
     return "UniqueScopeIdentifier(" + this.debugString + ")";

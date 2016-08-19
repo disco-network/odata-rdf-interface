@@ -1,40 +1,44 @@
 import base = require("./propertytree/propertytree");
 import {
-  IBranchingArgs, IPropertyBranchingArgs,
+  IBranchingArgs, IMirrorPropertyBranchingArgs,
   BranchingArgsGuard } from "./propertytree/branchingargs";
 import {
   IGraphPatternSelector,
   ITraversingArgs, IGraphPatternArgs, IMappingArgs,
 } from "./propertytree/traversingargs";
 
-/* @smell always having to check that mirroredIdFrom !== undefined violates OCP */
-export class ElementarySingleValuedMirroredBranchFactory implements base.ITreeFactoryCandidate {
+export class SingleValuedMirrorBranchFactory implements base.ITreeFactoryCandidate {
+
   public doesApply(args: IBranchingArgs) {
-    return BranchingArgsGuard.isProperty(args)
-      && !args.complex && args.mirroredIdFrom !== undefined && args.singleValued && !args.inverse;
+    return BranchingArgsGuard.isMirrorProperty(args)
+      && args.mirroredProperty().complex()
+      && args.mirroredProperty().singleValued()
+      && !args.mirroredProperty().inverse();
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args))
-      return new ElementarySingleValuedMirroredBranch(args);
+    if (BranchingArgsGuard.assertMirrorProperty(args))
+      return new SingleValuedMirrorBranch(args);
   }
 }
 
-export class ElementarySingleValuedMirroredBranch extends base.Branch<IPropertyBranchingArgs> {
+export class SingleValuedMirrorBranch extends base.Branch<IMirrorPropertyBranchingArgs> {
 
   protected applyBranch(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
 
     let mapping = args.mapping;
-    let complexPropertyUri = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.mirroredIdFrom);
-    let idPropertyUri = mapping.getSubMappingByComplexProperty(this.branchingArgs.mirroredIdFrom)
+    let complexPropertyName = this.branchingArgs.mirroredProperty().name();
+    let complexPropertyUri =
+      mapping.properties.getNamespacedUriOfProperty(complexPropertyName);
+    let idPropertyUri = mapping.getSubMappingByComplexProperty(complexPropertyName)
       .properties.getNamespacedUriOfProperty("Id");
 
-    let intermediateVariableName = mapping.variables.getComplexProperty(this.branchingArgs.mirroredIdFrom)
+    let intermediateVariableName = mapping.variables.getComplexProperty(complexPropertyName)
       .getVariable();
-    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name);
+    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name());
 
     let basePattern = this.selectPattern(args.patternSelector);
-    let subPattern = this.branchingArgs.mandatory === true ?
+    let subPattern = this.branchingArgs.mirroredProperty().mandatory() === true ?
       basePattern
         .branch(complexPropertyUri, intermediateVariableName)
         .branch(idPropertyUri, variableName) :

@@ -1,74 +1,173 @@
-import schema = require("../../odata/schema");
+import { Property, EntityKind, EntityType } from "../../odata/schema";
 import { ILambdaVariable } from "../../odata/filters";
 
-export type IBranchingArgs = IPropertyBranchingArgs | IInScopeVariableBranchingArgs | IAnyBranchingArgs;
+export interface IBranchingArgs {
+  type(): string;
+  hash(): string;
+}
 
-export interface IPropertyBranchingArgs {
-  type: "property";
-  name: string;
-  loose: boolean;
-  inverse: boolean;
-  complex: boolean;
-  mandatory: boolean;
-  singleValued: boolean;
-  mirroredIdFrom: string;
+export interface IMirrorPropertyBranchingArgs extends IBranchingArgs {
+  type(): "mirror";
+  name(): string;
+  mirroredProperty(): IPropertyBranchingArgs;
+}
+
+export interface IPropertyBranchingArgs extends IBranchingArgs {
+  type(): "property";
+  name(): string;
+  inverse(): boolean;
+  complex(): boolean;
+  mandatory(): boolean;
+  singleValued(): boolean;
+}
+
+export interface IInScopeVariableBranchingArgs extends IBranchingArgs {
+  type(): "inScopeVariable";
+  name(): string;
+  variableType(): EntityType;
+}
+
+export interface IAnyBranchingArgs extends IBranchingArgs {
+  type(): "any";
+  name(): string;
+  lambdaVariable(): ILambdaVariable;
+  inverse(): boolean;
+}
+
+export class MirrorPropertyBranchingArgs implements IMirrorPropertyBranchingArgs {
+
+  constructor(private nameArg: string, private mirroredPropertyArgs: IPropertyBranchingArgs) {
+  }
+
+  public hash() {
+    return JSON.stringify({ type: this.type(), name: this.name() });
+  }
+
+  public type(): "mirror" { return "mirror"; }
+
+  public name() {
+    return this.nameArg;
+  }
+
+  public mirroredProperty() {
+    return this.mirroredPropertyArgs;
+  }
+}
+
+export class PropertyBranchingArgs implements IPropertyBranchingArgs {
+
+  constructor(private property: Property) {
+  }
+
+  public hash() {
+    return JSON.stringify({ type: this.type(), name: this.name() });
+  }
+
+  public type(): "property" { return "property"; }
+
+  public name() {
+    return this.property.getName();
+  }
+
+  public inverse() {
+    return this.property.hasDirectRdfRepresentation() === false;
+  }
+
+  public complex() {
+    return this.property.getEntityKind() === EntityKind.Complex;
+  }
+
+  public mandatory() {
+    return this.property.isOptional() === false;
+  }
+
+  public singleValued() {
+    return this.property.isCardinalityOne() === true;
+  }
+}
+
+export class InScopeVariableBranchingArgs implements IInScopeVariableBranchingArgs {
+
+  constructor(private nameArg: string, private variableTypeArg: EntityType) {}
+
+  public hash() {
+    return JSON.stringify({ type: this.type(), name: this.name() });
+  }
+  public type(): "inScopeVariable" { return "inScopeVariable"; }
+
+  public name() {
+    return this.nameArg;
+  }
+
+  public variableType() {
+    return this.variableTypeArg;
+  }
+}
+
+export class AnyBranchingArgs implements IAnyBranchingArgs {
+  public constructor(private nameArg: string, private lambdaVariableArg: ILambdaVariable,
+                     private inverseArg: boolean) {}
+
+  public hash() {
+    return JSON.stringify({ type: this.type(), name: this.name(), scope: this.lambdaVariableArg.scopeId.idNumber });
+  }
+
+  public type(): "any" { return "any"; }
+
+  public name() {
+    return this.nameArg;
+  }
+
+  public lambdaVariable() {
+    return this.lambdaVariableArg;
+  }
+
+  public inverse() {
+    return this.inverseArg;
+  }
 }
 
 export class PropertyBranchingArgsFactory {
-  private modifiers: ((builder: PropertyBranchingArgsBuilder, property: schema.Property) => void)[] = [
-    (builder, property) => {
-      builder.mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName());
-    },
-  ];
 
-  public fromProperty(property: schema.Property): IPropertyBranchingArgs {
-    let builder = new PropertyBranchingArgsBuilder()
-      .name(property.getName())
-      .complex(property.getEntityKind() === schema.EntityKind.Complex)
-      .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
-      .mandatory(!property.isOptional())
-      .singleValued(property.isCardinalityOne())
-      .loose(false);
-    for (let modify of this.modifiers) {
-      modify(builder, property);
+  public fromProperty(property: Property): IPropertyBranchingArgs | IMirrorPropertyBranchingArgs {
+    if (property.mirroredFromProperty()) {
+      return new MirrorPropertyBranchingArgs(property.getName(), this.nonMirroring(property.mirroredFromProperty()));
     }
-    return builder.value;
+    else {
+      return this.nonMirroring(property);
+    }
   }
 
-  public registerModifier(modify: (builder: PropertyBranchingArgsBuilder, property: schema.Property) => void) {
-    this.modifiers.push(modify);
+  private nonMirroring(property: Property): IPropertyBranchingArgs {
+    return new PropertyBranchingArgs(property);
   }
-}
-
-export interface IInScopeVariableBranchingArgs {
-  type: "inScopeVariable";
-  name: string;
-  variableType: schema.EntityType;
-}
-
-export interface IAnyBranchingArgs {
-  type: "any";
-  name: string;
-  lambdaVariable: ILambdaVariable;
-  inverse: boolean;
 }
 
 export class BranchingArgsGuard {
   public static isProperty(args: IBranchingArgs): args is IPropertyBranchingArgs {
-    return args.type === "property";
+    return args.type() === "property";
+  }
+
+  public static isMirrorProperty(args: IBranchingArgs): args is IMirrorPropertyBranchingArgs {
+    return args.type() === "mirror";
   }
 
   public static isInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {
-    return args.type === "inScopeVariable";
+    return args.type() === "inScopeVariable";
   }
 
   public static isAny(args: IBranchingArgs): args is IAnyBranchingArgs {
-    return args.type === "any";
+    return args.type() === "any";
   }
 
   public static assertProperty(args: IBranchingArgs): args is IPropertyBranchingArgs {
     if (this.isProperty(args)) return true;
     else throw new Error("PropertyBranchingArgs expected");
+  }
+
+  public static assertMirrorProperty(args: IBranchingArgs): args is IMirrorPropertyBranchingArgs {
+    if (this.isMirrorProperty(args)) return true;
+    else throw new Error("MirrorPropertyBranchingArgs expected");
   }
 
   public static assertInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {
@@ -80,98 +179,4 @@ export class BranchingArgsGuard {
     if (this.isAny(args)) return true;
     else throw new Error("AnyBranchingArgs expected");
   }
-}
-
-export class PropertyBranchingArgsBuilderTemplate<Value extends { type: "property" }> {
-  public value: Value;
-
-  public name(name: string) {
-    return this.set({ name: name });
-  }
-
-  public complex(value: boolean) {
-    return this.set({ complex: value });
-  }
-
-  public mandatory(value: boolean) {
-    return this.set({ mandatory: value });
-  }
-
-  public singleValued(value: boolean) {
-    return this.set({ singleValued: value });
-  }
-
-  public inverse(value: boolean) {
-    return this.set({ inverse: value });
-  }
-
-  public loose(value: boolean) {
-    return this.set({ loose: value });
-  }
-
-  public mirroredIdFrom(value: string) {
-    return this.set({ mirroredIdFrom: value });
-  }
-
-  private set<T>(value: T): PropertyBranchingArgsBuilderTemplate<Value & T> {
-    for (let key of Object.keys(value)) {
-      this.value[key] = value[key];
-    }
-    return this as any as PropertyBranchingArgsBuilderTemplate<Value & T>;
-  }
-}
-
-export class PropertyBranchingArgsBuilder
-  extends PropertyBranchingArgsBuilderTemplate<{ type: "property", mirroredIdFrom: string }> {
-  public value = { type: <"property"> "property", mirroredIdFrom: undefined };
-}
-
-export class InScopeBranchingArgsBuilderTemplate<Value extends { type: "inScopeVariable" }> {
-  public value: Value;
-
-  public name(name: string) {
-    return this.set({ name: name });
-  }
-
-  public variableType(type: schema.EntityType) {
-    return this.set({ variableType: type });
-  }
-
-  private set<T>(value: T): InScopeBranchingArgsBuilderTemplate<Value & T> {
-    for (let key of Object.keys(value)) {
-      this.value[key] = value[key];
-    }
-    return this as any as InScopeBranchingArgsBuilderTemplate<Value & T>;
-  }
-}
-
-export class InScopeBranchingArgsBuilder extends InScopeBranchingArgsBuilderTemplate<{ type: "inScopeVariable" }> {
-  public value = { type: <"inScopeVariable"> "inScopeVariable" };
-}
-
-export class AnyBranchingArgsBuilderTemplate<Value extends { type: "any" }> {
-  public value: Value;
-
-  public name(value: string) {
-    this.set({ name: value });
-  }
-
-  public lambdaExpression(value: ILambdaVariable) {
-    this.set({ lambdaExpression: value });
-  }
-
-  public inverse(value: boolean) {
-    this.set({ inverse: value });
-  }
-
-  private set<T>(value: T): AnyBranchingArgsBuilderTemplate<Value & T> {
-    for (let key of Object.keys(value)) {
-      this.value[key] = value[key];
-    }
-    return this as any as AnyBranchingArgsBuilderTemplate<Value & T>;
-  }
-}
-
-export class AnyBranchingArgsBuilder extends AnyBranchingArgsBuilderTemplate<{ type: "any" }> {
-  public value = { type: <"any"> "any" };
 }

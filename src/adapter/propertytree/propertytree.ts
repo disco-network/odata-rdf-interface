@@ -26,11 +26,11 @@ export class Tree {
   }
 }
 
-export interface BranchFactory {
-  create(args: IBranchingArgs): Tree;
+export interface IBranchFactory<T extends IBranchingArgs> {
+  create(args: T): Tree;
 }
 
-export class TreeDependencyInjector implements BranchFactory {
+export class TreeDependencyInjector implements IBranchFactory<IBranchingArgs> {
 
   private candidates: ITreeFactoryCandidate[] = [];
 
@@ -57,10 +57,7 @@ export class BranchingArgsHasher {
   public hash(args: IBranchingArgs): string {
     // @smell how to guarantee that the hashing function keeps correct and
     // groups the branches considered equal?
-    return JSON.stringify({
-      type: args.type,
-      name: args.name,
-    });
+    return args.hash();
   }
 }
 

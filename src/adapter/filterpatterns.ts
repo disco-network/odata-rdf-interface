@@ -2,14 +2,16 @@ import schema = require("../odata/schema");
 import { ILambdaVariable, IScope, LambdaVariableScope } from "../odata/filters";
 import gpatterns = require("../sparql/graphpatterns");
 import translators = require("./filtertranslators");
-import propertyTrees = require("./propertytree/propertytree");
+import { IBranchFactory, RootTree, Tree } from "./propertytree/propertytree";
 import propertyTreesImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs, IGraphPatternSelector } from "./propertytree/traversingargs";
-import { InScopeBranchingArgsBuilder, PropertyBranchingArgsBuilder } from "./propertytree/branchingargs";
+import {
+  IBranchingArgs, InScopeVariableBranchingArgs, AnyBranchingArgs, PropertyBranchingArgsFactory,
+} from "./propertytree/branchingargs";
 
 export class FilterGraphPatternStrategy {
 
-  constructor(private branchFactory: propertyTrees.BranchFactory) {}
+  constructor(private branchFactory: IBranchFactory<IBranchingArgs>) {}
 
   public createAnyExpressionPattern(outerFilterContext: translators.IFilterContext,
                                     innerLowLevelPropertyTree: translators.ScopedPropertyTree,
@@ -22,13 +24,9 @@ export class FilterGraphPatternStrategy {
     let collectionProperty = propertyPathWithoutCollectionProperty.getFinalEntityType()
       .getProperty(collectionPropertyName);
 
-    let tree = new propertyTrees.RootTree();
-    let branch = tree.branch(this.branchFactory.create({
-      type: "any",
-      name: collectionPropertyName,
-      lambdaVariable: lambdaVariable,
-      inverse: !collectionProperty.hasDirectRdfRepresentation(),
-    }));
+    let tree = new RootTree();
+    let branch = tree.branch(this.branchFactory.create(
+      new AnyBranchingArgs(collectionPropertyName, lambdaVariable, !collectionProperty.hasDirectRdfRepresentation())));
 
     let innerFilterContext: IScope = {
       entityType: outerFilterContext.scope.entityType,
@@ -64,7 +62,7 @@ export class FilterGraphPatternStrategy {
   }
 
   public createPropertyTree(filterContext: IScope,
-                            lowLevelPropertyTree: translators.ScopedPropertyTree): propertyTrees.Tree {
+                            lowLevelPropertyTree: translators.ScopedPropertyTree): Tree {
     return this.createPropertyBranch(filterContext, filterContext.entityType, lowLevelPropertyTree);
   }
 
@@ -73,7 +71,7 @@ export class FilterGraphPatternStrategy {
                                lowLevelPropertyTree: translators.ScopedPropertyTree) {
     let entityType = filterContextOfBranch.entityType;
     let scope = filterContextOfBranch.lambdaVariableScope;
-    let result = new propertyTrees.RootTree();
+    let result = new RootTree();
 
     for (let it = lowLevelPropertyTree.root.getIterator(); it.hasValue(); it.next()) {
       let propertyName = it.current();
@@ -85,10 +83,7 @@ export class FilterGraphPatternStrategy {
     for (let it = lowLevelPropertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
       let inScopeVar = it.current();
       let lambdaExpression = scope.get(inScopeVar);
-      let args = new InScopeBranchingArgsBuilder()
-        .name(inScopeVar)
-        .variableType(lambdaExpression.entityType)
-        .value;
+      let args = new InScopeVariableBranchingArgs(inScopeVar, lambdaExpression.entityType);
       let branch = result.branch(this.branchFactory.create(args));
 
       let flatTree = lowLevelPropertyTree.inScopeVariables.getBranch(inScopeVar);
@@ -105,18 +100,10 @@ export class FilterGraphPatternStrategy {
   }
 
   private createAndInsertBranch(property: schema.Property,
-                                propertyTree: translators.FlatPropertyTree): propertyTrees.Tree {
-    let args = new PropertyBranchingArgsBuilder()
-      .name(property.getName())
-      .complex(property.getEntityKind() === schema.EntityKind.Complex)
-      .singleValued(property.isCardinalityOne())
-      .inverse(!property.mirroredFromProperty() && !property.hasDirectRdfRepresentation())
-      .mandatory(!property.isOptional())
-      .loose(false)
-      .mirroredIdFrom(property.mirroredFromProperty() && property.mirroredFromProperty().getName())
-      .value;
+                                propertyTree: translators.FlatPropertyTree): Tree {
+    let args = (new PropertyBranchingArgsFactory()).fromProperty(property);
 
-    let result = new propertyTrees.RootTree();
+    let result = new RootTree();
     let branch = result.branch(this.branchFactory.create(args));
 
     let subContext: IScope = {
