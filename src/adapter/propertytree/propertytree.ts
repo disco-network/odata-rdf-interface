@@ -48,7 +48,7 @@ export class TreeDependencyInjector implements IBranchFactory<IBranchingArgs> {
   }
 }
 
-export interface ITreeFactoryCandidate {
+export interface ITreeFactoryCandidate extends IBranchFactory<IBranchingArgs> {
   doesApply(args: IBranchingArgs): boolean;
   create(args: IBranchingArgs): Tree;
 }

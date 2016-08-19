@@ -34,6 +34,6 @@ function getBranchFactoryForExpanding(): propertyTrees.IBranchFactory<IBranching
     .registerFactoryCandidates(
       new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
       new propertyTreesImpl.ComplexBranchFactory(),
-      new propertyMirroring.SingleValuedMirrorBranchFactory()
+      new propertyMirroring.SingleValuedMirrorBranchFactory(new propertyTreesImpl.ComplexBranchFactory())
     );
 }

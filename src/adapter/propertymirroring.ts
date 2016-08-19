@@ -1,58 +1,74 @@
 import base = require("./propertytree/propertytree");
 import {
-  IBranchingArgs, IMirrorPropertyBranchingArgs,
+  IBranchingArgs, IMirrorPropertyBranchingArgs, IPropertyBranchingArgs,
   BranchingArgsGuard } from "./propertytree/branchingargs";
 import {
   IGraphPatternSelector,
-  ITraversingArgs, IGraphPatternArgs, IMappingArgs,
+  IGraphPatternArgs, IMappingArgs,
 } from "./propertytree/traversingargs";
 
 export class SingleValuedMirrorBranchFactory implements base.ITreeFactoryCandidate {
 
+  constructor(private complexNonMirrorBranchFactory: base.ITreeFactoryCandidate) {
+  }
+
   public doesApply(args: IBranchingArgs) {
     return BranchingArgsGuard.isMirrorProperty(args)
-      && args.mirroredProperty().complex()
-      && args.mirroredProperty().singleValued()
-      && !args.mirroredProperty().inverse();
+      && this.complexNonMirrorBranchFactory.doesApply(args.mirroredProperty());
   }
 
   public create(args: IBranchingArgs) {
     if (BranchingArgsGuard.assertMirrorProperty(args))
-      return new SingleValuedMirrorBranch(args);
+      return new SingleValuedMirrorBranch(args, this.complexNonMirrorBranchFactory);
   }
 }
 
-export class SingleValuedMirrorBranch extends base.Branch<IMirrorPropertyBranchingArgs> {
+export class SingleValuedMirrorBranch extends base.Tree {
 
-  protected applyBranch(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
+  constructor(private branchingArgs: IMirrorPropertyBranchingArgs,
+              private complexNonMirrorBranchFactory: base.IBranchFactory<IPropertyBranchingArgs>) {
+    super();
+  }
 
-    let mapping = args.mapping;
-    let complexPropertyName = this.branchingArgs.mirroredProperty().name();
-    let complexPropertyUri =
-      mapping.properties.getNamespacedUriOfProperty(complexPropertyName);
-    let idPropertyUri = mapping.getSubMappingByComplexProperty(complexPropertyName)
-      .properties.getNamespacedUriOfProperty("Id");
+  public hash() {
+    return this.branchingArgs.hash();
+  }
 
-    let intermediateVariableName = mapping.variables.getComplexProperty(complexPropertyName)
-      .getVariable();
-    let variableName = mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name());
+  public traverse(args: IGraphPatternArgs & IMappingArgs): void {
+    let branch = this.complexNonMirrorBranchFactory.create(this.branchingArgs.mirroredProperty());
+    let branchMapping = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.mirroredProperty().name());
+    let propertyName = branchMapping.properties.getNamespacedUriOfProperty("Id");
+    let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name());
+    let idBranch = branch.branch(new IdBranch(propertyName, variableName));
+    this.copyTo(idBranch);
 
-    let basePattern = this.selectPattern(args.patternSelector);
-    let subPattern = this.branchingArgs.mirroredProperty().mandatory() === true ?
-      basePattern
-        .branch(complexPropertyUri, intermediateVariableName)
-        .branch(idPropertyUri, variableName) :
-      basePattern
-        .optionalBranch(complexPropertyUri, intermediateVariableName)
-        .branch(idPropertyUri, variableName);
+    branch.traverse(args.clone());
+  }
+}
 
-    let result = args.clone();
-    result.patternSelector = args.patternSelector.getOtherSelector(subPattern);
-    result.mapping = undefined;
-    return result;
+class IdBranch extends base.Tree {
+  constructor(private propertyName: string, private variableName: string) {
+    super();
+  }
+
+  public hash() {
+    return JSON.stringify({ type: "id" });
+  }
+
+  public traverse(args: IGraphPatternArgs) {
+    let pattern = this.selectPattern(args.patternSelector);
+    let subPattern = pattern.branch(this.propertyName, this.variableName);
+
+    let subArgs = args.clone();
+    subArgs.patternSelector = args.patternSelector.getOtherSelector(subPattern);
+    subArgs.mapping = null;
+
+    for (let hash of Object.keys(this.branches)) {
+      this.branches[hash].traverse(subArgs);
+    }
   }
 
   private selectPattern(patternSelector: IGraphPatternSelector) {
-    return patternSelector.getUnionPatternForSingleValuedBranches();
+    return patternSelector.getRootPattern();
   }
 }
