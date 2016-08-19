@@ -1,5 +1,6 @@
 import schema = require("../odata/schema");
 import { ILambdaVariable, IScope, LambdaVariableScope } from "../odata/filters";
+import { ScopedPropertyTree, FlatPropertyTree } from "../odata/propertytree";
 import gpatterns = require("../sparql/graphpatterns");
 import translators = require("./filtertranslators");
 import { IBranchFactory, RootTree, Tree } from "./propertytree/propertytree";
@@ -14,7 +15,7 @@ export class FilterGraphPatternStrategy {
   constructor(private branchFactory: IBranchFactory<IBranchingArgs>) {}
 
   public createAnyExpressionPattern(outerFilterContext: translators.IFilterContext,
-                                    innerLowLevelPropertyTree: translators.ScopedPropertyTree,
+                                    innerLowLevelPropertyTree: ScopedPropertyTree,
                                     lambdaVariable: ILambdaVariable,
                                     propertyPathToExpr: translators.PropertyPath) {
 
@@ -48,7 +49,7 @@ export class FilterGraphPatternStrategy {
 
   /* @smell there are two kinds of PropertyTrees */
   public createPattern(filterContext: translators.IFilterContext,
-                       propertyTree: translators.ScopedPropertyTree): gpatterns.TreeGraphPattern {
+                       propertyTree: ScopedPropertyTree): gpatterns.TreeGraphPattern {
     let result = new gpatterns.TreeGraphPattern(filterContext.mapping.mapping.variables.getVariable());
     /* @smell pass selector as argument */
     let selector: IGraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
@@ -62,15 +63,15 @@ export class FilterGraphPatternStrategy {
   }
 
   public createPropertyTree(filterContext: IScope,
-                            lowLevelPropertyTree: translators.ScopedPropertyTree): Tree {
+                            lowLevelPropertyTree: ScopedPropertyTree): Tree {
     return this.createPropertyBranch(filterContext, filterContext.entityType, lowLevelPropertyTree);
   }
 
-  private createPropertyBranch(filterContextOfBranch: IScope,
+  private createPropertyBranch(filterContext: IScope,
                                unscopedEntityType: schema.EntityType,
-                               lowLevelPropertyTree: translators.ScopedPropertyTree) {
-    let entityType = filterContextOfBranch.entityType;
-    let scope = filterContextOfBranch.lambdaVariableScope;
+                               lowLevelPropertyTree: ScopedPropertyTree) {
+    let entityType = filterContext.entityType;
+    let scope = filterContext.lambdaVariableScope;
     let result = new RootTree();
 
     for (let it = lowLevelPropertyTree.root.getIterator(); it.hasValue(); it.next()) {
@@ -87,7 +88,7 @@ export class FilterGraphPatternStrategy {
       let branch = result.branch(this.branchFactory.create(args));
 
       let flatTree = lowLevelPropertyTree.inScopeVariables.getBranch(inScopeVar);
-      let subPropertyTree = translators.ScopedPropertyTree.create(flatTree);
+      let subPropertyTree = ScopedPropertyTree.create(flatTree);
       let subContext: IScope = {
         entityType: lambdaExpression.entityType,
         lambdaVariableScope: new LambdaVariableScope(),
@@ -100,7 +101,7 @@ export class FilterGraphPatternStrategy {
   }
 
   private createAndInsertBranch(property: schema.Property,
-                                propertyTree: translators.FlatPropertyTree): Tree {
+                                propertyTree: FlatPropertyTree): Tree {
     let args = (new PropertyBranchingArgsFactory()).fromProperty(property);
 
     let result = new RootTree();
@@ -110,7 +111,7 @@ export class FilterGraphPatternStrategy {
       entityType: property.getEntityType(),
       lambdaVariableScope: new LambdaVariableScope(),
     };
-    let scopedPropertyTree = translators.ScopedPropertyTree.create();
+    let scopedPropertyTree = ScopedPropertyTree.create();
     scopedPropertyTree.root = propertyTree.getBranch(property.getName());
     this.createPropertyTree(subContext, scopedPropertyTree)
       .copyTo(branch);

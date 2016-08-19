@@ -1,4 +1,5 @@
 import { LambdaVariableScope, ILambdaVariable, UniqueScopeIdentifier } from "../../odata/filters";
+import { ScopedPropertyTree } from "../../odata/propertytree";
 import filterTranslators = require("../filtertranslators");
 import qsBuilder = require("../../bootstrap/sparql/querystringbuilder"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
@@ -37,7 +38,7 @@ export class PropertyValueTranslator implements filterTranslators.IExpressionTra
     this.factory = args.factory;
   }
 
-  public getPropertyTree(): filterTranslators.ScopedPropertyTree {
+  public getPropertyTree(): ScopedPropertyTree {
     return this.getPropertyPathSegmentRelevantForPropertyTree()
       .toScopedPropertyTree();
   }
@@ -66,7 +67,7 @@ export class AnyExpression implements filterTranslators.IExpressionTranslator {
     this.propertyPath = propertyPath;
   }
 
-  public getPropertyTree(): filterTranslators.ScopedPropertyTree {
+  public getPropertyTree(): ScopedPropertyTree {
     return this.getPropertyPathSegmentRelevantForPropertyTree()
       .toScopedPropertyTree();
   }
@@ -148,7 +149,7 @@ export class PropertyPath {
   }
 
   public toScopedPropertyTree() {
-    let tree = filterTranslators.ScopedPropertyTree.create();
+    let tree = ScopedPropertyTree.create();
     let branch = this.createAndReturnPropertyTreeBranchOfLambdaPrefix(tree);
     let propertiesToInclude = this.getPropertyNamesWithoutLambdaPrefix();
     for (let i = 0; i < propertiesToInclude.length; ++i) {
@@ -240,7 +241,7 @@ export class PropertyPath {
     return this.propertyNames[0] && this.getLambdaVariableScope().get(this.propertyNames[0]);
   }
 
-  private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: filterTranslators.ScopedPropertyTree) {
+  private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: ScopedPropertyTree) {
     if (this.pathStartsWithLambdaPrefix()) {
       let inScopeVar = this.getPrefixLambdaVariable().name;
       return tree.inScopeVariables.createBranch(inScopeVar);

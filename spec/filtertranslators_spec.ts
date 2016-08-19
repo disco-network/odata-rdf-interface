@@ -1,6 +1,7 @@
 import { assert } from "chai";
 
 import { LambdaVariableScope, ILambdaVariable } from "../src/odata/filters";
+import { ScopedPropertyTree, FlatPropertyTree } from "../src/odata/propertytree";
 import { Schema } from "../src/odata/schema";
 
 import * as translators from "../src/adapter/filtertranslators";
@@ -216,7 +217,7 @@ describe("A PropertyTranslator", () => {
 
 describe("A flat property tree", () => {
   it("should recall saved entries", () => {
-    let tree = translators.FlatPropertyTree.empty();
+    let tree = FlatPropertyTree.empty();
     tree.createBranch("PropertyName").createBranch("SubProperty");
     assert.strictEqual(tree.branchExists("PropertyName"), true);
     assert.strictEqual(tree.branchExists("AsdfGhjk"), false);
@@ -226,7 +227,7 @@ describe("A flat property tree", () => {
   });
 
   xit("should be cloneable", () => {
-    let tree = translators.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
+    let tree = FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
 
     assert.strictEqual(tree.clone().branchExists("Content"), true);
     assert.strictEqual(tree.clone().branchExists("Id"), true);
@@ -235,8 +236,8 @@ describe("A flat property tree", () => {
   });
 
   it("should be mergeable", () => {
-    let treeA = translators.FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
-    let treeB = translators.FlatPropertyTree.fromDataObject({ "Content": { "Title": {} } });
+    let treeA = FlatPropertyTree.fromDataObject({ "Content": { "Id": {} }, "Id": {} });
+    let treeB = FlatPropertyTree.fromDataObject({ "Content": { "Title": {} } });
     treeA.merge(treeB);
 
     assert.strictEqual(treeA.branchExists("Content"), true);
@@ -365,6 +366,6 @@ class TestFilterExpression implements translators.IExpressionTranslator {
 
   constructor(public value, public args: translators.IExpressionTranslatorArgs) {}
   public getSubExpressions(): translators.IExpressionTranslator[] { return []; }
-  public getPropertyTree(): translators.ScopedPropertyTree { return new translators.ScopedPropertyTree(); }
+  public getPropertyTree(): ScopedPropertyTree { return new ScopedPropertyTree(); }
   public toSparqlFilterClause(): string { return this.value.toString(); }
 }
