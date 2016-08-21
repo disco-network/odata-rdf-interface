@@ -1,7 +1,7 @@
 import { assert } from "chai";
 
 import { LambdaVariableScope, ILambdaVariable } from "../src/odata/filters";
-import { ScopedPropertyTree, FlatPropertyTree } from "../src/odata/propertytree";
+import { ScopedPropertyTree, FlatPropertyTree } from "../src/odata/filtertree";
 import { Schema } from "../src/odata/schema";
 
 import * as translators from "../src/adapter/filtertranslators";

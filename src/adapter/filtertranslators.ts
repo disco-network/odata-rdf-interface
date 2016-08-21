@@ -1,6 +1,6 @@
 import mappings = require("./mappings");
 import { IScope } from "../odata/filters";
-import { ScopedPropertyTree } from "../odata/propertytree";
+import { ScopedPropertyTree } from "../odata/filtertree";
 import propertyExpr = require("./filters/propertyexpression");
 
 export interface IExpressionTranslator {
