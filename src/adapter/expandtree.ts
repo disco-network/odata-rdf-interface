@@ -1,7 +1,7 @@
 import gpatterns = require("../sparql/graphpatterns");
 import mappings = require("./mappings");
 import schema = require("../odata/schema");
-import { IBranchFactory, Tree, RootTree } from "./propertytree/propertytree";
+import { IBranchFactory, Tree } from "./propertytree/propertytree";
 import propertyTreeImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs } from "./propertytree/traversingargs";
 import { IBranchingArgs, PropertyBranchingArgsFactory } from "./propertytree/branchingargs";
@@ -19,7 +19,7 @@ export class DirectPropertiesTreeStrategy {
   public create(entityType: schema.EntityType,
                 options: string): Tree {
 
-    let tree = new RootTree();
+    let tree = new Tree();
 
     let propertyNames = entityType.getPropertyNames();
     let properties = propertyNames.map(p => entityType.getProperty(p));
@@ -30,7 +30,7 @@ export class DirectPropertiesTreeStrategy {
       if (propertyName === "Id" && options.indexOf("no-id-property") >= 0) continue;
       if (property.getEntityKind() === schema.EntityKind.Elementary) {
         let args = this.argsFactory.fromProperty(property);
-        tree.branch(this.branchFactory.create(args));
+        tree.branchNode(this.branchFactory.create(args));
       }
     }
 
@@ -70,10 +70,10 @@ export class ExpandTreeGraphPatternStrategy {
 
   private createTree(entityType: schema.EntityType, expandTree) {
 
-    let tree = new RootTree();
+    let tree = new Tree();
 
     let idProperty = entityType.getProperty("Id");
-    tree.branch(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));
+    tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));
 
     let directPropertyTree = this.directPropertiesStrategy.create(entityType, "no-id-property");
     directPropertyTree.copyTo(tree);
@@ -81,7 +81,7 @@ export class ExpandTreeGraphPatternStrategy {
     for (let propertyName of Object.keys(expandTree)) {
       let property = entityType.getProperty(propertyName);
 
-      let branch = tree.branch(this.branchFactory.create(this.argsFactory.fromProperty(property)));
+      let branch = tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(property)));
 
       let recursive = this.createTree(property.getEntityType(), expandTree[propertyName]);
       recursive.copyTo(branch);

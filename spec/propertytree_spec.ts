@@ -6,48 +6,52 @@ import schema = require("../src/odata/schema");
 
 describe("Property trees", () => {
   it("should avoid duplicate branches", () => {
-    let TestBranch = class extends propertyTree.Tree {
+    let counter = 0;
+    let TestBranch = class implements propertyTree.INode {
       public hash() {
         return "my hash";
       }
-      public countBranches() {
-        return Object.keys(this.branches).length;
+      public apply(): any {
+        ++counter;
       }
     };
-    let tree = new TestBranch();
+    let tree = new propertyTree.Tree();
     let branch = new TestBranch();
-    tree.branch(branch);
-    tree.branch(branch);
+    tree.branchNode(branch);
+    tree.branchNode(branch);
+    tree.traverse(null);
 
-    assert.strictEqual(tree.countBranches(), 1);
+    assert.strictEqual(counter, 1);
   });
 
   it("should avoid duplicate branches after copying", () => {
-    let TestBranch = class extends propertyTree.Tree {
-      constructor(private hashStr: string) {
+    let counter = 0;
+    class TestBranch extends propertyTree.Tree {
+      constructor(private hashStr: string, private count: boolean = false) {
         super();
       }
       public hash() {
-        return this.hashStr;
+        return "my hash";
       }
-      public countBranches() {
-        return Object.keys(this.branches).length;
+      public apply(): any {
+        if (this.count) ++counter;
       }
-    };
-    let tree1 = new TestBranch("1");
-    let tree2 = new TestBranch("2");
-    let branch1a = new TestBranch("a");
-    let branch2a = new TestBranch("a");
+    }
+    let tree1 = new propertyTree.Tree();
+    let tree2 = new propertyTree.Tree();
+    let branch1a = new propertyTree.Tree(new TestBranch("a", true));
+    let branch2a = new propertyTree.Tree(new TestBranch("a", true));
     let branch1a1 = new TestBranch("a/1");
     let branch2a1 = new TestBranch("a/1");
-    branch1a.branch(branch1a1);
-    tree1.branch(branch1a);
-    branch2a.branch(branch2a1);
-    tree2.branch(branch2a);
+    branch1a.branchNode(branch1a1);
+    tree1.branchTree(branch1a);
+    branch2a.branchNode(branch2a1);
+    tree2.branchTree(branch2a);
 
     tree2.copyTo(tree1);
+    tree1.traverse(null);
 
-    assert.strictEqual(branch1a.countBranches(), 1);
+    assert.strictEqual(counter, 1);
   });
 });
 

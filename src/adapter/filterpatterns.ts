@@ -3,7 +3,7 @@ import { ILambdaVariable, IScope, LambdaVariableScope } from "../odata/filters";
 import { ScopedPropertyTree, FlatPropertyTree } from "../odata/filtertree";
 import gpatterns = require("../sparql/graphpatterns");
 import translators = require("./filtertranslators");
-import { IBranchFactory, RootTree, Tree } from "./propertytree/propertytree";
+import { IBranchFactory, Tree } from "./propertytree/propertytree";
 import propertyTreesImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs, IGraphPatternSelector } from "./propertytree/traversingargs";
 import {
@@ -25,8 +25,8 @@ export class FilterGraphPatternStrategy {
     let collectionProperty = propertyPathWithoutCollectionProperty.getFinalEntityType()
       .getProperty(collectionPropertyName);
 
-    let tree = new RootTree();
-    let branch = tree.branch(this.branchFactory.create(
+    let tree = new Tree();
+    let branch = tree.branchNode(this.branchFactory.create(
       new AnyBranchingArgs(collectionPropertyName, lambdaVariable, !collectionProperty.hasDirectRdfRepresentation())));
 
     let innerFilterContext: IScope = {
@@ -72,7 +72,7 @@ export class FilterGraphPatternStrategy {
                                lowLevelPropertyTree: ScopedPropertyTree) {
     let entityType = filterContext.entityType;
     let scope = filterContext.lambdaVariableScope;
-    let result = new RootTree();
+    let result = new Tree();
 
     for (let it = lowLevelPropertyTree.root.getIterator(); it.hasValue(); it.next()) {
       let propertyName = it.current();
@@ -85,7 +85,7 @@ export class FilterGraphPatternStrategy {
       let inScopeVar = it.current();
       let lambdaExpression = scope.get(inScopeVar);
       let args = new InScopeVariableBranchingArgs(inScopeVar, lambdaExpression.entityType);
-      let branch = result.branch(this.branchFactory.create(args));
+      let branch = result.branchNode(this.branchFactory.create(args));
 
       let flatTree = lowLevelPropertyTree.inScopeVariables.getBranch(inScopeVar);
       let subPropertyTree = ScopedPropertyTree.create(flatTree);
@@ -104,8 +104,8 @@ export class FilterGraphPatternStrategy {
                                 propertyTree: FlatPropertyTree): Tree {
     let args = (new PropertyBranchingArgsFactory()).fromProperty(property);
 
-    let result = new RootTree();
-    let branch = result.branch(this.branchFactory.create(args));
+    let result = new Tree();
+    let branch = result.branchNode(this.branchFactory.create(args));
 
     let subContext: IScope = {
       entityType: property.getEntityType(),

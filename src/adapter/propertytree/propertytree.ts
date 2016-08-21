@@ -1,40 +1,71 @@
 import { TraversingArgs } from "./traversingargs";
 import { IBranchingArgs } from "./branchingargs";
 
+export interface INode {
+  hash(): string;
+  apply(args: TraversingArgs): TraversingArgs;
+}
+
+export class NullNode {
+  public hash(): string {
+    return "null";
+  }
+
+  public apply(args: TraversingArgs) {
+    return args;
+  }
+}
+
 export class Tree {
-  protected branches: { [id: string]: Tree } = {};
+  private branches: { [id: string]: Tree } = {};
+
+  constructor(private node: INode = new NullNode()) {}
 
   public traverse(args: TraversingArgs): void {
-    throw new Error("abstract method - not implemented");
+    let subArgs = this.node.apply(args);
+    for (let key of Object.keys(this.branches)) {
+      let branch = this.branches[key];
+      branch.traverse(subArgs);
+    }
   }
 
-  public hash(): string {
-    throw new Error("abstract method - not implemented");
+  public hashOfNode(): string {
+    return this.node.hash();
   }
 
-  public branch(branch: Tree): Tree {
+  public branchNode(branch: INode): Tree {
     if (!Object.prototype.hasOwnProperty.call(this.branches, branch.hash())) {
-      this.branches[branch.hash()] = branch;
+      this.branches[branch.hash()] = new Tree(branch);
     }
     return this.branches[branch.hash()];
   }
 
+  public branchTree(branch: Tree): Tree {
+    if (!Object.prototype.hasOwnProperty.call(this.branches, branch.hashOfNode())) {
+      this.branches[branch.hashOfNode()] = branch;
+    }
+    else {
+      branch.copyTo(this.branches[branch.hashOfNode()]);
+    }
+    return this.branches[branch.hashOfNode()];
+  }
+
   public copyTo(tree: Tree) {
     for (let hash of Object.keys(this.branches)) {
-      tree.branch(this.branches[hash]);
+      tree.branchTree(this.branches[hash]);
     }
   }
 }
 
 export interface IBranchFactory<T extends IBranchingArgs> {
-  create(args: T): Tree;
+  create(args: T): INode;
 }
 
 export class TreeDependencyInjector implements IBranchFactory<IBranchingArgs> {
 
   private candidates: ITreeFactoryCandidate[] = [];
 
-  public create(args: IBranchingArgs): Tree {
+  public create(args: IBranchingArgs): INode {
     for (let i = 0; i < this.candidates.length; ++i) {
       let candidate = this.candidates[i];
       if (candidate.doesApply(args)) return candidate.create(args);
@@ -50,51 +81,5 @@ export class TreeDependencyInjector implements IBranchFactory<IBranchingArgs> {
 
 export interface ITreeFactoryCandidate extends IBranchFactory<IBranchingArgs> {
   doesApply(args: IBranchingArgs): boolean;
-  create(args: IBranchingArgs): Tree;
+  create(args: IBranchingArgs): INode;
 }
-
-export class BranchingArgsHasher {
-  public hash(args: IBranchingArgs): string {
-    // @smell how to guarantee that the hashing function keeps correct and
-    // groups the branches considered equal?
-    return args.hash();
-  }
-}
-
-export class RootTree extends Tree {
-
-  public traverse(args: TraversingArgs): void {
-    for (let hash of Object.keys(this.branches)) {
-      this.branches[hash].traverse(args);
-    }
-  }
-}
-
-export class Branch<Args extends IBranchingArgs> extends Tree {
-
-  constructor(protected branchingArgs: Args) {
-    super();
-  }
-
-  public traverse(args: TraversingArgs): void {
-    let subArgs = this.applyBranch(args);
-    for (let hash of Object.keys(this.branches)) {
-      let branch = this.branches[hash];
-      branch.traverse(subArgs);
-    }
-  }
-
-  public hash() {
-    return new BranchingArgsHasher().hash(this.branchingArgs);
-  }
-
-  protected applyBranch(args: TraversingArgs): TraversingArgs {
-    throw new Error("abstract class - not implemented");
-  }
-}
-
-/* @canremove export interface IBranchingResult {
-  mapping: mappings.Mapping;
-  scopedMapping: mappings.ScopedMapping;
-  pattern: gpatterns.TreeGraphPattern;
-}*/
