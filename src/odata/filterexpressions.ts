@@ -1,24 +1,25 @@
 import * as contract from "../contract";
 
-export interface IType {
-
+export interface IValueHandler<TWrapValue extends IWrapValue<TWrapValue>, Return> {
+  handle(value: TWrapValue): Return;
 }
 
-export interface ElementaryType {
-  name: string;
+export interface IValue<TWrapper extends IWrapValue<TWrapper>> {
 }
 
-export interface IValue {
-  getType(): IType;
-}
-
-export interface IValueHandler<TSupportedValue extends IValue, ReturnValue> {
-  handle(value: TSupportedValue): ReturnValue;
-}
-
-export let IStringLiteralExpression = contract.define<IStringLiteralExpression>();
-export interface IStringLiteralExpression extends IValue {
+export let IStringLiteral
+  = contract.defineGeneric<(<T extends IWrapValue<T>>(x: IValue<T>) => x is IStringLiteral<T>)>();
+export interface IStringLiteral<TWrapValue extends IWrapValue<TWrapValue>> extends IValue<TWrapValue> {
   getValue(): string;
 }
 
-export type ValueKind = string | symbol;
+export let IOrExpression
+  = contract.defineGeneric<(<T extends IWrapValue<T>>(x: IValue<T>) => x is IOrExpression<T>)>();
+export interface IOrExpression<TWrapValue extends IWrapValue<TWrapValue>> extends IValue<TWrapValue> {
+  getLhs(): TWrapValue;
+  getRhs(): TWrapValue;
+}
+
+export interface IWrapValue<Self extends IWrapValue<Self>> {
+  getValue(): IValue<IWrapValue<Self>>;
+}
