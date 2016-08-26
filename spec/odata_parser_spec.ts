@@ -27,6 +27,13 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
     assert.strictEqual(result.queryOptions.expand[0].path[1], "ReferredFrom");
   });
 
+  it("should parse a string with \"", () => {
+    let parser = initODataParser();
+    let result = parser.parse("Posts?$filter='''' eq ''");
+
+    assert.strictEqual(result.queryOptions.filter.lhs.value, "'");
+  });
+
   it("should parse a simple filter expression", () => {
     let parser = initODataParser();
     let result = parser.parse("Posts?$filter='2' eq '1'");
