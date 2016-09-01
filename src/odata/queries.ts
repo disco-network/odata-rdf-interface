@@ -1,13 +1,14 @@
 /** @module */
 import Schema = require("./schema");
+import { IValue } from "./filterexpressions";
 
 export interface IQuery {
   run(sparqlProvider, cb: (result) => void): void;
 }
 
-export interface IQueryModel {
+export interface IQueryModel<TExpressionVisitor> {
   entitySetType: Schema.EntityType;
-  filterOption: any;
+  filterOption: IValue<TExpressionVisitor>;
   expandTree: any;
 }
 

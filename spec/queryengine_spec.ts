@@ -2,9 +2,10 @@ import { assert } from "chai";
 import { stub, match } from "sinon";
 
 import { GetHandler, PostHandler, IGetResponseSender, GetResponseSender } from "../src/odata/queryengine";
-import { IPostRequestParser, IGetRequestParser } from "../src/odata/parser";
+import { IPostRequestParser, IGetRequestParser, IFilterVisitor } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
 import { IRepository } from "../src/odata/repository";
+import { IValue } from "../src/odata/filterexpressions";
 import { Result, AnyResult } from "../src/result";
 import { Schema, EntityType } from "../src/odata/schema";
 import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";
@@ -18,7 +19,7 @@ describe("OData.PostHandler:", () => {
     stub(parser, "parse").returns({ entitySetName: "Posts", entity: {} });
     let entityInitializer = new EntityInitializer();
     stub(entityInitializer, "fromParsed").returns({});
-    let repository = new Repository();
+    let repository = new Repository<IFilterVisitor>();
     stub(repository, "insertEntity").callsArgWith(2, Result.success("ok"));
 
     let engine = new PostHandler(parser, entityInitializer, repository, new Schema(),
@@ -41,7 +42,7 @@ describe("OData.PostHandler:", () => {
         .withArgs(args.parsedEntity, match(type => type.getName() === "Post"))
         .returns(args.entity);
 
-      let repository = new Repository();
+      let repository = new Repository<IFilterVisitor>();
       let insertEntity = stub(repository, "insertEntity")
         .withArgs(args.entity, match(type => type.getName() === "Post"))
         .callsArgWith(2, Result.success("ok"));
@@ -68,12 +69,12 @@ describe("OData.GetHandler", () => {
       .withArgs({ relativeUrl: "/Posts", body: "" })
       .returns({
         entitySetName: "Posts",
-        filterTree: null,
-        expandTree: null,
+        filterExpression: null,
+        expandTree: {},
       });
-    let repository = new Repository();
+    let repository = new Repository<IFilterVisitor>();
     stub(repository, "getEntities")
-      .withArgs(match(type => type.getName() === "Post"), null, null, match.any)
+      .withArgs(match(type => type.getName() === "Post"), {}, null, match.any)
       .callsArgWith(3, Result.success([ { Id: "1" } ]));
 
     let responseSender = new GetResponseSenderStub();
@@ -83,7 +84,7 @@ describe("OData.GetHandler", () => {
     });
 
     let schema = new Schema();
-    let getHandler = new GetHandler(schema, parser, repository, responseSender);
+    let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
     getHandler.query({ relativeUrl: "/Posts", body: "" });
   });
@@ -94,11 +95,11 @@ describe("OData.GetHandler", () => {
       .withArgs({ relativeUrl: "/Posts?$expand=Children", body: "" })
       .returns({
         entitySetName: "Posts",
-        filterTree: null,
+        filterExpression: null,
         expandTree: { Children: {} },
       });
 
-    let repository = new Repository();
+    let repository = new Repository<IFilterVisitor>();
     stub(repository, "getEntities")
       .withArgs(match(type => type.getName() === "Post"), { Children: {} }, null, match.any)
       .callsArgWith(3, Result.success([ { Id: "2" } ]));
@@ -110,7 +111,7 @@ describe("OData.GetHandler", () => {
     });
 
     let schema = new Schema();
-    let getHandler = new GetHandler(schema, parser, repository, responseSender);
+    let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
     getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" });
   });
@@ -220,7 +221,7 @@ class PostRequestParser implements IPostRequestParser {
   }
 }
 
-class GetRequestParser implements IGetRequestParser {
+class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
   public parse(request: IHttpRequest): any {
     //
   }
@@ -256,9 +257,10 @@ class HttpResponseSender implements IHttpResponseSender {
   }
 }
 
-class Repository implements IRepository {
+class Repository<T> implements IRepository<T> {
 
-  public getEntities(entityType: EntityType, filterAst: any, cb: (result: Result<any[], any>) => void) {
+  public getEntities(entityType: EntityType, expandTree: any, filter: IValue<T>,
+                     cb: (result: Result<any[], any>) => void) {
     //
   }
 

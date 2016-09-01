@@ -21,17 +21,17 @@ export interface IPostRequestResult {
   success: boolean;
 }
 
-export class GetHandler implements IGetHandler {
+export class GetHandler<T> implements IGetHandler {
 
   constructor(private schema: Schema,
-              private parser: odataParser.IGetRequestParser,
-              private repository: IRepository,
+              private parser: odataParser.IGetRequestParser<T>,
+              private repository: IRepository<T>,
               private responseSender: IGetResponseSender) {}
 
   public query(request: IHttpRequest) {
     let parsed = this.parser.parse(request);
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
-    this.repository.getEntities(type, parsed.expandTree, parsed.filterTree, result => {
+    this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
       this.responseSender.success(result.result());
     });
   }
@@ -60,11 +60,11 @@ export class GetResponseSender implements IGetResponseSender {
   }
 }
 
-export class PostHandler implements IPostHandler {
+export class PostHandler<T> implements IPostHandler {
 
   constructor(private parser: odataParser.IPostRequestParser,
               private entityInitializer: entityReader.IEntityInitializer,
-              private repository: IRepository,
+              private repository: IRepository<T>,
               private schema: Schema,
               private responseSender: IHttpResponseSender) {
   }

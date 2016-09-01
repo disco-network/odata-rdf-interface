@@ -1,180 +1,208 @@
-import mappings = require("./mappings");
-import { IScope } from "../odata/filters";
+import { IScope, ILambdaVariable, UniqueScopeIdentifier } from "../odata/filters";
 import { ScopedPropertyTree } from "../odata/filtertree";
-import propertyExpr = require("./filters/propertyexpression");
+import { IValue, IBinaryExpression,
+  IStringLiteralVisitor, IStringLiteral,
+  INumericLiteralVisitor, INumericLiteral,
+  IAndExpressionVisitor, IAndExpression,
+  IOrExpressionVisitor, IOrExpression,
+  IEqExpressionVisitor, IEqExpression,
+  IParenthesesVisitor as IParenthesesVisitorImported, IParentheses,
+  IPropertyValueVisitor, IPropertyValue,
+  IAnyExpressionVisitor, IAnyExpression } from "../odata/filterexpressions";
 
-export interface IExpressionTranslator {
-  getPropertyTree(): ScopedPropertyTree;
-  toSparqlFilterClause(): string;
+import { PropertyPath, PropertyValueTranslator,
+  IAnyExpressionTranslatorFactory } from "./filters/propertyexpression";
+import { Mapping, ScopedMapping } from "./mappings";
+
+export { PropertyPath } from "./filters/propertyexpression";
+
+export interface IExpressionTranslatorFactory<TVisitor> {
+  create(expression: IValue<TVisitor>, context?: IFilterContext): IExpressionTranslator;
 }
 
-export interface IExpressionTranslatorArgs {
-  factory: IExpressionTranslatorFactory;
-  filterContext?: IFilterContext;
+export interface IVisitor {
+  passResult(result: IExpressionTranslator);
+  getState(): IVisitorState;
+  create(expression: IValue<this>, context: IFilterContext): IExpressionTranslator;
+  create(expression: IValue<this>): IExpressionTranslator;
 }
 
-export interface IFilterContext {
-  scope: IScope;
-  mapping: IFilterMappingContext;
+export class VisitorBase implements IVisitor {
+  private lastResult: IExpressionTranslator;
+
+  constructor(private state: IVisitorState) {}
+
+  public passResult(result: IExpressionTranslator): any {
+    this.lastResult = result;
+  }
+
+  public getState(): IVisitorState {
+    return this.state;
+  }
+
+  public create(expression: IValue<this>, context = this.getState().filterContext): IExpressionTranslator {
+    return this.withFilterContext(context, () => {
+      expression.accept(this);
+      return this.lastResult;
+    });
+  }
+
+  public withFilterContext<T>(context: IFilterContext, fn: () => T): T {
+    const old = this.getState().filterContext;
+    this.getState().filterContext = context;
+    const result = fn();
+    this.getState().filterContext = old;
+    return result;
+  }
 }
 
-export interface IFilterMappingContext {
-  mapping: mappings.Mapping;
-  scopedMapping: mappings.ScopedMapping;
+export interface ITypeofVisitor<T extends IVisitor> {
+  new(state: IVisitorState): T;
 }
 
-export interface IExpressionTranslatorFactory {
-  fromRaw(raw, context?: IFilterContext): IExpressionTranslator;
+export interface IVisitorConstructible extends ITypeofVisitor<IVisitor> {}
+
+export function AssembledVisitor<T extends IVisitor>
+  (BaseClass: IVisitorConstructible, Extensions: ((From: IVisitorConstructible) => IVisitorConstructible)[]) {
+
+  let Result = BaseClass;
+  for (let Extension of Extensions) {
+    Result = Extension(Result);
+  }
+  return Result as ITypeofVisitor<T>;
 }
 
-/**
- * Selects the appropriate FilterExpression implementation from raw data.
- */
-export class FilterToTranslatorChainOfResponsibility {
-  private registeredFilterExpressions: ITranslatorFromRawHandler[] = [];
+export interface ILiteralVisitor
+  extends IStringLiteralVisitor, INumericLiteralVisitor {}
 
-  public pushHandlers(types: ITranslatorFromRawHandler[]) {
-    for (let i = 0; i < types.length; ++i) {
-      this.pushHandler(types[i]);
+export function LiteralVisitor
+  (Base: IVisitorConstructible) {
+
+  return class Visitor extends Base implements ILiteralVisitor {
+
+    constructor(state: IVisitorState) {
+      super(state);
     }
-    return this;
-  }
 
-  public pushHandler(Type: ITranslatorFromRawHandler) {
-    if (this.registeredFilterExpressions.indexOf(Type) === -1)
-      this.registeredFilterExpressions.push(Type);
-    return this;
-  }
-
-  /**
-   * Create a FilterExpression with the specified FilterContext.
-   * The FilterContext will be also used as default value for child expressions -
-   * see this.creationArgs(...).
-   */
-  public fromRaw(raw: any, filterContext): IExpressionTranslator {
-    if (this.validateFilterContext(filterContext)) {
-      return this.fromRawNoValidations(raw, filterContext);
+    public visitStringLiteral(expr: IStringLiteral<this>) {
+      this.passResult(new LiteralTranslator<string>(expr.getString(), str => "'" + str + "'"));
     }
-    else {
-      throw new Error("Can't create filter expressions with invalid filter context.");
+
+    public visitNumericLiteral(expr: INumericLiteral<this>) {
+      this.passResult(new LiteralTranslator<number>(expr.getNumber(), num => "'" + num + "'"));
     }
-  }
+  } as IVisitorConstructible;
+}
 
-  public createFactoryWithFilterContext(filterContext: IFilterContext): IExpressionTranslatorFactory {
-    return {
-      fromRaw: (raw, context = filterContext) => this.fromRaw(raw, context),
-    };
-  }
+export interface IBinaryExprVisitor
+  extends IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor {}
 
-  private fromRawNoValidations(raw, filterContext: IFilterContext): IExpressionTranslator {
-      for (let i = 0; i < this.registeredFilterExpressions.length; ++i) {
-        let SelectedFilterExpression = this.registeredFilterExpressions[i];
-        if (SelectedFilterExpression.doesApplyToRaw(raw))
-          return SelectedFilterExpression.fromRaw(raw, this.createCreationArgs(filterContext));
+export function BinaryExprVisitor
+  (Base: IVisitorConstructible) {
+
+  return class Visitor extends Base implements IBinaryExprVisitor {
+
+    constructor(state: IVisitorState) {
+      super(state);
+    }
+
+    public visitAndExpression(expr: IAndExpression<this>) {
+      this.visitBinaryExpression(expr, "&&");
+    }
+
+    public visitOrExpression(expr: IOrExpression<this>) {
+      this.visitBinaryExpression(expr, "||");
+    }
+
+    public visitEqExpression(expr: IEqExpression<this>) {
+      this.visitBinaryExpression(expr, "=");
+    }
+
+    private visitBinaryExpression(expr: IBinaryExpression<this>, sparqlOperator: string) {
+      let [lhs, rhs] = this.createBinaryOperands(expr);
+      this.passResult(new BinaryOperatorTranslator(lhs, sparqlOperator, rhs));
+    }
+
+    private createBinaryOperands(expr: IBinaryExpression<this>) {
+      return [ this.create(expr.getLhs()), this.create(expr.getRhs()) ];
+    }
+  } as IVisitorConstructible;
+}
+
+export interface IParenthesesVisitor extends IParenthesesVisitorImported {}
+
+export function ParenthesesVisitor(Base: IVisitorConstructible) {
+
+  return class extends Base implements IParenthesesVisitor {
+
+    constructor(state: IVisitorState) {
+      super(state);
+    }
+
+    public visitParentheses(expr: IParentheses<this>) {
+      this.passResult(this.create(expr.getInner()));
+    }
+  } as IVisitorConstructible;
+}
+
+export interface IPropertyVisitor extends IPropertyValueVisitor, IAnyExpressionVisitor {}
+
+export function generatePropertyVisitor(anyTranslatorFactory: IAnyExpressionTranslatorFactory) {
+  return function(Base: IVisitorConstructible): IVisitorConstructible {
+
+    return class Visitor extends Base implements IPropertyVisitor {
+
+      constructor(state: IVisitorState) {
+        super(state);
       }
-      throw new Error("filter expression is not supported: " + JSON.stringify(raw));
-  }
 
-  private createCreationArgs(filterContext: IFilterContext): IExpressionTranslatorArgs {
-    return {
-      factory: this.createFactoryWithFilterContext(filterContext),
-      filterContext: filterContext,
-    };
-  }
+      public visitPropertyValue(expr: IPropertyValue<this>) {
+        const path = new PropertyPath(expr.getPropertyPath(), this.getState().filterContext);
+        this.passResult(new PropertyValueTranslator(path, this.getState().filterContext));
+      }
 
-  private validateFilterContext(filterContext: IFilterContext) {
-    return filterContext !== undefined &&
-      this.validateFilterScopeContext(filterContext.scope) &&
-      this.validateFilterMappingContext(filterContext.mapping);
-  }
+      public visitAnyExpression(expr: IAnyExpression<this>) {
+        const path = new PropertyPath(expr.getPropertyPath(), this.getState().filterContext);
+        const variable = this.createLambdaVariable(path, expr.getLambdaExpression().variable);
+        const expression = this.create(expr.getLambdaExpression().expression,
+                                      this.createFilterContextInsideLambda(path, variable));
 
-  private validateFilterScopeContext(context: IScope) {
-    return context.entityType !== undefined &&
-      context.lambdaVariableScope !== undefined;
-  }
+        this.passResult(anyTranslatorFactory.create(
+          expr.getPropertyPath(), variable, expression, this.getState().filterContext));
+      }
 
-  private validateFilterMappingContext(context: IFilterMappingContext) {
-    return context.mapping !== undefined && context.scopedMapping !== undefined;
-  }
+      private createFilterContextInsideLambda(path: PropertyPath, variable: ILambdaVariable): IFilterContext {
+        return {
+          mapping: {
+            scope: this.getState().filterContext.mapping.scope.scope(variable.scopeId),
+          },
+          scope: {
+            entityType: this.getState().filterContext.scope.entityType,
+            lambdaVariableScope: this.getState().filterContext.scope.lambdaVariableScope.clone().add(variable),
+          },
+        };
+      }
+
+      private createLambdaVariable(path: PropertyPath, variable: string): ILambdaVariable {
+        return {
+          name: variable,
+          entityType: path.getFinalEntityType(),
+          scopeId: new UniqueScopeIdentifier("any"),
+        };
+      }
+    } as IVisitorConstructible;
+  };
 }
 
-export interface ITranslatorFromRawHandler {
-  fromRaw(raw, args: IExpressionTranslatorArgs): IExpressionTranslator;
-  doesApplyToRaw(raw): boolean;
+export interface IVisitorState {
+  filterContext: IFilterContext;
 }
-
-export let PropertyTranslatorFactory = propertyExpr.PropertyTranslatorFactory;
-
-export class LiteralTranslatorFactory<ValueType> implements ITranslatorFromRawHandler {
-  constructor(private config: ILiteralExpressionConfig<ValueType>) {}
-
-  public fromRaw(raw, args: IExpressionTranslatorArgs): IExpressionTranslator {
-    return new LiteralTranslator(this.config.parse(raw), this.config);
-  }
-
-  public doesApplyToRaw(raw) {
-    return raw.type === this.config.typeName;
-  }
-}
-
-export let StringLiteralTranslatorFactory = new LiteralTranslatorFactory<string>({
-  typeName: "string",
-  parse: raw => raw.value,
-  toSparql: value => "'" + value + "'",
-});
-
-export let NumericLiteralTranslatorFactory = new LiteralTranslatorFactory<number>({
-  typeName: "decimalValue",
-  parse: raw => {
-    let ret = parseInt(raw.value, 10);
-    if (isNaN(ret)) throw new Error("error parsing number literal " + raw.value);
-    else return ret;
-  },
-  toSparql: value => "'" + value + "'",
-});
-
-export class BinaryOperatorTranslatorFactory implements ITranslatorFromRawHandler {
-
-  constructor(private config: IBinaryOperatorExpressionConfig) {}
-
-  public doesApplyToRaw(raw) {
-    return raw.type === "operator" && raw.op === this.config.opName;
-  }
-
-  public fromRaw(raw, args: IExpressionTranslatorArgs) {
-    return new BinaryOperatorTranslator(raw, this.config, args.factory);
-  }
-}
-
-export let OrTranslatorFactory = new BinaryOperatorTranslatorFactory({ opName: "or", sparql: "||" });
-
-export let AndTranslatorFactory = new BinaryOperatorTranslatorFactory({ opName: "and", sparql: "&&" });
-
-export let EqTranslatorFactory = new BinaryOperatorTranslatorFactory({ opName: "eq", sparql: "=" });
-
-export class ParenthesesTranslatorFactory {
-
-  public static doesApplyToRaw(raw) {
-    return raw.type === "parentheses-expression";
-  }
-
-  public static fromRaw(raw, args: IExpressionTranslatorArgs) {
-    // We don't have to return a ParenthesesExpression, let's choose the direct way
-    return args.factory.fromRaw(raw.inner);
-  }
-}
-
-export interface ILiteralExpressionConfig<ValueType> {
-  typeName: string;
-  parse: (raw) => ValueType;
-  toSparql: (value: ValueType) => string;
-};
 
 export class LiteralTranslator<ValueType> implements IExpressionTranslator {
 
     private value: ValueType;
 
-    constructor(value: ValueType, private config: ILiteralExpressionConfig<ValueType>) {
+    constructor(value: ValueType, private toSparql: (v: ValueType) => string) {
       this.value = value;
     }
 
@@ -183,24 +211,14 @@ export class LiteralTranslator<ValueType> implements IExpressionTranslator {
     }
 
     public toSparqlFilterClause(): string {
-      return this.config.toSparql(this.value);
+      return this.toSparql(this.value);
     }
-}
-
-export interface IBinaryOperatorExpressionConfig {
-  opName: string;
-  sparql: string;
 }
 
 export class BinaryOperatorTranslator implements IExpressionTranslator {
 
-    private lhs: IExpressionTranslator;
-    private rhs: IExpressionTranslator;
-
-    constructor(raw, private config: IBinaryOperatorExpressionConfig,
-                expressionFactory: IExpressionTranslatorFactory) {
-      this.lhs = expressionFactory.fromRaw(raw.lhs);
-      this.rhs = expressionFactory.fromRaw(raw.rhs);
+    constructor(private lhs: IExpressionTranslator,  private sparqlOperator: string,
+                private rhs: IExpressionTranslator) {
     }
 
     public getPropertyTree(): ScopedPropertyTree {
@@ -208,13 +226,9 @@ export class BinaryOperatorTranslator implements IExpressionTranslator {
     }
 
     public toSparqlFilterClause(): string {
-      return `(${this.lhs.toSparqlFilterClause()} ${this.config.sparql} ${this.rhs.toSparqlFilterClause()})`;
+      return `(${this.lhs.toSparqlFilterClause()} ${this.sparqlOperator} ${this.rhs.toSparqlFilterClause()})`;
     }
 }
-
-/* @smell decide where to move PropertyPath */
-export let PropertyPath = propertyExpr.PropertyPath;
-export type PropertyPath = propertyExpr.PropertyPath;
 
 export class FilterExpressionHelper {
   public static getPropertyTree(subExpressions: IExpressionTranslator[]): ScopedPropertyTree {
@@ -225,4 +239,25 @@ export class FilterExpressionHelper {
     });
     return result;
   }
+}
+
+export class Factory<TVisitor> {
+  private visitor: TVisitor;
+  public process(expr: IValue<TVisitor>) {
+    expr.accept(this.visitor);
+  }
+}
+
+export interface IExpressionTranslator {
+  getPropertyTree(): ScopedPropertyTree;
+  toSparqlFilterClause(): string;
+}
+
+export interface IFilterContext {
+  scope: IScope;
+  mapping: IFilterMappingContext;
+}
+
+export interface IFilterMappingContext {
+  scope: ScopedMapping;
 }

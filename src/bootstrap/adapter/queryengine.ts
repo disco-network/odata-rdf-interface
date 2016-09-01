@@ -4,8 +4,9 @@ import { Schema } from "../../odata/schema";
 import { GetRequestParser } from "../odata/parser";
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 import { ODataRepository } from "./odatarepository";
+import { IVisitor } from "./filters";
 
-export class GetHandler extends base.GetHandler {
+export class GetHandler extends base.GetHandler<IVisitor> {
   constructor(schema: Schema, sparqlProvider: ISparqlProvider, responseSender: IHttpResponseSender) {
     super(schema, new GetRequestParser(), new ODataRepository(sparqlProvider),
       new base.GetResponseSender(responseSender));

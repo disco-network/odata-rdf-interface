@@ -41,7 +41,7 @@ export class FilterGraphPatternStrategy {
     tree.traverse(new TraversingArgs({
       patternSelector: /* @smell */ new propertyTreesImpl.GraphPatternSelector(ret),
       mapping: innerMapping,
-      scopedMapping: outerFilterContext.mapping.scopedMapping,
+      scopedMapping: outerFilterContext.mapping.scope,
     }));
 
     return ret;
@@ -50,13 +50,13 @@ export class FilterGraphPatternStrategy {
   /* @smell there are two kinds of PropertyTrees */
   public createPattern(filterContext: translators.IFilterContext,
                        propertyTree: ScopedPropertyTree): gpatterns.TreeGraphPattern {
-    let result = new gpatterns.TreeGraphPattern(filterContext.mapping.mapping.variables.getVariable());
+    let result = new gpatterns.TreeGraphPattern(filterContext.mapping.scope.unscoped().variables.getVariable());
     /* @smell pass selector as argument */
     let selector: IGraphPatternSelector = new propertyTreesImpl.GraphPatternSelector(result);
     this.createPropertyTree(filterContext.scope, propertyTree).traverse(new TraversingArgs({
       patternSelector: selector,
-      mapping: filterContext.mapping.mapping,
-      scopedMapping: filterContext.mapping.scopedMapping,
+      mapping: filterContext.mapping.scope.unscoped(),
+      scopedMapping: filterContext.mapping.scope,
     }));
 
     return result;
@@ -67,11 +67,11 @@ export class FilterGraphPatternStrategy {
     return this.createPropertyBranch(filterContext, filterContext.entityType, lowLevelPropertyTree);
   }
 
-  private createPropertyBranch(filterContext: IScope,
+  private createPropertyBranch(scopeContext: IScope,
                                unscopedEntityType: schema.EntityType,
                                lowLevelPropertyTree: ScopedPropertyTree) {
-    let entityType = filterContext.entityType;
-    let scope = filterContext.lambdaVariableScope;
+    let entityType = scopeContext.entityType;
+    let variableScope = scopeContext.lambdaVariableScope;
     let result = new Tree();
 
     for (let it = lowLevelPropertyTree.root.getIterator(); it.hasValue(); it.next()) {
@@ -83,7 +83,7 @@ export class FilterGraphPatternStrategy {
 
     for (let it = lowLevelPropertyTree.inScopeVariables.getIterator(); it.hasValue(); it.next()) {
       let inScopeVar = it.current();
-      let lambdaExpression = scope.get(inScopeVar);
+      let lambdaExpression = variableScope.get(inScopeVar);
       let args = new InScopeVariableBranchingArgs(inScopeVar, lambdaExpression.entityType);
       let branch = result.branchNode(this.branchFactory.create(args));
 

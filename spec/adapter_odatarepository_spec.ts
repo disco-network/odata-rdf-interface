@@ -38,10 +38,10 @@ describe("Adapter.ODataRepository (generated insertion tests):", () => {
   }
 });
 
-function create(sparqlProvider: sparqlProviderBase.ISparqlProvider,
-                getQueryStringBuilder: IGetQueryStringBuilder,
-                postQueryStringBuilder: postQueries.IQueryStringBuilder) {
-  return new ODataRepository(sparqlProvider, getQueryStringBuilder, postQueryStringBuilder);
+function create<T>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
+                   getQueryStringBuilder: IGetQueryStringBuilder<T>,
+                   postQueryStringBuilder: postQueries.IQueryStringBuilder) {
+  return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder, postQueryStringBuilder);
 }
 
 class PostQueryStringBuilder /*implements postQueries.IQueryStringBuilder*/ {
@@ -50,8 +50,8 @@ class PostQueryStringBuilder /*implements postQueries.IQueryStringBuilder*/ {
   }
 }
 
-class GetQueryStringBuilder implements IGetQueryStringBuilder {
-  public fromQueryAdapterModel(model: IQueryAdapterModel) {
+class GetQueryStringBuilder<T> implements IGetQueryStringBuilder<T> {
+  public fromQueryAdapterModel(model: IQueryAdapterModel<T>) {
     //
   }
 }

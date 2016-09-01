@@ -1,60 +1,69 @@
-import * as contract from "../contract";
-
-/*
- * IValueHandlers should be able to restrict the subtypes of IValues to handle.
- * This should be enforced by the type checker.
- * To ensure type checking, it seems that we need lots of recursive generic interface definitions
- * which turn out to have similarities with the so-called Curiously Recurring Template Pattern.
- * 
- * In order to use this module we first need to recursively define a helper object, for example:
- *
- *  type AllowedValues = IOrExpression<MyValueWrapper> | IStringLiteral<MyValueWrapper>;
- *  class MyValueWrapper implements IWrapValue<MyValueWrapper> {
- *    constructor(private value: AllowedValues) {}
- *    public getValue(): AllowedValues {
- *      return this.value;
- *    }
- *  }
- *
- * Then the type of our ValueHandler will look like this.
- *
- *  type MyValueHandler = IValueHandler<MyValueWrapper, [return type]>;
- *
- * Or we could do this:
- *
- *  class MyValueHandler implements IValueHandler<MyValueWrapper, boolean> {
- *    /** return true if all values are of type IOrExpression * /
- *    handle(wrapper: MyValueWrapper): boolean {
- *      let value = wrapper.getValue();
- *      if (IOrExpression.is(value)) {
- *        // Due to TypeScript type guard magic, we can access IOrExpression-specific members.
- *        return this.handle(this.getLhs()) && this.handle(this.getRhs());
- *      }
- *      else return false;
- *    }
- *  }
- */
-
-export interface IValueHandler<TWrapValue extends IWrapValue<TWrapValue>, Return> {
-  handle(value: TWrapValue): Return;
+export interface IValue<TVisitor> {
+  accept(visitor: TVisitor): void;
 }
 
-export interface IValue<TWrapper extends IWrapValue<TWrapper>> {
+export interface IStringLiteralVisitor {
+  visitStringLiteral(expr: IStringLiteral<this>);
 }
 
-export let IStringLiteral
-  = contract.defineGeneric<(<T extends IWrapValue<T>>(x: IValue<T>) => x is IStringLiteral<T>)>();
-export interface IStringLiteral<TWrapValue extends IWrapValue<TWrapValue>> extends IValue<TWrapValue> {
-  getValue(): string;
+/** @todo is it necessary to do this generically? BinaryExpression is a different case */
+export interface IStringLiteral<TVisitor extends IStringLiteralVisitor> extends IValue<TVisitor> {
+  getString(): string;
 }
 
-export let IOrExpression
-  = contract.defineGeneric<(<T extends IWrapValue<T>>(x: IValue<T>) => x is IOrExpression<T>)>();
-export interface IOrExpression<TWrapValue extends IWrapValue<TWrapValue>> extends IValue<TWrapValue> {
-  getLhs(): TWrapValue;
-  getRhs(): TWrapValue;
+export interface INumericLiteralVisitor {
+  visitNumericLiteral(expr: INumericLiteral<this>);
+}
+export interface INumericLiteral<TVisitor extends INumericLiteralVisitor> extends IValue<TVisitor> {
+  getNumber(): number;
 }
 
-export interface IWrapValue<Self extends IWrapValue<Self>> {
-  getValue(): IValue<IWrapValue<Self>>;
+export interface IOrExpressionVisitor {
+  visitOrExpression(expr: IOrExpression<this>);
+}
+export interface IOrExpression<TVisitor extends IOrExpressionVisitor> extends IBinaryExpression<TVisitor> {
+}
+
+export interface IAndExpressionVisitor {
+  visitAndExpression(expr: IAndExpression<this>);
+}
+export interface IAndExpression<TVisitor extends IAndExpressionVisitor> extends IBinaryExpression<TVisitor> {
+}
+
+export interface IEqExpressionVisitor {
+  visitEqExpression(expr: IEqExpression<this>);
+}
+export interface IEqExpression<TVisitor extends IEqExpressionVisitor> extends IBinaryExpression<TVisitor> {
+}
+
+export interface IBinaryExpression<TVisitor> extends IValue<TVisitor> {
+  getLhs(): IValue<TVisitor>;
+  getRhs(): IValue<TVisitor>;
+}
+
+export interface IParenthesesVisitor {
+  visitParentheses(expr: IParentheses<this>);
+}
+export interface IParentheses<TVisitor extends IParenthesesVisitor> extends IValue<TVisitor> {
+  getInner(): IValue<TVisitor>;
+}
+
+export interface IPropertyValueVisitor {
+  visitPropertyValue(expr: IPropertyValue<this>);
+}
+export interface IPropertyValue<TVisitor extends IPropertyValueVisitor> extends IValue<TVisitor> {
+  getPropertyPath(): string[];
+}
+
+export interface IAnyExpressionVisitor {
+  visitAnyExpression(expr: IAnyExpression<this>);
+}
+export interface IAnyExpression<TVisitor extends IAnyExpressionVisitor> extends IValue<TVisitor> {
+  getPropertyPath(): string[];
+  getLambdaExpression(): ILambdaExpression<TVisitor>;
+}
+
+export interface ILambdaExpression<TVisitor> {
+  variable: string;
+  expression: IValue<TVisitor>;
 }

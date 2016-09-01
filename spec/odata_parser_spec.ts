@@ -1,8 +1,9 @@
 import { assert } from "chai";
+import { stub } from "sinon";
 
 import {
-  IPostRequestParser, PostRequestParser, IGetRequestParser, GetRequestParser,
-  IODataParser, ODataParser,
+  IPostRequestParser, PostRequestParser, GetRequestParser,
+  IODataParser, ODataParser, IFilterVisitor
 } from "../src/odata/parser";
 import queryTestCases = require("./helpers/querytestcases");
 
@@ -103,24 +104,21 @@ describe("GetRequestParser:", () => {
     assert.strictEqual(parsed.entitySetName, "Posts");
   });
 
-  it("should also return the filter tree", () => {
-    let parser = initGetRequestParser();
+  it("should also return the filter tree", done => {
+    const parser = initGetRequestParser();
 
-    let parsed = parser.parse({ relativeUrl: "/Posts?$filter=a/b/c eq 1", body: "" });
+    const eqVisitor: IFilterVisitor = new Visitor();
+    eqVisitor.visitEqExpression = expr => {
+      expr.getLhs().accept(propertyVisitor);
+    };
+    const propertyVisitor: IFilterVisitor = new Visitor();
+    propertyVisitor.visitPropertyValue = expr => {
+      assert.deepEqual(expr.getPropertyPath(), ["a", "b", "c"]);
+      done();
+    };
 
-    assert.deepEqual(parsed.filterTree, {
-      type: "operator",
-      op: "eq",
-      lhs: {
-        type: "member-expression",
-        operation: "property-value",
-        path: ["a", "b", "c"],
-      },
-      rhs: {
-        type: "decimalValue",
-        value: "1",
-      },
-    });
+    const parsed = parser.parse({ relativeUrl: "/Posts?$filter=a/b/c eq 1", body: "" });
+    parsed.filterExpression.accept(eqVisitor);
   });
 
   it("should also return the expand tree", () => {
@@ -136,10 +134,21 @@ function initPostRequestParser(): IPostRequestParser {
   return new PostRequestParser();
 }
 
-function initGetRequestParser(): IGetRequestParser {
+function initGetRequestParser() {
   return new GetRequestParser();
 }
 
 function initODataParser(): IODataParser {
   return new ODataParser();
+}
+
+class Visitor implements IFilterVisitor {
+  public visitStringLiteral() {}
+  public visitNumericLiteral() {}
+  public visitAndExpression() {}
+  public visitOrExpression() {}
+  public visitEqExpression() {}
+  public visitParentheses() {}
+  public visitPropertyValue() {}
+  public visitAnyExpression() {}
 }
