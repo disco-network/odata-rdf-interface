@@ -63,8 +63,8 @@ gulp.task("build-package.json", function () {
     "version": appPackageJson.version,
     "author": appPackageJson.author,
     "repository": appPackageJson.repository,
-    "main": "server.js",      // TODO: generate this from app package.json
-    "typings": "server.d.ts", // TODO: generate this from app package.json
+    "main": undefined,      // TODO: generate this from app package.json
+    "typings": undefined, // TODO: generate this from app package.json
     "dependencies": appPackageJson.dependencies,
     "keywords": appPackageJson.keywords,
     "license": appPackageJson.license,
@@ -93,9 +93,17 @@ gulp.task("build", function (cb) {
 });
 
 gulp.task("build-spec", function (cb) {
+  return runSequence(
+    "clean-all",
+    "build-spec-js",
+    "copy",
+    cb
+  );
+});
+
+gulp.task("build-spec-js", function (cb) {
   return gulp.src([
     "./**/**.ts",
-    "!./src/**",
     "!./lib/**",
     "!./node_modules/**"
   ])
