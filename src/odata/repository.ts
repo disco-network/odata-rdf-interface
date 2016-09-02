@@ -1,5 +1,5 @@
 import schema = require("./schema");
-import { IValue } from "./filterexpressions";
+import { IValue } from "./filters/expressions";
 import results = require("../result");
 
 export interface IRepository<TVisitor> {

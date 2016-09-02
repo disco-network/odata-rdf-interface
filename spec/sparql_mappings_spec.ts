@@ -1,6 +1,6 @@
 import { assert } from "chai";
 
-import { UniqueScopeIdentifier } from "../src/odata/filters";
+import { UniqueScopeIdentifier } from "../src/odata/filters/filters";
 import { Schema } from "../src/odata/schema";
 
 import helper = require("./helpers/sparql_mappings");

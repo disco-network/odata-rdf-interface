@@ -8,7 +8,7 @@ import {
   IStringLiteralVisitor, INumericLiteralVisitor, IParenthesesVisitor, IPropertyValueVisitor, IAnyExpressionVisitor,
   IStringLiteral, INumericLiteral, IEqExpression, IAndExpression, IOrExpression, IParentheses,
   IPropertyValue, IAnyExpression, ILambdaExpression,
-} from "./filterexpressions";
+} from "./filters/expressions";
 
 declare let __dirname;
 

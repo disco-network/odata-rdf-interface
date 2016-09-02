@@ -1,5 +1,5 @@
 import schema = require("../odata/schema");
-import { UniqueScopeIdentifier } from "../odata/filters";
+import { UniqueScopeIdentifier } from "../odata/filters/filters";
 
 declare class Map<Key, Value> {
   public set(key: Key, value: Value);

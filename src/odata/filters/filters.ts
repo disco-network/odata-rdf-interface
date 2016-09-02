@@ -1,4 +1,4 @@
-import { EntityType } from "./schema";
+import { EntityType } from "../schema";
 
 export interface IScope {
   entityType: EntityType;

@@ -5,7 +5,7 @@ import { GetHandler, PostHandler, IGetResponseSender, GetResponseSender } from "
 import { IPostRequestParser, IGetRequestParser, IFilterVisitor } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
 import { IRepository } from "../src/odata/repository";
-import { IValue } from "../src/odata/filterexpressions";
+import { IValue } from "../src/odata/filters/expressions";
 import { Result, AnyResult } from "../src/result";
 import { Schema, EntityType } from "../src/odata/schema";
 import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";

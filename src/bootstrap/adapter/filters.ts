@@ -1,7 +1,7 @@
 import { getFilterGraphPatternStrategy } from "./propertytree";
 
-import { IValue } from "../../odata/filterexpressions";
-import { ILambdaVariable } from "../../odata/filters";
+import { IValue } from "../../odata/filters/expressions";
+import { ILambdaVariable } from "../../odata/filters/filters";
 
 import {
   IVisitor, VisitorBase, AssembledVisitor, ITypeofVisitor, IVisitorState,

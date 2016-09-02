@@ -1,7 +1,7 @@
 import base = require("../odata/repository");
 import { EntityType, Property } from "../odata/schema";
-import { LambdaVariableScope } from "../odata/filters";
-import { IValue } from "../odata/filterexpressions";
+import { LambdaVariableScope } from "../odata/filters/filters";
+import { IValue } from "../odata/filters/expressions";
 import {
   IQueryModel as IODataQueryModel, IQueryContext as IODataQueryContext, JsonResultBuilder,
 } from "../odata/queries";

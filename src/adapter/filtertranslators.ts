@@ -1,5 +1,5 @@
-import { IScope, ILambdaVariable, UniqueScopeIdentifier } from "../odata/filters";
-import { ScopedPropertyTree } from "../odata/filtertree";
+import { IScope, ILambdaVariable, UniqueScopeIdentifier } from "../odata/filters/filters";
+import { ScopedPropertyTree } from "../odata/filters/propertytree";
 import { IValue, IBinaryExpression,
   IStringLiteralVisitor, IStringLiteral,
   INumericLiteralVisitor, INumericLiteral,
@@ -8,11 +8,11 @@ import { IValue, IBinaryExpression,
   IEqExpressionVisitor, IEqExpression,
   IParenthesesVisitor as IParenthesesVisitorImported, IParentheses,
   IPropertyValueVisitor, IPropertyValue,
-  IAnyExpressionVisitor, IAnyExpression } from "../odata/filterexpressions";
+  IAnyExpressionVisitor, IAnyExpression } from "../odata/filters/expressions";
 
 import { PropertyPath, PropertyValueTranslator,
   IAnyExpressionTranslatorFactory } from "./filters/propertyexpression";
-import { Mapping, ScopedMapping } from "./mappings";
+import { ScopedMapping } from "./mappings";
 
 export { PropertyPath } from "./filters/propertyexpression";
 

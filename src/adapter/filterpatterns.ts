@@ -1,6 +1,6 @@
 import schema = require("../odata/schema");
-import { ILambdaVariable, IScope, LambdaVariableScope } from "../odata/filters";
-import { ScopedPropertyTree, FlatPropertyTree } from "../odata/filtertree";
+import { ILambdaVariable, IScope, LambdaVariableScope } from "../odata/filters/filters";
+import { ScopedPropertyTree, FlatPropertyTree } from "../odata/filters/propertytree";
 import gpatterns = require("../sparql/graphpatterns");
 import translators = require("./filtertranslators");
 import { IBranchFactory, Tree } from "./propertytree/propertytree";

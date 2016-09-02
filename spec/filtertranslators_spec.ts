@@ -3,7 +3,7 @@ import { assert } from "chai";
 import {
   IStringLiteral, INumericLiteral,
   IEqExpression, IAndExpression, IOrExpression, IAnyExpression,
-} from "../src/odata/filterexpressions";
+} from "../src/odata/filters/expressions";
 import {
   IVisitorState, IVisitor, VisitorBase, AssembledVisitor,
   PropertyPath,
@@ -17,8 +17,8 @@ import {
   SparqlVariableGenerator, StructuredSparqlVariableMapping,
   Mapping, PropertyMapping, ScopedMapping,
 } from "../src/adapter/mappings";
-import { FlatPropertyTree, ScopedPropertyTree } from "../src/odata/filtertree";
-import { ILambdaVariable, LambdaVariableScope, UniqueScopeIdentifier } from "../src/odata/filters";
+import { FlatPropertyTree, ScopedPropertyTree } from "../src/odata/filters/propertytree";
+import { ILambdaVariable, LambdaVariableScope, UniqueScopeIdentifier } from "../src/odata/filters/filters";
 import { Schema } from "../src/odata/schema";
 const schema = new Schema();
 

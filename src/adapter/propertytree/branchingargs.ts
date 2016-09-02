@@ -1,5 +1,5 @@
 import { Property, EntityKind, EntityType } from "../../odata/schema";
-import { ILambdaVariable } from "../../odata/filters";
+import { ILambdaVariable } from "../../odata/filters/filters";
 
 export interface IBranchingArgs {
   type(): string;
