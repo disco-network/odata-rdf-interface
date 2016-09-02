@@ -1,32 +1,32 @@
 import base = require("./propertytree/propertytree");
 import {
-  IBranchingArgs, IMirrorPropertyBranchingArgs, IPropertyBranchingArgs,
+  IBranchingArgs, IForeignKeyPropertyBranchingArgs, IPropertyBranchingArgs,
   BranchingArgsGuard } from "./propertytree/branchingargs";
 import {
   ITraversingArgs, IGraphPatternSelector,
   IGraphPatternArgs, IMappingArgs,
 } from "./propertytree/traversingargs";
 
-export class SingleValuedMirrorBranchFactory implements base.ITreeFactoryCandidate {
+export class SingleValuedForeignKeyBranchFactory implements base.ITreeFactoryCandidate {
 
-  constructor(private complexNonMirrorBranchFactory: base.ITreeFactoryCandidate) {
+  constructor(private complexDirectBranchFactory: base.ITreeFactoryCandidate) {
   }
 
   public doesApply(args: IBranchingArgs) {
-    return BranchingArgsGuard.isMirrorProperty(args)
-      && this.complexNonMirrorBranchFactory.doesApply(args.mirroredProperty());
+    return BranchingArgsGuard.isForeignKeyProperty(args)
+      && this.complexDirectBranchFactory.doesApply(args.foreignProperty());
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertMirrorProperty(args))
-      return new SingleValuedMirrorBranch(args, this.complexNonMirrorBranchFactory);
+    if (BranchingArgsGuard.assertForeignKeyProperty(args))
+      return new SingleValuedForeignKeyBranch(args, this.complexDirectBranchFactory);
   }
 }
 
-export class SingleValuedMirrorBranch implements base.INode {
+export class SingleValuedForeignKeyBranch implements base.INode {
 
-  constructor(private branchingArgs: IMirrorPropertyBranchingArgs,
-              private complexNonMirrorBranchFactory: base.IBranchFactory<IPropertyBranchingArgs>) {
+  constructor(private branchingArgs: IForeignKeyPropertyBranchingArgs,
+              private complexDirectBranchFactory: base.IBranchFactory<IPropertyBranchingArgs>) {
   }
 
   public hash() {
@@ -34,8 +34,8 @@ export class SingleValuedMirrorBranch implements base.INode {
   }
 
   public apply(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
-    let branch = this.complexNonMirrorBranchFactory.create(this.branchingArgs.mirroredProperty());
-    let branchMapping = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.mirroredProperty().name());
+    let branch = this.complexDirectBranchFactory.create(this.branchingArgs.foreignProperty());
+    let branchMapping = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.foreignProperty().name());
     let propertyName = branchMapping.properties.getNamespacedUriOfProperty("Id");
     let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name());
     let idBranch = new IdBranch(propertyName, variableName);

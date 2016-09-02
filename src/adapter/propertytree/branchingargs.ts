@@ -6,10 +6,10 @@ export interface IBranchingArgs {
   hash(): string;
 }
 
-export interface IMirrorPropertyBranchingArgs extends IBranchingArgs {
-  type(): "mirror";
+export interface IForeignKeyPropertyBranchingArgs extends IBranchingArgs {
+  type(): "foreignKey";
   name(): string;
-  mirroredProperty(): IPropertyBranchingArgs;
+  foreignProperty(): IPropertyBranchingArgs;
 }
 
 export interface IPropertyBranchingArgs extends IBranchingArgs {
@@ -34,23 +34,23 @@ export interface IAnyBranchingArgs extends IBranchingArgs {
   inverse(): boolean;
 }
 
-export class MirrorPropertyBranchingArgs implements IMirrorPropertyBranchingArgs {
+export class ForeignKeyPropertyBranchingArgs implements IForeignKeyPropertyBranchingArgs {
 
-  constructor(private nameArg: string, private mirroredPropertyArgs: IPropertyBranchingArgs) {
+  constructor(private nameArg: string, private foreignPropertyArgs: IPropertyBranchingArgs) {
   }
 
   public hash() {
     return JSON.stringify({ type: this.type(), name: this.name() });
   }
 
-  public type(): "mirror" { return "mirror"; }
+  public type(): "foreignKey" { return "foreignKey"; }
 
   public name() {
     return this.nameArg;
   }
 
-  public mirroredProperty() {
-    return this.mirroredPropertyArgs;
+  public foreignProperty() {
+    return this.foreignPropertyArgs;
   }
 }
 
@@ -129,16 +129,16 @@ export class AnyBranchingArgs implements IAnyBranchingArgs {
 
 export class PropertyBranchingArgsFactory {
 
-  public fromProperty(property: Property): IPropertyBranchingArgs | IMirrorPropertyBranchingArgs {
-    if (property.mirroredFromProperty()) {
-      return new MirrorPropertyBranchingArgs(property.getName(), this.nonMirroring(property.mirroredFromProperty()));
+  public fromProperty(property: Property): IPropertyBranchingArgs | IForeignKeyPropertyBranchingArgs {
+    if (property.foreignProperty()) {
+      return new ForeignKeyPropertyBranchingArgs(property.getName(), this.directProperty(property.foreignProperty()));
     }
     else {
-      return this.nonMirroring(property);
+      return this.directProperty(property);
     }
   }
 
-  private nonMirroring(property: Property): IPropertyBranchingArgs {
+  private directProperty(property: Property): IPropertyBranchingArgs {
     return new PropertyBranchingArgs(property);
   }
 }
@@ -148,8 +148,8 @@ export class BranchingArgsGuard {
     return args.type() === "property";
   }
 
-  public static isMirrorProperty(args: IBranchingArgs): args is IMirrorPropertyBranchingArgs {
-    return args.type() === "mirror";
+  public static isForeignKeyProperty(args: IBranchingArgs): args is IForeignKeyPropertyBranchingArgs {
+    return args.type() === "foreignKey";
   }
 
   public static isInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {
@@ -165,9 +165,9 @@ export class BranchingArgsGuard {
     else throw new Error("PropertyBranchingArgs expected");
   }
 
-  public static assertMirrorProperty(args: IBranchingArgs): args is IMirrorPropertyBranchingArgs {
-    if (this.isMirrorProperty(args)) return true;
-    else throw new Error("MirrorPropertyBranchingArgs expected");
+  public static assertForeignKeyProperty(args: IBranchingArgs): args is IForeignKeyPropertyBranchingArgs {
+    if (this.isForeignKeyProperty(args)) return true;
+    else throw new Error("ForeignKeyPropertyBranchingArgs expected");
   }
 
   public static assertInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {

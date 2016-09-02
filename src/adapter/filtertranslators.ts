@@ -167,6 +167,7 @@ export function generatePropertyVisitor(anyTranslatorFactory: IAnyExpressionTran
         const expression = this.create(expr.getLambdaExpression().expression,
                                       this.createFilterContextInsideLambda(path, variable));
 
+        /* @todo move scoping logic to /odata/ into ScopeAwareWalker class */
         this.passResult(anyTranslatorFactory.create(
           expr.getPropertyPath(), variable, expression, this.getState().filterContext));
       }

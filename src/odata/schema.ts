@@ -5,13 +5,13 @@ let raw = {
     Post: {
       properties: {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
-        ContentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Content" },
-        ParentId: { type: "Edm.Int64", mirroredFromNavigationProperty: "Parent" },
+        ContentId: { type: "Edm.Int64", foreignProperty: "Content" },
+        ParentId: { type: "Edm.Int64", foreignProperty: "Parent" },
         Parent: { type: "Post", optional: true, quantity: "one-to-many",
-          mirroredIndexProperty: "ParentId", foreignSet: "Posts", foreignProperty: "Children",
+          foreignSet: "Posts", inverseProperty: "Children",
           rdfName: "parent", nullable: true },
-        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", foreignProperty: "Parent" },
-        Content: { type: "Content", quantity: "one-to-many", mirroredIndexProperty: "ContentId", rdfName: "content" },
+        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", inverseProperty: "Parent" },
+        Content: { type: "Content", quantity: "one-to-many", rdfName: "content" },
       },
       rdfName: "Post",
     },
@@ -147,11 +147,11 @@ export class Property extends RdfBasedSchemaResource {
   }
 
   public isOptional(): boolean {
-    if (this.mirroredFromProperty() === undefined) {
+    if (this.foreignProperty() === undefined) {
       return this.getRaw().optional === true;
     }
     else {
-      return this.mirroredFromProperty().isOptional();
+      return this.foreignProperty().isOptional();
     }
   }
 
@@ -165,13 +165,13 @@ export class Property extends RdfBasedSchemaResource {
 
   public getInverseProperty(): Property {
     let setName = this.getRaw().foreignSet;
-    let propName = this.getRaw().foreignProperty;
+    let propName = this.getRaw().inverseProperty;
     return this.completeSchema.getEntitySet(setName).getEntityType().getProperty(propName);
   }
 
-  public mirroredFromProperty(): Property {
-    let name = this.getRaw().mirroredFromNavigationProperty;
-    return name && new Property(this.completeSchema, this.parentType, this.getRaw().mirroredFromNavigationProperty);
+  public foreignProperty(): Property {
+    let name = this.getRaw().foreignProperty;
+    return name && new Property(this.completeSchema, this.parentType, this.getRaw().foreignProperty);
   }
 }
 

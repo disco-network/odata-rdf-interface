@@ -1,6 +1,6 @@
 import propertyTrees = require("../../adapter/propertytree/propertytree");
 import propertyTreesImpl = require("../../adapter/propertytree/propertytree_impl");
-import propertyMirroring = require("../../adapter/propertymirroring");
+import foreignKeyProperties = require("../../adapter/foreignkeyproperties");
 import expandTreePatterns = require("../../adapter/expandtree");
 import filterPatterns = require("../../adapter/filterpatterns");
 import { PropertyBranchingArgsFactory, IBranchingArgs } from "../../adapter/propertytree/branchingargs";
@@ -34,6 +34,6 @@ function getBranchFactoryForExpanding(): propertyTrees.IBranchFactory<IBranching
     .registerFactoryCandidates(
       new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
       new propertyTreesImpl.ComplexBranchFactory(),
-      new propertyMirroring.SingleValuedMirrorBranchFactory(new propertyTreesImpl.ComplexBranchFactory())
+      new foreignKeyProperties.SingleValuedForeignKeyBranchFactory(new propertyTreesImpl.ComplexBranchFactory())
     );
 }
