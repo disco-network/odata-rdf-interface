@@ -5,8 +5,10 @@ import {
 } from "./traversingargs";
 import {
   IBranchingArgs, BranchingArgsGuard,
-  IPropertyBranchingArgs, IInScopeVariableBranchingArgs, IAnyBranchingArgs,
+  IPropertyBranchingArgs, PropertyBranchingArgs, IInScopeVariableBranchingArgs, IAnyBranchingArgs,
 } from "./branchingargs";
+import { ForeignKeyPropertyResolver } from "../../odata/foreignkeyproperties";
+import { Property } from "../../odata/schema";
 
 /**
  * Selects the graph patterns to branch on for those properties which are shown (expanded) in the query result.
@@ -114,6 +116,28 @@ export class ElementarySingleValuedBranchFactory implements base.ITreeFactoryCan
 }
 
 export class ElementarySingleValuedBranch implements base.INode {
+  private resolver = new ForeignKeyPropertyResolver();
+
+  constructor(private branchingArgs: IPropertyBranchingArgs) {}
+
+  public apply(args: IGraphPatternArgs) {
+    const path: Property[] = this.resolver.resolveGetter(this.branchingArgs.schema());
+    const nodes: base.INode[] = path.map(prop => new DirectElementarySingleValuedBranch(
+      new PropertyBranchingArgs(prop)));
+
+    let currentArgs = args.clone();
+    for (let node of nodes) {
+      currentArgs = node.apply(currentArgs);
+    }
+    return currentArgs;
+  }
+
+  public hash() {
+    return this.branchingArgs.hash();
+  }
+}
+
+export class DirectElementarySingleValuedBranch implements base.INode {
 
   constructor(private branchingArgs: IPropertyBranchingArgs) {}
 

@@ -26,7 +26,7 @@ describe("the graph pattern string builder", function() {
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
-      "{ ?root disco:id \"1\" . " +
+      "{ ?root disco:id \"1\" " +
       "{ ?root disco:parent ?parent } UNION { ?child disco:parent ?root } }"
     );
   });

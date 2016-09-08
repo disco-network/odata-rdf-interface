@@ -75,14 +75,22 @@ export class GraphPatternStringBuilder implements IGraphPatternStringBuilder {
       .map(p => this.buildGraphPatternString(p))
       .filter(s => s !== "{  }")
       .join(" UNION ");
-    let parts = [];
 
-    if (triplesString !== "") parts.push(triplesString);
-    if (subPatternsString !== "") parts.push(subPatternsString);
-    if (optionalPatternsString !== "") parts.push(optionalPatternsString);
-    if (conjunctivePatternsString !== "") parts.push(conjunctivePatternsString);
-    if (unionsString !== "") parts.push(unionsString);
+    let result = "";
+    function append(str: string) {
+      if (result !== "") result += " ";
+      result += str;
+    }
+    function appendWithPeriod(str: string) {
+      if (result !== "") append(".");
+      append(str);
+    }
+    if (triplesString !== "") appendWithPeriod(triplesString);
+    if (subPatternsString !== "") appendWithPeriod(subPatternsString);
+    if (optionalPatternsString !== "") appendWithPeriod(optionalPatternsString);
+    if (conjunctivePatternsString !== "") append(conjunctivePatternsString);
+    if (unionsString !== "") append(unionsString);
 
-    return parts.join(" . ");
+    return result;
   }
 }

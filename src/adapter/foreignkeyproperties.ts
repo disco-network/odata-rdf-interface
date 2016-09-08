@@ -1,11 +1,11 @@
 import base = require("./propertytree/propertytree");
 import {
-  IBranchingArgs, IForeignKeyPropertyBranchingArgs, IPropertyBranchingArgs,
+  IBranchingArgs, IForeignKeyPropertyBranchingArgs, IPropertyBranchingArgs, PropertyBranchingArgs,
   BranchingArgsGuard } from "./propertytree/branchingargs";
 import {
-  ITraversingArgs, IGraphPatternSelector,
-  IGraphPatternArgs, IMappingArgs,
+  ITraversingArgs, IGraphPatternSelector, IGraphPatternArgs,
 } from "./propertytree/traversingargs";
+import { ForeignKeyPropertyResolver } from "../odata/foreignkeyproperties";
 
 export class SingleValuedForeignKeyBranchFactory implements base.ITreeFactoryCandidate {
 
@@ -24,6 +24,7 @@ export class SingleValuedForeignKeyBranchFactory implements base.ITreeFactoryCan
 }
 
 export class SingleValuedForeignKeyBranch implements base.INode {
+  private resolver = new ForeignKeyPropertyResolver();
 
   constructor(private branchingArgs: IForeignKeyPropertyBranchingArgs,
               private complexDirectBranchFactory: base.IBranchFactory<IPropertyBranchingArgs>) {
@@ -33,12 +34,11 @@ export class SingleValuedForeignKeyBranch implements base.INode {
     return this.branchingArgs.hash();
   }
 
-  public apply(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
-    let branch = this.complexDirectBranchFactory.create(this.branchingArgs.foreignProperty());
-    let branchMapping = args.mapping.getSubMappingByComplexProperty(this.branchingArgs.foreignProperty().name());
-    let propertyName = branchMapping.properties.getNamespacedUriOfProperty("Id");
-    let variableName = args.mapping.variables.getElementaryPropertyVariable(this.branchingArgs.name());
-    let idBranch = new IdBranch(propertyName, variableName);
+  public apply(args: IGraphPatternArgs): ITraversingArgs {
+    this.resolver.resolveGetter(this.branchingArgs.)
+    const branch = this.complexDirectBranchFactory.create(this.branchingArgs.foreignProperty());
+    const idProperty = this.branchingArgs.foreignProperty().schema().getEntityType().getProperty("Id");
+    const idBranch = this.complexDirectBranchFactory.create(new PropertyBranchingArgs(idProperty));
 
     return idBranch.apply(branch.apply(args.clone()));
   }

@@ -9,11 +9,12 @@ export interface IBranchingArgs {
 export interface IForeignKeyPropertyBranchingArgs extends IBranchingArgs {
   type(): "foreignKey";
   name(): string;
-  foreignProperty(): IPropertyBranchingArgs;
+  property(): Property;
 }
 
 export interface IPropertyBranchingArgs extends IBranchingArgs {
   type(): "property";
+  schema(): Property;
   name(): string;
   inverse(): boolean;
   complex(): boolean;
@@ -36,7 +37,7 @@ export interface IAnyBranchingArgs extends IBranchingArgs {
 
 export class ForeignKeyPropertyBranchingArgs implements IForeignKeyPropertyBranchingArgs {
 
-  constructor(private nameArg: string, private foreignPropertyArgs: IPropertyBranchingArgs) {
+  constructor(private nameArg: string, private schema: Property) {
   }
 
   public hash() {
@@ -49,8 +50,8 @@ export class ForeignKeyPropertyBranchingArgs implements IForeignKeyPropertyBranc
     return this.nameArg;
   }
 
-  public foreignProperty() {
-    return this.foreignPropertyArgs;
+  public property() {
+    return this.schema;
   }
 }
 
@@ -64,6 +65,10 @@ export class PropertyBranchingArgs implements IPropertyBranchingArgs {
   }
 
   public type(): "property" { return "property"; }
+
+  public schema(): Property {
+    return this.property;
+  }
 
   public name() {
     return this.property.getName();
@@ -131,7 +136,7 @@ export class PropertyBranchingArgsFactory {
 
   public fromProperty(property: Property): IPropertyBranchingArgs | IForeignKeyPropertyBranchingArgs {
     if (property.foreignProperty()) {
-      return new ForeignKeyPropertyBranchingArgs(property.getName(), this.directProperty(property.foreignProperty()));
+      return new ForeignKeyPropertyBranchingArgs(property.getName(), property);
     }
     else {
       return this.directProperty(property);

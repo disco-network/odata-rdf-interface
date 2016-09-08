@@ -59,6 +59,29 @@ describe("rdfstore should execute", function() {
     assert.strictEqual(answer.result.length, 1);
   });
 
+  createSpec(`PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX disco: <http://disco-network.org/resource/>
+SELECT * WHERE {
+  {
+    ?x0 disco:id ?x1
+    {
+      ?x0 disco:content ?x2 . 
+      ?x0 disco:content ?x2
+      { 
+        ?x2 disco:id ?x3 } .
+      ?x2 disco:id ?x6
+      { 
+        ?x2 disco:title ?x7 } . 
+      OPTIONAL {
+        ?x0 disco:parent ?x4 . 
+        {
+          ?x4 disco:id ?x5
+        }
+      }
+    }
+  }
+}`, answer => assert.strictEqual(answer.error, null));
+
   function createSpec(query: string, cb: (results: any) => void) {
     let prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
     prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";
