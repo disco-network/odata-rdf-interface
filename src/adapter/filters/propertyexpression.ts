@@ -4,6 +4,7 @@ import filterTranslators = require("../filtertranslators");
 import qsBuilder = require("../../bootstrap/sparql/querystringbuilder"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
+import { ForeignKeyPropertyResolver } from "../../odata/foreignkeyproperties";
 import mappings = require("../mappings");
 
 export class PropertyValueTranslator implements filterTranslators.IExpressionTranslator {
@@ -90,8 +91,9 @@ export class PropertyPath {
     }
 
     let property = entityType.getProperty(properties[properties.length - 1]);
-    if (property.getEntityKind() === schema.EntityKind.Elementary)
+    if (property.getEntityKind() === schema.EntityKind.Elementary) {
       return mapping.getElementaryPropertyVariable(property.getName());
+    }
     else
       throw new Error("The last property has to be elementary.");
   }
@@ -135,8 +137,19 @@ export class PropertyPath {
   }
 
   public getPropertyNamesWithoutLambdaPrefix() {
-    return this.pathStartsWithLambdaPrefix() ?
+    const resolver = new ForeignKeyPropertyResolver();
+    const namesWithoutLambdaPrefix = this.pathStartsWithLambdaPrefix() ?
       this.propertyNames.slice(1) : this.propertyNames;
+    const transformedPath: schema.Property[] = [];
+
+    let entityType = this.getEntityTypeAfterLambdaPrefix();
+    for (const segment of namesWithoutLambdaPrefix) {
+      let property = entityType.getProperty(segment);
+      console.log("124 " + entityType);
+      entityType = property.getEntityType();
+      transformedPath.push.apply(transformedPath, resolver.resolveGetter(property));
+    }
+    return transformedPath.map(p => p.getName());
   }
 
   public getFilterContextAfterLambdaPrefix(): filterTranslators.IFilterContext {

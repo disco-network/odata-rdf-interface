@@ -75,6 +75,7 @@ export class ExpandTreeGraphPatternStrategy {
     let idProperty = entityType.getProperty("Id");
     tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));
 
+    /* @construction !!! use PropertyPath */
     let directPropertyTree = this.directPropertiesStrategy.create(entityType, "no-id-property");
     directPropertyTree.copyTo(tree);
 

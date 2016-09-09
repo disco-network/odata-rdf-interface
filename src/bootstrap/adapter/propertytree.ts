@@ -1,6 +1,5 @@
 import propertyTrees = require("../../adapter/propertytree/propertytree");
 import propertyTreesImpl = require("../../adapter/propertytree/propertytree_impl");
-import foreignKeyProperties = require("../../adapter/foreignkeyproperties");
 import expandTreePatterns = require("../../adapter/expandtree");
 import filterPatterns = require("../../adapter/filterpatterns");
 import { PropertyBranchingArgsFactory, IBranchingArgs } from "../../adapter/propertytree/branchingargs";
@@ -30,10 +29,10 @@ function getBranchingArgsFactory(): PropertyBranchingArgsFactory {
 }
 
 function getBranchFactoryForExpanding(): propertyTrees.IBranchFactory<IBranchingArgs> {
-  return new propertyTrees.TreeDependencyInjector()
-    .registerFactoryCandidates(
-      new propertyTreesImpl.ElementarySingleValuedBranchFactory(),
-      new propertyTreesImpl.ComplexBranchFactory(),
-      new foreignKeyProperties.SingleValuedForeignKeyBranchFactory(new propertyTreesImpl.ComplexBranchFactory())
+  const patternMatcher = new propertyTrees.TreeDependencyInjector();
+  patternMatcher.registerFactoryCandidates(
+      new propertyTreesImpl.ElementarySingleValuedBranchFactory(patternMatcher),
+      new propertyTreesImpl.ComplexBranchFactory()
     );
+  return patternMatcher;
 }

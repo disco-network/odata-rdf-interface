@@ -104,6 +104,9 @@ export class ComplexBranch implements base.INode {
 // ===
 
 export class ElementarySingleValuedBranchFactory implements base.ITreeFactoryCandidate {
+
+  constructor(private /* @smell */ branchFactory: base.IBranchFactory<PropertyBranchingArgs>) {}
+
   public doesApply(args: IBranchingArgs) {
     return BranchingArgsGuard.isProperty(args)
       && !args.complex() && args.singleValued();
@@ -111,19 +114,38 @@ export class ElementarySingleValuedBranchFactory implements base.ITreeFactoryCan
 
   public create(args: IBranchingArgs) {
     if (BranchingArgsGuard.assertProperty(args))
-      return new ElementarySingleValuedBranch(args);
+      return new ElementarySingleValuedBranch(args, this.branchFactory);
+  }
+}
+
+class DirectElementarySingleValuedBranchFactory implements base.ITreeFactoryCandidate {
+
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isProperty(args)
+      && !args.complex() && args.singleValued();
+  }
+
+  public create(args: IBranchingArgs) {
+    if (BranchingArgsGuard.assertProperty(args) && this.doesApply(args))
+      return new DirectElementarySingleValuedBranch(args);
+    else
+      throw new Error("property is not elementary and single-valued");
   }
 }
 
 export class ElementarySingleValuedBranch implements base.INode {
   private resolver = new ForeignKeyPropertyResolver();
+  private branchFactory: base.IBranchFactory<IPropertyBranchingArgs>;
 
-  constructor(private branchingArgs: IPropertyBranchingArgs) {}
+  constructor(private branchingArgs: IPropertyBranchingArgs,
+              branchFactory: base.IBranchFactory<IPropertyBranchingArgs>) {
+    this.branchFactory = lexicalPriorityBranchFactory(
+      new DirectElementarySingleValuedBranchFactory(), branchFactory);
+  }
 
   public apply(args: IGraphPatternArgs) {
     const path: Property[] = this.resolver.resolveGetter(this.branchingArgs.schema());
-    const nodes: base.INode[] = path.map(prop => new DirectElementarySingleValuedBranch(
-      new PropertyBranchingArgs(prop)));
+    const nodes: base.INode[] = path.map(prop => this.branchFactory.create(new PropertyBranchingArgs(prop)));
 
     let currentArgs = args.clone();
     for (let node of nodes) {
@@ -135,6 +157,22 @@ export class ElementarySingleValuedBranch implements base.INode {
   public hash() {
     return this.branchingArgs.hash();
   }
+}
+
+function lexicalPriorityBranchFactory<T extends IBranchingArgs>
+  (...factories: base.IBranchFactory<T>[]): base.IBranchFactory<T> {
+  return { create: function(args: T) {
+    let lastException;
+    for (let fty of factories) {
+      try {
+        return fty.create(args);
+      }
+      catch (e) {
+        lastException = e;
+      }
+    }
+    throw lastException;
+  } };
 }
 
 export class DirectElementarySingleValuedBranch implements base.INode {

@@ -6,12 +6,6 @@ export interface IBranchingArgs {
   hash(): string;
 }
 
-export interface IForeignKeyPropertyBranchingArgs extends IBranchingArgs {
-  type(): "foreignKey";
-  name(): string;
-  property(): Property;
-}
-
 export interface IPropertyBranchingArgs extends IBranchingArgs {
   type(): "property";
   schema(): Property;
@@ -33,26 +27,6 @@ export interface IAnyBranchingArgs extends IBranchingArgs {
   name(): string;
   lambdaVariable(): ILambdaVariable;
   inverse(): boolean;
-}
-
-export class ForeignKeyPropertyBranchingArgs implements IForeignKeyPropertyBranchingArgs {
-
-  constructor(private nameArg: string, private schema: Property) {
-  }
-
-  public hash() {
-    return JSON.stringify({ type: this.type(), name: this.name() });
-  }
-
-  public type(): "foreignKey" { return "foreignKey"; }
-
-  public name() {
-    return this.nameArg;
-  }
-
-  public property() {
-    return this.schema;
-  }
 }
 
 export class PropertyBranchingArgs implements IPropertyBranchingArgs {
@@ -134,16 +108,7 @@ export class AnyBranchingArgs implements IAnyBranchingArgs {
 
 export class PropertyBranchingArgsFactory {
 
-  public fromProperty(property: Property): IPropertyBranchingArgs | IForeignKeyPropertyBranchingArgs {
-    if (property.foreignProperty()) {
-      return new ForeignKeyPropertyBranchingArgs(property.getName(), property);
-    }
-    else {
-      return this.directProperty(property);
-    }
-  }
-
-  private directProperty(property: Property): IPropertyBranchingArgs {
+  public fromProperty(property: Property): IPropertyBranchingArgs {
     return new PropertyBranchingArgs(property);
   }
 }
@@ -151,10 +116,6 @@ export class PropertyBranchingArgsFactory {
 export class BranchingArgsGuard {
   public static isProperty(args: IBranchingArgs): args is IPropertyBranchingArgs {
     return args.type() === "property";
-  }
-
-  public static isForeignKeyProperty(args: IBranchingArgs): args is IForeignKeyPropertyBranchingArgs {
-    return args.type() === "foreignKey";
   }
 
   public static isInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {
@@ -168,11 +129,6 @@ export class BranchingArgsGuard {
   public static assertProperty(args: IBranchingArgs): args is IPropertyBranchingArgs {
     if (this.isProperty(args)) return true;
     else throw new Error("PropertyBranchingArgs expected");
-  }
-
-  public static assertForeignKeyProperty(args: IBranchingArgs): args is IForeignKeyPropertyBranchingArgs {
-    if (this.isForeignKeyProperty(args)) return true;
-    else throw new Error("ForeignKeyPropertyBranchingArgs expected");
   }
 
   public static assertInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {
