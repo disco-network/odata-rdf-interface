@@ -210,13 +210,13 @@ describe("Adapter.AnyExpressionTranslator", () => {
   });
   it("should generate the property tree of an /any expression consisting of all path segments except the last one",
   () => {
-    let translator = new AnyExpressionTranslator(["A", "B", "Children"], {
+    let translator = new AnyExpressionTranslator(["Content", "Children"], {
       name: "it",
-      entityType: null,
+      entityType: schema.getEntityType("Post"),
       scopeId: new UniqueScopeIdentifier("test"),
     }, new TestTranslator("TEST"), {
       scope: {
-        entityType: null,
+        entityType: schema.getEntityType("Post"),
         lambdaVariableScope: new LambdaVariableScope(),
       },
       mapping: {
@@ -224,8 +224,11 @@ describe("Adapter.AnyExpressionTranslator", () => {
       },
     }, createFilterPatternStrategy());
 
-    assert.deepEqual(translator.getPropertyTree().root.toDataObject(), { A: { B: {} } });
+    assert.deepEqual(translator.getPropertyTree().root.toDataObject(), { Content: {} });
     assert.deepEqual(translator.getPropertyTree().inScopeVariables.toDataObject(), {});
+  },
+  () => {
+    // before spec
   });
 });
 
