@@ -1,6 +1,5 @@
-src/
+/.vscode
 spec/
-typings/
 maps/
 .stryker-tmp/
 .stryker.conf.js

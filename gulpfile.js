@@ -7,54 +7,52 @@ var gulp = require("gulp"),
   mocha = require("gulp-mocha"),
   tslint = require("gulp-tslint"),
   tsc = require("gulp-typescript"),
-  sourcemaps = require("gulp-sourcemaps");
+  sourcemaps = require("gulp-sourcemaps"),
+  merge = require("merge2");
 
 gulp.task("lint", function () {
   return gulp.src([
     "src/**/**.ts",
     "spec/**.ts",
     "typings/**.d.ts",
-    "!lib/**",
-    "!maps/**"
+    "!build/**"
   ])
     .pipe(tslint({}))
     .pipe(tslint.report("verbose"));
 });
 
-var tsProjectForJs = tsc.createProject("tsconfig.json");
-var tsProjectForDts = tsc.createProject("tsconfig.json");
-gulp.task("build-js", function () {
-  return gulp.src([
-    "./**/**.ts",
-    "!./spec/**",
-    "!./lib/**",
-    "!./node_modules/**"
-  ])
-    .pipe(sourcemaps.init())
-    .pipe(tsc(tsProjectForJs))
-    .js
-    .pipe(sourcemaps.write("../maps", {
-      includeContent: false,
-      sourceRoot: function (file) {
-        // needed to fix relative path in sourceMaps
-        var path = "../".repeat((file.relative.match(/\//g) || []).length + 1);
-        return path;
-      }
-    }))
-    .pipe(gulp.dest("lib"));
-})
+var sourceMapsConfig = {
+  includeContent: false,
+  sourceRoot: function (file) {
+    // needed to fix relative path in sourceMaps
+    var path = "../".repeat((file.relative.match(/\//g) || []).length + 1);
+    return path;
+  }
+};
 
-gulp.task("build-dts", function () {
-  return gulp.src([
-    "./**/**.ts",
-    "!./spec/**",
-    "!./lib/**",
-    "!./node_modules/**"
-  ])
-    .pipe(tsc(tsProjectForDts))
-    .dts
-    .pipe(gulp.dest("lib"));
-})
+var tsProject = tsc.createProject("tsconfig.json");
+
+function build(sourcePath, targetPath) {
+  var tsResult = gulp.src(sourcePath)
+    .pipe(sourcemaps.init())
+    .pipe(tsc(tsProject));
+
+  return merge([
+    tsResult.dts
+      .pipe(gulp.dest("build/typings")),
+    tsResult.js
+      .pipe(sourcemaps.write("../maps", sourceMapsConfig))
+      .pipe(gulp.dest("build/" + targetPath))
+  ]);
+}
+
+gulp.task("build-spec", function () {
+  return build(["spec/**/*.ts", "src/**/*.ts"], "tests");
+});
+gulp.task("build-lib", function () {
+  return build("src/**/*.ts", "lib");
+});
+
 gulp.task("build-package.json", function () {
   var appPackageJson = JSON.parse(fs.readFileSync(__dirname + "/package.json", "utf8"));
   var npmPackageJson = {
@@ -70,68 +68,51 @@ gulp.task("build-package.json", function () {
     "license": appPackageJson.license,
     "bugs": appPackageJson.bugs
   }
-  fs.mkdirSync(path.join(__dirname, "lib"));
-  fs.mkdirSync(path.join(__dirname, "lib", "src"));
-  fs.writeFileSync(path.join(__dirname, "lib", "src", "package.json"), JSON.stringify(npmPackageJson, null, 2));
+  fs.mkdirSync(path.join(__dirname, "build"));
+  fs.mkdirSync(path.join(__dirname, "build", "lib"));
+  fs.writeFileSync(path.join(__dirname, "build", "lib", "package.json"), JSON.stringify(npmPackageJson, null, 2));
 });
 
-gulp.task("copy", function () {
+function copyStaticSrc() {
   return gulp.src([
     "./src/**/**/odata4-mod.abnf",
     "README.md",
     "LICENSE"
-  ])
-    .pipe(gulp.dest("lib/src"));
+  ]);
+}
+gulp.task("copy-static-lib", function () {
+  return copyStaticSrc().pipe(gulp.dest("build/lib"));
+});
+gulp.task("copy-static-spec", function () {
+  return copyStaticSrc().pipe(gulp.dest("build/tests/src"));
 });
 
 gulp.task("build", function (cb) {
   return runSequence(
     "clean-all",
-    ["build-js", "build-dts", "copy", "build-package.json"],
+    ["build-lib", "copy-static-lib", "build-package.json"],
     cb
   );
 });
 
-gulp.task("build-spec", function (cb) {
-  return runSequence(
-    "clean-all",
-    "build-spec-js",
-    "copy",
-    cb
-  );
-});
-
-gulp.task("build-spec-js", function (cb) {
-  return gulp.src([
-    "./**/**.ts",
-    "!./lib/**",
-    "!./node_modules/**"
-  ])
-    .pipe(sourcemaps.init())
-    .pipe(tsc(tsProjectForJs))
-    .js
-    .pipe(sourcemaps.write("../maps", {
-      includeContent: false,
-      sourceRoot: function (file) {
-        // needed to fix relative path in sourceMaps
-        var path = "../".repeat((file.relative.match(/\//g) || []).length + 1);
-        return path;
-      }
-    }))
-    .pipe(gulp.dest("lib"));
-});
-
-gulp.task("clean-all", function () {
+// TODO: depricated - will be removed soon!
+gulp.task("clean-all-old", function () {
   return del(["./maps", "./lib"]);
 });
-
-gulp.task("tests-no-build", function () {
-  return gulp.src("./lib/spec/*.js")
-    .pipe(mocha());
+gulp.task("clean-all", ["clean-all-old"], function () {
+  return del(["./build"]);
 });
 
-gulp.task("tests", ["build-spec"], function () {
-  return gulp.src("./lib/spec/*.js")
+gulp.task("build-tests", function (cb) {
+  return runSequence(
+    "clean-all",
+    ["build-spec", "copy-static-spec"],
+    cb
+  );
+});
+
+gulp.task("tests", ["build-tests"], function () {
+    return gulp.src("./build/tests/spec/*.js")
     .pipe(mocha());
 });
 
