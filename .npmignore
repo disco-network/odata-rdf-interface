@@ -1,5 +1,11 @@
 /.vscode
-spec/
-maps/
-.stryker-tmp/
-.stryker.conf.js
+/node_modules
+/spec
+.npmignore
+.travis.yml
+gulpfile.js
+tsconfig.json
+tslint.json
+typings.json
+stryker-tmp/
+stryker.conf.js

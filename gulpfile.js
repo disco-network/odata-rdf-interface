@@ -25,7 +25,8 @@ var sourceMapsConfig = {
   includeContent: false,
   sourceRoot: function (file) {
     // needed to fix relative path in sourceMaps
-    var path = "../".repeat((file.relative.match(/\//g) || []).length + 1);
+    // HACK: this solution is coupled with the current folder structure!!
+    var path = "../".repeat((file.relative.match(/\//g) || []).length + 1) + "../src/";
     return path;
   }
 };
