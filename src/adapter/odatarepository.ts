@@ -1,10 +1,17 @@
 import base = require("../odata/repository");
-import { EntityType, Property, EntityKind } from "../odata/schema";
+import { EntityType, Property, EntityKind, Schema } from "../odata/schema";
 import { LambdaVariableScope } from "../odata/filters/filters";
-import { IValue } from "../odata/filters/expressions";
+import {
+  IValue, IEqExpression, IStringLiteral, INumericLiteral, IPropertyValue,
+  IAndExpressionVisitor, IEqExpressionVisitor, IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor,
+} from "../odata/filters/expressions";
+import {
+  EqExpression, AndExpression, StringLiteral, NumericLiteral, PropertyValue,
+} from "../odata/parser";
 import {
   IQueryModel as IODataQueryModel,
 } from "../odata/queries";
+import * as async from "async";
 
 import sparqlProvider = require("../sparql/sparql_provider_base");
 import gpatterns = require("../sparql/graphpatterns");
@@ -19,23 +26,99 @@ import { ForeignKeyPropertyResolver } from "../odata/foreignkeyproperties";
 
 import results = require("../result");
 
-export class ODataRepository<TExpressionVisitor>
+export interface IMinimalVisitor extends IAndExpressionVisitor, IEqExpressionVisitor,
+  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor {}
+
+export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   implements base.IRepository<TExpressionVisitor> {
 
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
               private postQueryStringBuilder: postQueries.IQueryStringBuilder) {}
 
+  public batch(ops: base.IOperation[], schema: Schema, cbResults: (results: results.AnyResult) => void) {
+    async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
+      if (this.isGetOp(op)) {
+        const entityType = schema.getEntityType(op.entityType);
+        const conditions = Object.keys(op.pattern).map(compose(
+            (key: string) => ({ key: key, value: op.pattern[key] }),
+            this.eqExpressionFromKeyValue));
+        const firstCondition = conditions.slice(0, 1)[0];
+        const restConditions = conditions.slice(1);
+        const filterExpression = restConditions.reduce<IValue<IMinimalVisitor>>((reduced, condition) =>
+          new AndExpression(reduced, condition), firstCondition);
+
+        this.runGet(entityType, {}, filterExpression, (res, m) => {
+          batchResults.push(this.translateResponse(res, m, (result, model) => ({
+            odata: this.translateResponseToOData(result, model),
+            uris: this.translateResonseToEntityUris(result, model),
+          })));
+          cb(null, batchResults);
+        });
+      }
+      else if (this.isInsertOp(op)) {
+        const keyValuePairs: { property: string, value: ISparqlLiteral }[] = [];
+        let errored = false;
+        for (const property of Object.keys(op.value)) {
+          const value = op.value[property];
+          if (typeof value === "string") {
+            keyValuePairs.push({ property: property, value: new SparqlString(value) });
+          }
+          else if (typeof value === "number") {
+            keyValuePairs.push({ property: property, value: new SparqlNumber(value.toString())});
+          }
+          else if (typeof value === "object" && value.type === "ref") {
+            const resultForValue = batchResults[value.resultIndex].result();
+            if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
+              keyValuePairs.push({ property: property, value: new SparqlUri(resultForValue.uris[0]) });
+            }
+            else {
+              batchResults.push(results.Result.error("referenced result is not single-valued"));
+              errored = true;
+              break;
+            }
+          }
+        }
+
+        if (errored === true) return cb(null, batchResults);
+
+        this.runInsert(schema.getEntityType(op.entityType), keyValuePairs, (res: results.AnyResult) => {
+          batchResults.push(results.Result.success("inserted"));
+          cb(null, batchResults);
+        });
+      }
+    }, (err, result) => {
+      cbResults(results.Result.success("@todo dunno"));
+    });
+  }
+
+  public eqExpressionFromKeyValue(pair: { key: string; value: base.IPrimitive }): IEqExpression<IMinimalVisitor> {
+    return new EqExpression(
+      this.propertyExpressionFromName(pair.key),
+      this.primitiveLiteralExpressionFromValue(pair.value)
+    );
+  }
+
+  public primitiveLiteralExpressionFromValue(value: base.IPrimitive):
+    IStringLiteral<IMinimalVisitor> | INumericLiteral<IMinimalVisitor> {
+
+    if (typeof value === "string") {
+      return new StringLiteral(value);
+    }
+    else if (typeof value === "number") {
+      return new NumericLiteral(value);
+    }
+    else throw new Error("value has to be string | number");
+  }
+
+  public propertyExpressionFromName(name: string): IPropertyValue<IMinimalVisitor> {
+    return new PropertyValue([ name ]);
+  }
+
   public getEntities(entityType: EntityType, expandTree: any, filterExpression: IValue<TExpressionVisitor>,
                      cb: (result: results.Result<any[], any>) => void) {
-    let model: IQueryAdapterModel<TExpressionVisitor> = new QueryAdapterModel({
-      entitySetType: entityType,
-      filterOption: filterExpression,
-      expandTree: expandTree || {},
-    }); /* @todo injectable */
-    this.sparqlProvider.querySelect(this.getQueryStringBuilder.fromQueryAdapterModel(model), result => {
-      cb(this.translateResponseToOData(result, model));
-    });
+    this.runGet(entityType, expandTree, filterExpression,
+      (res, model) => cb(this.translateResponse(res, model, this.translateResponseToOData)));
   }
 
   public insertEntity(entity: any, type: EntityType, cb: (result: results.AnyResult) => void) {
@@ -44,22 +127,49 @@ export class ODataRepository<TExpressionVisitor>
     });
   }
 
-  public setSparqlProvider(value: sparqlProvider.ISparqlProvider) {
-    this.sparqlProvider = value;
+  private isGetOp(op: base.IOperation): op is base.IGetOperation {
+    return op.type === "get";
   }
 
-  public setPostQueryStringBuilder(value: postQueries.IQueryStringBuilder) {
-    this.postQueryStringBuilder = value;
+  private isInsertOp(op: base.IOperation): op is base.IInsertOperation {
+    return op.type === "insert";
   }
 
-  private translateResponseToOData(response: results.AnyResult,
-                                   model: IQueryAdapterModel<TExpressionVisitor>): results.AnyResult {
-    if (response.success()) {
-      return results.Result.success(this.translateSuccessfulResponseToOData(response.result(), model));
-    }
-    else {
-      return results.Result.error(response.error());
-    }
+  private runGet<T>(entityType: EntityType, expandTree: any, filterExpression: IValue<TExpressionVisitor>,
+                    cb: (result: results.Result<any, any>, model: IQueryAdapterModel<TExpressionVisitor>) => void) {
+    const model: IQueryAdapterModel<TExpressionVisitor> = new QueryAdapterModel({
+      entitySetType: entityType,
+      filterOption: filterExpression,
+      expandTree: expandTree || {},
+    }); /* @todo injectable */
+    this.sparqlProvider.querySelect(this.getQueryStringBuilder.fromQueryAdapterModel(model), result => {
+      cb(result, model);
+    });
+  }
+
+  private runInsert(entityType: EntityType, keyValuePairs: { property: string, value: ISparqlLiteral }[],
+                    cb: (res: results.AnyResult) => void) {
+
+    cb(results.Result.success("@todo dunno"));
+  }
+
+  private translateResponse<T>(response: results.AnyResult,
+                               model: IQueryAdapterModel<TExpressionVisitor>,
+                               translateResult: (result, model: IQueryAdapterModel<TExpressionVisitor>) => T) {
+    return response.process(
+      result => translateResult(result, model),
+      error => error
+    );
+  }
+
+  private translateResonseToEntityUris(results,
+                                       model: IQueryAdapterModel<TExpressionVisitor>) {
+    return results.map(res => res[model.getMapping().variables.getVariable()]);
+  }
+
+  private translateResponseToOData = (results,
+                                      model: IQueryAdapterModel<TExpressionVisitor>) => {
+    return this.translateSuccessfulResponseToOData(results, model);
   }
 
   private translateSuccessfulResponseToOData(response: any, model: IQueryAdapterModel<TExpressionVisitor>) {
@@ -68,6 +178,10 @@ export class ODataRepository<TExpressionVisitor>
     let resultBuilder = new JsonResultBuilder();
     return resultBuilder.run(response, queryContext);
   }
+}
+
+function compose<T, U, V>(y: (arg: V) => U, x: (arg: U) => T): (arg: V) => T {
+  return function(arg: V) { return x(y(arg)); };
 }
 
 export class JsonResultBuilder {
@@ -432,5 +546,52 @@ export class QueryContext implements IQueryContext {
       this.mapping.getComplexProperty(propertyName),
       this.rootTypeSchema.getProperty(propertyName).getEntityType(),
       this.remainingExpandBranch[propertyName] || {});
+  }
+}
+
+export interface ISparqlLiteral {
+  representAsSparql(): string;
+}
+
+export class SparqlString implements ISparqlLiteral {
+  constructor(private value: string) {}
+
+  public representAsSparql() {
+    return "'" + this.escapedValue() + "'";
+  }
+
+  private escapedValue() {
+    const escape = [
+      { from: "\\", to: "\\\\" },
+      { from: "'", to: "\\'"},
+      { from: '"', to: '\\"'},
+      { from: "\f", to: "\\f"},
+      { from: "\b", to: "\\b"},
+      { from: "\r", to: "\\r"},
+      { from: "\n", to: "\\n"},
+      { from: "\t", to: "\\t"}];
+
+    return escape.reduce((prev, rule) => prev.replace(rule.from, rule.to), this.value);
+  }
+}
+
+export class SparqlNumber implements ISparqlLiteral {
+  constructor(private value: string) {}
+
+  public representAsSparql() {
+    return "'" + parseFloat(this.value) + "'";
+  }
+}
+
+export class SparqlUri implements ISparqlLiteral {
+  constructor(private uri: string) {}
+
+  public representAsSparql() {
+    return "<" + this.verifiedUri() + ">";
+  }
+
+  private verifiedUri() {
+    if (this.uri.indexOf(">") !== -1 || this.uri.indexOf("<") !== -1) throw new Error("invalid uri");
+    else return this.uri;
   }
 }

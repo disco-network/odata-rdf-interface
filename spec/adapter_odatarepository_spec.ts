@@ -2,7 +2,9 @@ import { assert } from "chai";
 import results = require("../src/result");
 import schema = require("../src/odata/schema");
 import postQueries = require("../src/adapter/postquery");
-import { ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel } from "../src/adapter/odatarepository";
+import {
+  ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor,
+} from "../src/adapter/odatarepository";
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
 
 import queryTestCases = require("./helpers/querytestcases");
@@ -38,9 +40,9 @@ describe("Adapter.ODataRepository (generated insertion tests):", () => {
   }
 });
 
-function create<T>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
-                   getQueryStringBuilder: IGetQueryStringBuilder<T>,
-                   postQueryStringBuilder: postQueries.IQueryStringBuilder) {
+function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
+                                           getQueryStringBuilder: IGetQueryStringBuilder<T>,
+                                           postQueryStringBuilder: postQueries.IQueryStringBuilder) {
   return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder, postQueryStringBuilder);
 }
 

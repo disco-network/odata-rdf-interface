@@ -4,13 +4,11 @@ import { stub, match } from "sinon";
 import { GetHandler, PostHandler, IGetResponseSender, GetResponseSender } from "../src/odata/queryengine";
 import { IPostRequestParser, IGetRequestParser, IFilterVisitor } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
-import { IRepository } from "../src/odata/repository";
+import { IRepository, IOperation } from "../src/odata/repository";
 import { IValue } from "../src/odata/filters/expressions";
 import { Result, AnyResult } from "../src/result";
 import { Schema, EntityType } from "../src/odata/schema";
 import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";
-
-import queryTestCases = require("./helpers/querytestcases");
 
 describe("OData.PostHandler:", () => {
 
@@ -18,9 +16,9 @@ describe("OData.PostHandler:", () => {
     let parser = new PostRequestParser();
     stub(parser, "parse").returns({ entitySetName: "Posts", entity: {} });
     let entityInitializer = new EntityInitializer();
-    stub(entityInitializer, "fromParsed").returns({});
+    stub(entityInitializer, "fromParsed").returns([]);
     let repository = new Repository<IFilterVisitor>();
-    stub(repository, "insertEntity").callsArgWith(2, Result.success("ok"));
+    stub(repository, "batch").callsArgWith(2, Result.success("ok"));
 
     let engine = new PostHandler(parser, entityInitializer, repository, new Schema(),
       httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
@@ -28,38 +26,47 @@ describe("OData.PostHandler:", () => {
     engine.query({ relativeUrl: "/Posts", body: "{}" });
   });
 
-  postQuery("should insert an entity and send an empty response, sending exactly one body",
-    queryTestCases.postQueryTests[0]);
-  function postQuery(test: string, args: queryTestCases.IPostQueryTestCase) {
-    it(test, done => {
-      let parser = new PostRequestParser();
-      stub(parser, "parse")
-        .withArgs({ relativeUrl: args.query, body: args.body })
-        .returns({ entitySetName: args.entitySetName, entity: args.parsedEntity });
+  it("should insert an entity and send an empty response, sending exactly one body", done => {
+    let parser = new PostRequestParser();
+    stub(parser, "parse")
+      .withArgs({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" })
+      .returns({ entitySetName: "Posts", entity: { ContentId: "1" } });
 
-      let entityReader = new EntityInitializer();
-      stub(entityReader, "fromParsed")
-        .withArgs(args.parsedEntity, match(type => type.getName() === "Post"))
-        .returns(args.entity);
+    const ops = [{
+        type: "get",
+        entityType: "Post",
+        pattern: {
+          Id: "1",
+        },
+      }, {
+        type: "insert",
+        entityType: "Post",
+        value: {
+          Id: "3",
+          Content: { type: "ref", resultIndex: 0 },
+    }}];
+    let entityReader = new EntityInitializer();
+    stub(entityReader, "fromParsed")
+      .withArgs({ ContentId: "1" }, match(type => type.getName() === "Post"))
+      .returns(ops);
 
-      let repository = new Repository<IFilterVisitor>();
-      let insertEntity = stub(repository, "insertEntity")
-        .withArgs(args.entity, match(type => type.getName() === "Post"))
-        .callsArgWith(2, Result.success("ok"));
+    let repository = new Repository<IFilterVisitor>();
+    let insertEntity = stub(repository, "batch")
+      .withArgs(ops, match.any, match.any)
+      .callsArgWith(2, Result.success("ok"));
 
-      let responseSender = new HttpResponseSender();
-      let sendBody = stub(responseSender, "sendBody");
-      stub(responseSender, "finishResponse", () => {
-        assert.strictEqual(sendBody.calledOnce, true);
-        assert.strictEqual(insertEntity.calledOnce, true);
-        done();
-      });
-
-      let engine = new PostHandler(parser, entityReader, repository, new Schema(), responseSender);
-
-      engine.query({ relativeUrl: args.query, body: args.body });
+    let responseSender = new HttpResponseSender();
+    let sendBody = stub(responseSender, "sendBody");
+    stub(responseSender, "finishResponse", () => {
+      assert.strictEqual(sendBody.calledOnce, true);
+      assert.strictEqual(insertEntity.calledOnce, true);
+      done();
     });
-  }
+
+    let engine = new PostHandler(parser, entityReader, repository, new Schema(), responseSender);
+
+    engine.query({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" });
+  });
 });
 
 describe("OData.GetHandler", () => {
@@ -265,6 +272,10 @@ class Repository<T> implements IRepository<T> {
   }
 
   public insertEntity(entity: any, type: EntityType, cb: (result: AnyResult) => void) {
+    //
+  }
+
+  public batch(ops: IOperation[], schema: Schema, cb: (result: AnyResult) => void) {
     //
   }
 }

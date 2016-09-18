@@ -140,7 +140,7 @@ export class ODataParser implements IODataParser {
   }
 }
 
-class StringLiteral implements IStringLiteral<IStringLiteralVisitor> {
+export class StringLiteral implements IStringLiteral<IStringLiteralVisitor> {
 
   constructor(private value: string) {}
 
@@ -153,7 +153,7 @@ class StringLiteral implements IStringLiteral<IStringLiteralVisitor> {
   }
 }
 
-class NumericLiteral implements INumericLiteral<INumericLiteralVisitor> {
+export class NumericLiteral implements INumericLiteral<INumericLiteralVisitor> {
 
   constructor(private value: number) {}
 
@@ -166,7 +166,7 @@ class NumericLiteral implements INumericLiteral<INumericLiteralVisitor> {
   }
 }
 
-class BinaryExpression<T> {
+export class BinaryExpression<T> {
 
   constructor(private lhs: IValue<T>, private rhs: IValue<T>) {}
 
@@ -179,25 +179,25 @@ class BinaryExpression<T> {
   }
 }
 
-class EqExpression<T extends IEqExpressionVisitor> extends BinaryExpression<T> implements IEqExpression<T> {
+export class EqExpression<T extends IEqExpressionVisitor> extends BinaryExpression<T> implements IEqExpression<T> {
   public accept(visitor: T) {
     visitor.visitEqExpression(this);
   }
 }
 
-class AndExpression<T extends IAndExpressionVisitor> extends BinaryExpression<T> implements IAndExpression<T> {
+export class AndExpression<T extends IAndExpressionVisitor> extends BinaryExpression<T> implements IAndExpression<T> {
   public accept(visitor: T) {
     visitor.visitAndExpression(this);
   }
 }
 
-class OrExpression<T extends IOrExpressionVisitor> extends BinaryExpression<T> implements IOrExpression<T> {
+export class OrExpression<T extends IOrExpressionVisitor> extends BinaryExpression<T> implements IOrExpression<T> {
   public accept(visitor: T) {
     visitor.visitOrExpression(this);
   }
 }
 
-class ParenthesesExpression<T extends IParenthesesVisitor> implements IParentheses<T> {
+export class ParenthesesExpression<T extends IParenthesesVisitor> implements IParentheses<T> {
 
   constructor(private inner: IValue<T>) {}
 
@@ -210,7 +210,7 @@ class ParenthesesExpression<T extends IParenthesesVisitor> implements IParenthes
   }
 }
 
-class PropertyValue implements IPropertyValue<IPropertyValueVisitor> {
+export class PropertyValue implements IPropertyValue<IPropertyValueVisitor> {
 
   constructor(private path: string[]) {}
 

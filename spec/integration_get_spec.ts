@@ -8,7 +8,7 @@ import { Result } from "../src/result";
 import sparqlProviderModule = require("../src/sparql/sparql_provider");
 import rdfstore = require("rdfstore");
 
-describe("The query engine should evaluate", () => {
+describe("The GetHandler should evaluate", () => {
 
   /* @todo get test queries from array */
   createQuerySpec("/Posts", answer => {

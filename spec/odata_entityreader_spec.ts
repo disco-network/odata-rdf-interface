@@ -4,6 +4,7 @@ import base = require("../src/odata/entityreader");
 import queryTestCases = require("./helpers/querytestcases");
 
 describe("OData.EntityReader", () => {
+
   queryTestCases.entityReaderTests.forEach(
     (args, i) => spec(`#${i}`, args)
   );

@@ -74,7 +74,7 @@ export class PostHandler<T> implements IPostHandler {
     let parsed = this.parser.parse(request);
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     let entity = this.entityInitializer.fromParsed(parsed.entity, type);
-    this.repository.insertEntity(entity, type, result => {
+    this.repository.batch(entity, this.schema, result => {
       this.responseSender.sendStatusCode(201, "Created");
       this.responseSender.sendBody("@todo");
       this.responseSender.finishResponse();
