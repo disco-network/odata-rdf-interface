@@ -40,7 +40,7 @@ function build(sourcePath, targetPath) {
 
   return merge([
     tsResult.dts
-      .pipe(gulp.dest("build/typings")),
+      .pipe(gulp.dest("build/lib")),
     tsResult.js
       .pipe(sourcemaps.write("../maps", sourceMapsConfig))
       .pipe(gulp.dest("build/" + targetPath))
