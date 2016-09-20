@@ -48,10 +48,10 @@ function build(sourcePath, targetPath) {
 }
 
 gulp.task("build-spec", function () {
-  return build(["spec/**/*.ts", "src/**/*.ts"], "tests");
+  return build(["spec/**/*.ts", "src/**/*.ts", "typings/*.ts"], "tests");
 });
 gulp.task("build-lib", function () {
-  return build("src/**/*.ts", "lib");
+  return build("src/**/*.ts", "typings/*.ts", "lib");
 });
 
 gulp.task("build-package.json", function () {
@@ -62,30 +62,33 @@ gulp.task("build-package.json", function () {
     "version": appPackageJson.version,
     "author": appPackageJson.author,
     "repository": appPackageJson.repository,
-    "main": undefined,      // TODO: generate this from app package.json
-    "typings": undefined, // TODO: generate this from app package.json
+    "main": "lib/index.js",      // TODO: generate this from app package.json
+    "typings": "typings/index.d.ts", // TODO: generate this from app package.json
     "dependencies": appPackageJson.dependencies,
     "keywords": appPackageJson.keywords,
     "license": appPackageJson.license,
     "bugs": appPackageJson.bugs
   }
   fs.mkdirSync(path.join(__dirname, "build"));
-  fs.mkdirSync(path.join(__dirname, "build", "lib"));
-  fs.writeFileSync(path.join(__dirname, "build", "lib", "package.json"), JSON.stringify(npmPackageJson, null, 2));
+  fs.writeFileSync(path.join(__dirname, "build", "package.json"), JSON.stringify(npmPackageJson, null, 2));
 });
 
 function copyStaticSrc() {
   return gulp.src([
-    "./src/**/**/odata4-mod.abnf",
-    "README.md",
-    "LICENSE"
+    "./src/**/**/odata4-mod.abnf"
   ]);
 }
-gulp.task("copy-static-lib", function () {
+gulp.task("copy-static-lib", ["copy-license"], function () {
   return copyStaticSrc().pipe(gulp.dest("build/lib"));
 });
 gulp.task("copy-static-spec", function () {
   return copyStaticSrc().pipe(gulp.dest("build/tests/src"));
+});
+gulp.task("copy-license", function () {
+  return gulp.src([
+    "README.md",
+    "LICENSE"
+  ]).pipe(gulp.dest("build"));
 });
 
 gulp.task("build", function (cb) {
@@ -113,7 +116,7 @@ gulp.task("build-tests", function (cb) {
 });
 
 gulp.task("tests", ["build-tests"], function () {
-    return gulp.src("./build/tests/spec/*.js")
+  return gulp.src("./build/tests/spec/*.js")
     .pipe(mocha());
 });
 
