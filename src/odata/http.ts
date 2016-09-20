@@ -1,5 +1,5 @@
 export interface IHttpRequestHandler {
-  query(request: IHttpRequest);
+  query(request: IHttpRequest, responseSender: IHttpResponseSender);
 }
 
 export interface IHttpRequest {

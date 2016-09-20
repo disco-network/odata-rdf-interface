@@ -1,1 +1,1 @@
-export { EntityReader } from "../../odata/entityreader";
+export { EntityInitializer } from "../../odata/entityreader";

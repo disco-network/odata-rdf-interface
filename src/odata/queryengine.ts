@@ -7,8 +7,8 @@ import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata
 export interface IGetHandler extends IHttpRequestHandler {
 }
 
-export interface IGetResponseSender {
-  success(entities: any[]): void;
+export interface IGetHttpResponder {
+  success(entities: any[], responseSender: IHttpResponseSender): void;
 }
 
 export interface IPostHandler extends IHttpRequestHandler {
@@ -26,37 +26,35 @@ export class GetHandler<T> implements IGetHandler {
   constructor(private schema: Schema,
               private parser: odataParser.IGetRequestParser<T>,
               private repository: IRepository<T>,
-              private responseSender: IGetResponseSender) {}
+              private getHttpResponder: IGetHttpResponder) {}
 
-  public query(request: IHttpRequest) {
+  public query(request: IHttpRequest, httpResponseSender: IHttpResponseSender) {
     let parsed = this.parser.parse(request);
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
-      this.responseSender.success(result.result());
+      this.getHttpResponder.success(result.result(), httpResponseSender);
     });
   }
 }
 
-export class GetResponseSender implements IGetResponseSender {
+export class GetHttpResponder implements IGetHttpResponder {
 
-  constructor(private httpResponseSender: IHttpResponseSender) {}
+  public success(entities: any[], httpResponseSender: IHttpResponseSender) {
+    httpResponseSender.sendStatusCode(200);
 
-  public success(entities: any[]) {
-    this.httpResponseSender.sendStatusCode(200);
-
-    this.httpResponseSender.sendHeader("Access-Control-Allow-Origin", "*");
-    this.httpResponseSender.sendHeader("Access-Control-Expose-Headers", "MaxDataServiceVersion, DataServiceVersion");
+    httpResponseSender.sendHeader("Access-Control-Allow-Origin", "*");
+    httpResponseSender.sendHeader("Access-Control-Expose-Headers", "MaxDataServiceVersion, DataServiceVersion");
 
     let body = JSON.stringify({
       "odata.metadata": "http://example.org/",
       "value": entities,
     }, null, 2);
-    this.httpResponseSender.sendHeader("Content-Type", "application/json;charset=utf-8");
-    this.httpResponseSender.sendHeader("Content-Length", body.length.toString());
+    httpResponseSender.sendHeader("Content-Type", "application/json;charset=utf-8");
+    httpResponseSender.sendHeader("Content-Length", body.length.toString());
 
-    this.httpResponseSender.sendBody(body);
+    httpResponseSender.sendBody(body);
 
-    this.httpResponseSender.finishResponse();
+    httpResponseSender.finishResponse();
   }
 }
 
@@ -65,32 +63,29 @@ export class PostHandler<T> implements IPostHandler {
   constructor(private parser: odataParser.IPostRequestParser,
               private entityInitializer: entityReader.IEntityInitializer,
               private repository: IRepository<T>,
-              private schema: Schema,
-              private responseSender: IHttpResponseSender) {
+              private schema: Schema) {
   }
 
-  public query(request: IHttpRequest) {
+  public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
     /* @todo verify AST */
     let parsed = this.parser.parse(request);
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     let entity = this.entityInitializer.fromParsed(parsed.entity, type);
     this.repository.batch(entity, this.schema, result => {
-      this.responseSender.sendStatusCode(201, "Created");
-      this.responseSender.sendBody("@todo");
-      this.responseSender.finishResponse();
+      responseSender.sendStatusCode(201, "Created");
+      responseSender.sendBody("@todo");
+      responseSender.finishResponse();
     });
   }
 }
 
 export class OptionsHandler implements IOptionsHandler {
 
-  constructor(private responseSender: IHttpResponseSender) {}
-
-  public query(request: IHttpRequest) {
-    this.responseSender.sendStatusCode(200);
-    this.responseSender.sendHeader("Access-Control-Allow-Origin", "*");
-    this.responseSender.sendHeader("Access-Control-Allow-Headers",
+  public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
+    responseSender.sendStatusCode(200);
+    responseSender.sendHeader("Access-Control-Allow-Origin", "*");
+    responseSender.sendHeader("Access-Control-Allow-Headers",
       "MaxDataServiceVersion, DataServiceVersion, Authorization, Accept, Authorization, odata-maxversion");
-    this.responseSender.finishResponse();
+    responseSender.finishResponse();
   }
 }

@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { stub, match } from "sinon";
 
-import { GetHandler, PostHandler, IGetResponseSender, GetResponseSender } from "../src/odata/queryengine";
+import { GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder } from "../src/odata/queryengine";
 import { IPostRequestParser, IGetRequestParser, IFilterVisitor } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
 import { IRepository, IOperation } from "../src/odata/repository";
@@ -20,10 +20,9 @@ describe("OData.PostHandler:", () => {
     let repository = new Repository<IFilterVisitor>();
     stub(repository, "batch").callsArgWith(2, Result.success("ok"));
 
-    let engine = new PostHandler(parser, entityInitializer, repository, new Schema(),
-      httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
+    let engine = new PostHandler(parser, entityInitializer, repository, new Schema());
 
-    engine.query({ relativeUrl: "/Posts", body: "{}" });
+    engine.query({ relativeUrl: "/Posts", body: "{}" }, httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
   });
 
   it("should insert an entity and send an empty response, sending exactly one body", done => {
@@ -63,9 +62,9 @@ describe("OData.PostHandler:", () => {
       done();
     });
 
-    let engine = new PostHandler(parser, entityReader, repository, new Schema(), responseSender);
+    let engine = new PostHandler(parser, entityReader, repository, new Schema());
 
-    engine.query({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" });
+    engine.query({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" }, responseSender);
   });
 });
 
@@ -93,7 +92,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts", body: "" });
+    getHandler.query({ relativeUrl: "/Posts", body: "" }, null);
   });
 
   it("should return an expanded entity set, sending exactly one body", done => {
@@ -120,7 +119,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" });
+    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, null);
   });
 });
 
@@ -135,30 +134,30 @@ describe("OData.GetResponseSender", () => {
       assert.strictEqual(storedCode, 200);
       done();
     });
-    let responseSender = new GetResponseSender(httpSenderThatShouldReceiveStatusCode(200, done));
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSenderThatShouldReceiveStatusCode(200, done));
   });
   it("should send CORS headers", done => {
     let httpSender = httpSenderThatShouldReceiveCorsHeaders(done);
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSender);
   });
   it("should send Content-Length and Content-Type headers", done => {
     let body = JSON.stringify({ "odata.metadata": "http://example.org/", value: [] }, null, 2);
     let httpSender = httpSenderThatShouldReceiveJsonContentHeaders(body.length.toString(), done);
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSender);
   });
   it("should send the request body with minimal metadata", done => {
     let body = JSON.stringify({ "odata.metadata": "http://example.org/", value: [] }, null, 2);
     let httpSender = httpSenderThatShouldReceiveRequestBody(
       body, done);
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSender);
   });
 });
 
@@ -240,7 +239,7 @@ class EntityInitializer implements IEntityInitializer {
   }
 }
 
-class GetResponseSenderStub implements IGetResponseSender {
+class GetResponseSenderStub implements IGetHttpResponder {
   public success(entities: any[]) {
     //
   }

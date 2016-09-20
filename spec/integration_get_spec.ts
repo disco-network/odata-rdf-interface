@@ -222,7 +222,7 @@ describe("The GetHandler should evaluate", () => {
             },
           };
           let getHandler = new GetHandler(new Schema(), new GetRequestParser(), repository, responseSender);
-          try { getHandler.query({ relativeUrl: query, body: "" }); }
+          try { getHandler.query({ relativeUrl: query, body: "" }, null); }
           catch (e) {
             assert.strictEqual(e.stack || e, "no exception");
             done();

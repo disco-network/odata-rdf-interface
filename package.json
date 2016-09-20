@@ -5,7 +5,8 @@
   "dependencies": {
     "abnfjs": "git+https://git@github.com/datokrat/abnfjs.git",
     "async": "^1.5.2",
-    "rdfstore": "git+https://git@github.com/disco-network/rdfstore-js.git"
+    "rdfstore": "git+https://git@github.com/disco-network/rdfstore-js.git",
+    "uuid": "^2.0.3"
   },
   "devDependencies": {
     "chai": "^3.5.0",

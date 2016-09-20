@@ -1,4 +1,5 @@
 import schema = require("../../src/odata/schema");
+import { match } from "../../src/assert";
 
 let queries = [
   "/Posts",
@@ -25,6 +26,8 @@ let initializedEntities = [
       },
     }, {
       type: "insert",
+      entityType: "Post",
+      identifier: match.any,
       value: {
         Id: "3",
         Content: { type: "ref", resultIndex: 0 },

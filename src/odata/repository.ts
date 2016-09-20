@@ -21,6 +21,7 @@ export interface IGetOperation {
 export interface IInsertOperation {
   type: "insert";
   entityType: string;
+  identifier: string;
   value: { [id: string]: IPrimitive | IReference };
 }
 

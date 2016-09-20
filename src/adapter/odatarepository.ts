@@ -15,7 +15,11 @@ import * as async from "async";
 
 import sparqlProvider = require("../sparql/sparql_provider_base");
 import gpatterns = require("../sparql/graphpatterns");
-import { ISelectQueryStringBuilder } from "../sparql/querystringbuilder";
+import {
+  ISelectQueryStringBuilder, IInsertQueryStringBuilder,
+  ISparqlLiteral,
+  SparqlString, SparqlNumber, SparqlUri,
+} from "../sparql/querystringbuilder";
 
 import postQueries = require("../adapter/postquery");
 import translators = require("../adapter/filtertranslators");
@@ -26,6 +30,12 @@ import { ForeignKeyPropertyResolver } from "../odata/foreignkeyproperties";
 
 import results = require("../result");
 
+/* @smell */
+const prefixes = [
+  { prefix: "rdf", uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
+  { prefix: "disco", uri: "http://disco-network.org/resource/" },
+];
+
 export interface IMinimalVisitor extends IAndExpressionVisitor, IEqExpressionVisitor,
   IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor {}
 
@@ -34,7 +44,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
-              private postQueryStringBuilder: postQueries.IQueryStringBuilder) {}
+              private postQueryStringBuilder: postQueries.IQueryStringBuilder,
+              private insertQueryStringBuilder: IInsertQueryStringBuilder) {}
 
   public batch(ops: base.IOperation[], schema: Schema, cbResults: (results: results.AnyResult) => void) {
     async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
@@ -82,10 +93,11 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
         if (errored === true) return cb(null, batchResults);
 
-        this.runInsert(schema.getEntityType(op.entityType), keyValuePairs, (res: results.AnyResult) => {
-          batchResults.push(results.Result.success("inserted"));
-          cb(null, batchResults);
-        });
+        this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
+          keyValuePairs, (res: results.AnyResult) => {
+            batchResults.push(results.Result.success("inserted"));
+            cb(null, batchResults);
+          });
       }
     }, (err, result) => {
       cbResults(results.Result.success("@todo dunno"));
@@ -121,6 +133,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
       (res, model) => cb(this.translateResponse(res, model, this.translateResponseToOData)));
   }
 
+  /* @deprecated */
   public insertEntity(entity: any, type: EntityType, cb: (result: results.AnyResult) => void) {
     this.sparqlProvider.query(this.postQueryStringBuilder.build(entity, type), result => {
       cb(result.process(res => "ok", err => ({ message: "sparql error", error: err })));
@@ -147,10 +160,21 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     });
   }
 
-  private runInsert(entityType: EntityType, keyValuePairs: { property: string, value: ISparqlLiteral }[],
+  private runInsert(entityType: EntityType, uri: string, keyValuePairs: { property: string; value: ISparqlLiteral }[],
                     cb: (res: results.AnyResult) => void) {
 
-    cb(results.Result.success("@todo dunno"));
+    const sparqlEntity = keyValuePairs.map(p => ({
+      rdfProperty: entityType.getProperty(p.property).getNamespacedUri(),
+      value: p.value,
+    }));
+    const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri, sparqlEntity);
+
+    this.sparqlProvider.query(query, response => {
+      cb(response.process(
+        result => ({ success: true }),
+        error => ({ success: false, error: error })
+      ));
+    });
   }
 
   private translateResponse<T>(response: results.AnyResult,
@@ -379,11 +403,6 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
     graphPattern.newConjunctivePattern(expandGraphPattern);
     graphPattern.newConjunctivePattern(filterGraphPattern);
 
-    let prefixes = [
-      { prefix: "rdf", uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
-      { prefix: "disco", uri: "http://disco-network.org/resource/" },
-    ];
-
     return this.sparqlSelectBuilder.fromGraphPatternAndFilterExpression(prefixes, graphPattern, filterExpression);
   }
 
@@ -546,52 +565,5 @@ export class QueryContext implements IQueryContext {
       this.mapping.getComplexProperty(propertyName),
       this.rootTypeSchema.getProperty(propertyName).getEntityType(),
       this.remainingExpandBranch[propertyName] || {});
-  }
-}
-
-export interface ISparqlLiteral {
-  representAsSparql(): string;
-}
-
-export class SparqlString implements ISparqlLiteral {
-  constructor(private value: string) {}
-
-  public representAsSparql() {
-    return "'" + this.escapedValue() + "'";
-  }
-
-  private escapedValue() {
-    const escape = [
-      { from: "\\", to: "\\\\" },
-      { from: "'", to: "\\'"},
-      { from: '"', to: '\\"'},
-      { from: "\f", to: "\\f"},
-      { from: "\b", to: "\\b"},
-      { from: "\r", to: "\\r"},
-      { from: "\n", to: "\\n"},
-      { from: "\t", to: "\\t"}];
-
-    return escape.reduce((prev, rule) => prev.replace(rule.from, rule.to), this.value);
-  }
-}
-
-export class SparqlNumber implements ISparqlLiteral {
-  constructor(private value: string) {}
-
-  public representAsSparql() {
-    return "'" + parseFloat(this.value) + "'";
-  }
-}
-
-export class SparqlUri implements ISparqlLiteral {
-  constructor(private uri: string) {}
-
-  public representAsSparql() {
-    return "<" + this.verifiedUri() + ">";
-  }
-
-  private verifiedUri() {
-    if (this.uri.indexOf(">") !== -1 || this.uri.indexOf("<") !== -1) throw new Error("invalid uri");
-    else return this.uri;
   }
 }

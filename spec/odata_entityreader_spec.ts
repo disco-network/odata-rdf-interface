@@ -1,9 +1,9 @@
-import { assert } from "chai";
+import { assertEx } from "../src/assert";
 
 import base = require("../src/odata/entityreader");
 import queryTestCases = require("./helpers/querytestcases");
 
-describe("OData.EntityReader", () => {
+describe("OData.EntityInitializer", () => {
 
   queryTestCases.entityReaderTests.forEach(
     (args, i) => spec(`#${i}`, args)
@@ -15,11 +15,11 @@ describe("OData.EntityReader", () => {
 
       let entity = entityReader.fromParsed(args.input, args.type);
 
-      assert.deepEqual(entity, args.outputEntity);
+      assertEx.deepEqual(entity, args.outputEntity);
     });
   }
 });
 
 function create() {
-  return new base.EntityReader();
+  return new base.EntityInitializer();
 }
