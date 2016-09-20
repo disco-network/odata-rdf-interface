@@ -95,6 +95,18 @@ describe("PostRequestParser (generated tests)", () => {
   }
 });
 
+describe("PostRequestParser:", () => {
+  it("should parse the JSON body", () => {
+    let parser = initPostRequestParser();
+
+    let parsed = parser.parse({ relativeUrl: "/Posts", body: "{ \"ContentId\": \"1\" }" });
+
+    assert.deepEqual(parsed.entity, { ContentId: "1" });
+  });
+});
+
+/* @construction body spec */
+
 describe("GetRequestParser:", () => {
   it("should also return the correct entity set name", () => {
     let parser = initGetRequestParser();

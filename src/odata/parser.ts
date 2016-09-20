@@ -43,7 +43,7 @@ export class PostRequestParser implements IPostRequestParser {
     let ast = this.odataParser.parse(request.relativeUrl);
     return {
       entitySetName: ast.resourcePath.entitySetName,
-      entity: JSON.stringify(request.body),
+      entity: JSON.parse(request.body),
     };
   }
 }
