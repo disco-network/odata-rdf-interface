@@ -14,15 +14,12 @@ To install them in your working directory, please use NPM:
     $ npm install
 
 # how to use
-To start the server, run:
+This package does not provide you with an HTTP server and that's why you can't simply start it.
 
-    $ node lib/src/server.js
+On the other hand, it enables you to combine it with every HTTP server you want! We still don't have docs
+but if you want 
 
-... or - if you already installed gulp -
-
-    $ gulp server
-
-Possible queries are at the moment:
+GET queries that are currently supported:
 
  * /Posts
  * /Posts?$expand=Content
@@ -34,6 +31,8 @@ Possible queries are at the moment:
  * /Posts?$filter=(Parent/Id eq 1) and (Content/Id eq 2)
  * /Posts?$filter=Children/any(child: child/Id eq 2)
  * /Posts?$filter=Children/any(c1: c1/Children/any(c2: 1 eq 1))
+
+POST queries *should* be supported (experimental because of the lack of deeper test cases).
 
 # development
 To develop this project, please use NPM to install further development dependencies, especially gulp.
@@ -48,6 +47,6 @@ To compile all and run the tests (based on jasmine), run:
 
 # what's missing?
 
- * $filter queries
  * $batch queries
- * POST, UPDATE etc.
+ * UPDATE etc.
+ * specification conformity... we currently only support some cherry-picked essential features.
