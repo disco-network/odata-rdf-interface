@@ -51,7 +51,7 @@ gulp.task("build-spec", function () {
   return build(["spec/**/*.ts", "src/**/*.ts", "typings/*.ts"], "tests");
 });
 gulp.task("build-lib", function () {
-  return build("src/**/*.ts", "typings/*.ts", "lib");
+  return build(["src/**/*.ts", "typings/*.ts"], "lib");
 });
 
 gulp.task("build-package.json", function () {
