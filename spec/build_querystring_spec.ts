@@ -164,6 +164,23 @@ describe("SelectQueryStringBuilder:", () => {
   }
 });
 
+describe("InsertQueryStringBuilder:", () => {
+  it("should produce '[PREFIXES] INSERT { <test> ns:prop '1' } WHERE {}",
+  () => {
+    const prefixes = [{ prefix: "ns", uri: "http://ns.a/" }];
+    const properties = [{ rdfProperty: "ns:prop", value: { representAsSparql: () => "'1'"} }];
+    const prefixProducer = new PrefixBuilder();
+    prefixProducer.prefixesAsSparql = p => {
+      assert.deepEqual(p, prefixes);
+      return "[PREFIXES]";
+    };
+    const producer = new qbuilder.InsertQueryStringBuilder(prefixProducer);
+
+    const sparql = producer.insertAsSparql(prefixes, "test", properties);
+    assert.strictEqual(sparql, "[PREFIXES] INSERT { <test> ns:prop '1' } WHERE {}");
+  });
+});
+
 class SelectSkeletonBuilder implements qbuilder.ISelectSkeletonBuilder {
   public buildSkeleton(prefixes: string, graphPattern: string): any {
     //

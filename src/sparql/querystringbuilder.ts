@@ -59,7 +59,7 @@ export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
     let query = this.prefixBuilder.prefixesAsSparql(prefixes);
     if (query !== "") query += " ";
 
-    query += `INSERT { ${this.triplesAsSparql(uri, properties)} }`;
+    query += `INSERT { ${this.triplesAsSparql(uri, properties)} } WHERE {}`;
     return query;
   }
 

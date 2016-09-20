@@ -82,6 +82,10 @@ SELECT * WHERE {
   }
 }`, answer => assert.strictEqual(answer.error, null));
 
+  createSpec("PREFIX disco: <http://disco-network.org/resource/> INSERT { <test> disco:id '1' } WHERE {}", answer => {
+    assert.strictEqual(answer.error, null);
+  });
+
   function createSpec(query: string, cb: (results: any) => void) {
     let prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
     prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";
