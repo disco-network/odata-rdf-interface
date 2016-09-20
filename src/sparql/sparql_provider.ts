@@ -5,7 +5,7 @@ import result = require("../result");
 export class SparqlProvider implements base.ISparqlProvider {
   constructor(private store, private graphName: string) { }
 
-  public querySelect(queryString: string, cb: (result: result.AnyResult) => void): void {
+  public query(queryString: string, cb: (result: result.AnyResult) => void): void {
     // TODO: ensure that query has kind SELECT
     this.store.executeWithEnvironment(queryString, [this.graphName], [], function(err, results) {
       if (!err) {
@@ -15,9 +15,5 @@ export class SparqlProvider implements base.ISparqlProvider {
         cb(result.Result.error(err));
       }
     });
-  }
-
-  public query(queryString: string, cb: (result: result.AnyResult) => void): void {
-    //
   }
 }

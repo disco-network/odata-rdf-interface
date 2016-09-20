@@ -77,9 +77,6 @@ class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
 }
 
 class SparqlProvider implements sparqlProviderBase.ISparqlProvider {
-  public querySelect() {
-    //
-  }
 
   public query(query: string, cb: (result: results.AnyResult) => void) {
     //

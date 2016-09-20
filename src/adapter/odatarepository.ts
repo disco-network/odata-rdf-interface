@@ -155,7 +155,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
       filterOption: filterExpression,
       expandTree: expandTree || {},
     }); /* @todo injectable */
-    this.sparqlProvider.querySelect(this.getQueryStringBuilder.fromQueryAdapterModel(model), result => {
+    this.sparqlProvider.query(this.getQueryStringBuilder.fromQueryAdapterModel(model), result => {
       cb(result, model);
     });
   }
