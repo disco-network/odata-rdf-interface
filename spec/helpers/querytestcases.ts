@@ -1,4 +1,5 @@
 import schema = require("../../src/odata/schema");
+import { match } from "../../src/assert";
 
 let queries = [
   "/Posts",
@@ -16,34 +17,28 @@ let parsedEntities = [
 
 let jsonStrings = parsedEntities.map(e => JSON.stringify(e));
 
-let asts = [
-  {
-    type: "resourceQuery",
-    resourcePath: {
-      type: "entitySet",
-      entitySetName: "Posts",
-      navigation: { type: "none" },
+let initializedEntities = [
+  [{
+      type: "get",
+      entityType: "Post",
+      pattern: {
+        Id: "1",
+      },
+    }, {
+      type: "insert",
+      entityType: "Post",
+      identifier: match.any,
+      value: {
+        Id: "3",
+        Content: { type: "ref", resultIndex: 0 },
+  }}],
+  [{
+    type: "insert",
+    entity: {
+      Id: "3",
+      Title: "MyContent",
     },
-    queryOptions: {},
-  },
-  {
-    type: "resourceQuery",
-    resourcePath: {
-      type: "entitySet",
-      entitySetName: "Content",
-    },
-  },
-];
-
-let entities = [
-  {
-    Id: "3",
-    ContentId: "1",
-  },
-  {
-    Id: "3",
-    Title: "MyContent",
-  },
+  }],
 ];
 
 let entitySetNames = [
@@ -62,22 +57,22 @@ let sparqlStrings = [
 ];
 
 export let postQueryTests: IPostQueryTestCase[] = [
-  { query: queries[0], body: jsonStrings[0], entity: entities[0], entityType: types[0],
+  { query: queries[0], body: jsonStrings[0], entity: initializedEntities[0], entityType: types[0],
     sparql: sparqlStrings[0], parsedEntity: parsedEntities[0], entitySetName: entitySetNames[0] },
-  { query: queries[1], body: jsonStrings[1], entity: entities[1], entityType: types[1],
+  { query: queries[1], body: jsonStrings[1], entity: initializedEntities[1], entityType: types[1],
     sparql: sparqlStrings[1], parsedEntity: parsedEntities[1], entitySetName: entitySetNames[1] },
 ];
 
 export let odataRepositoryQueryTests: IODataRepositoryTestCase[] = [
-  { entity: entities[0], entityType: types[0], sparql: sparqlStrings[0] },
+  { entity: initializedEntities[0], entityType: types[0], sparql: sparqlStrings[0] },
 ];
 
 export let odataParserTests: IPostRequestParserTestCase[] = [
-  { query: queries[0], body: jsonStrings[0], parsedEntity: entities[0], entitySetName: entitySetNames[0] },
+  { query: queries[0], body: jsonStrings[0], entitySetName: entitySetNames[0] },
 ];
 
 export let entityReaderTests: IEntityReaderTestCase[] = [
-  { input: parsedEntities[0], type: types[0], outputEntity: entities[0] },
+  { input: parsedEntities[0], type: types[0], outputEntity: initializedEntities[0] },
 ];
 
 export interface IPostQueryTestCase {
@@ -86,7 +81,7 @@ export interface IPostQueryTestCase {
 }
 
 export interface IPostRequestParserTestCase {
-  query: string; body: string; parsedEntity: any; entitySetName: string;
+  query: string; body: string; entitySetName: string;
 }
 
 export interface IODataRepositoryTestCase {

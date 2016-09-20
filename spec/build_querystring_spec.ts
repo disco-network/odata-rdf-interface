@@ -151,7 +151,11 @@ describe("SelectQueryStringBuilder:", () => {
         assert.strictEqual(pat, args.patternString);
         return args.queryString;
       };
-      let builder = new qbuilder.SelectQueryStringBuilder(skeletonBuilder, patternBuilder);
+      let prefixBuilder = new PrefixBuilder();
+      prefixBuilder.prefixesAsSparql = prefixes => {
+        return args.prefixString;
+      };
+      let builder = new qbuilder.SelectQueryStringBuilder(prefixBuilder, skeletonBuilder, patternBuilder);
 
       let query = builder.fromGraphPatternAndFilterExpression(args.prefixes, args.pattern, args.filter);
 
@@ -173,6 +177,12 @@ class GraphPatternStringBuilder implements qbuilder.IGraphPatternStringBuilder {
 
   public buildGraphPatternStringAmendFilterExpression(pattern: gpatterns.TreeGraphPattern,
                                                       filter?: qbuilder.IFilterExpression): any {
+    //
+  }
+}
+
+class PrefixBuilder implements qbuilder.IPrefixBuilder {
+  public prefixesAsSparql(prefixes: qbuilder.IPrefix[]): any {
     //
   }
 }

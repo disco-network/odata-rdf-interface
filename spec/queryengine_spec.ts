@@ -1,16 +1,14 @@
 import { assert } from "chai";
 import { stub, match } from "sinon";
 
-import { GetHandler, PostHandler, IGetResponseSender, GetResponseSender } from "../src/odata/queryengine";
+import { GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder } from "../src/odata/queryengine";
 import { IPostRequestParser, IGetRequestParser, IFilterVisitor } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
-import { IRepository } from "../src/odata/repository";
+import { IRepository, IOperation } from "../src/odata/repository";
 import { IValue } from "../src/odata/filters/expressions";
 import { Result, AnyResult } from "../src/result";
 import { Schema, EntityType } from "../src/odata/schema";
 import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";
-
-import queryTestCases = require("./helpers/querytestcases");
 
 describe("OData.PostHandler:", () => {
 
@@ -18,48 +16,56 @@ describe("OData.PostHandler:", () => {
     let parser = new PostRequestParser();
     stub(parser, "parse").returns({ entitySetName: "Posts", entity: {} });
     let entityInitializer = new EntityInitializer();
-    stub(entityInitializer, "fromParsed").returns({});
+    stub(entityInitializer, "fromParsed").returns([]);
     let repository = new Repository<IFilterVisitor>();
-    stub(repository, "insertEntity").callsArgWith(2, Result.success("ok"));
+    stub(repository, "batch").callsArgWith(2, Result.success("ok"));
 
-    let engine = new PostHandler(parser, entityInitializer, repository, new Schema(),
-      httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
+    let engine = new PostHandler(parser, entityInitializer, repository, new Schema());
 
-    engine.query({ relativeUrl: "/Posts", body: "{}" });
+    engine.query({ relativeUrl: "/Posts", body: "{}" }, httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
   });
 
-  postQuery("should insert an entity and send an empty response, sending exactly one body",
-    queryTestCases.postQueryTests[0]);
-  function postQuery(test: string, args: queryTestCases.IPostQueryTestCase) {
-    it(test, done => {
-      let parser = new PostRequestParser();
-      stub(parser, "parse")
-        .withArgs({ relativeUrl: args.query, body: args.body })
-        .returns({ entitySetName: args.entitySetName, entity: args.parsedEntity });
+  it("should insert an entity and send an empty response, sending exactly one body", done => {
+    let parser = new PostRequestParser();
+    stub(parser, "parse")
+      .withArgs({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" })
+      .returns({ entitySetName: "Posts", entity: { ContentId: "1" } });
 
-      let entityReader = new EntityInitializer();
-      stub(entityReader, "fromParsed")
-        .withArgs(args.parsedEntity, match(type => type.getName() === "Post"))
-        .returns(args.entity);
+    const ops = [{
+        type: "get",
+        entityType: "Post",
+        pattern: {
+          Id: "1",
+        },
+      }, {
+        type: "insert",
+        entityType: "Post",
+        value: {
+          Id: "3",
+          Content: { type: "ref", resultIndex: 0 },
+    }}];
+    let entityReader = new EntityInitializer();
+    stub(entityReader, "fromParsed")
+      .withArgs({ ContentId: "1" }, match(type => type.getName() === "Post"))
+      .returns(ops);
 
-      let repository = new Repository<IFilterVisitor>();
-      let insertEntity = stub(repository, "insertEntity")
-        .withArgs(args.entity, match(type => type.getName() === "Post"))
-        .callsArgWith(2, Result.success("ok"));
+    let repository = new Repository<IFilterVisitor>();
+    let insertEntity = stub(repository, "batch")
+      .withArgs(ops, match.any, match.any)
+      .callsArgWith(2, Result.success("ok"));
 
-      let responseSender = new HttpResponseSender();
-      let sendBody = stub(responseSender, "sendBody");
-      stub(responseSender, "finishResponse", () => {
-        assert.strictEqual(sendBody.calledOnce, true);
-        assert.strictEqual(insertEntity.calledOnce, true);
-        done();
-      });
-
-      let engine = new PostHandler(parser, entityReader, repository, new Schema(), responseSender);
-
-      engine.query({ relativeUrl: args.query, body: args.body });
+    let responseSender = new HttpResponseSender();
+    let sendBody = stub(responseSender, "sendBody");
+    stub(responseSender, "finishResponse", () => {
+      assert.strictEqual(sendBody.calledOnce, true);
+      assert.strictEqual(insertEntity.calledOnce, true);
+      done();
     });
-  }
+
+    let engine = new PostHandler(parser, entityReader, repository, new Schema());
+
+    engine.query({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" }, responseSender);
+  });
 });
 
 describe("OData.GetHandler", () => {
@@ -86,7 +92,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts", body: "" });
+    getHandler.query({ relativeUrl: "/Posts", body: "" }, null);
   });
 
   it("should return an expanded entity set, sending exactly one body", done => {
@@ -113,7 +119,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" });
+    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, null);
   });
 });
 
@@ -128,30 +134,30 @@ describe("OData.GetResponseSender", () => {
       assert.strictEqual(storedCode, 200);
       done();
     });
-    let responseSender = new GetResponseSender(httpSenderThatShouldReceiveStatusCode(200, done));
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSenderThatShouldReceiveStatusCode(200, done));
   });
   it("should send CORS headers", done => {
     let httpSender = httpSenderThatShouldReceiveCorsHeaders(done);
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSender);
   });
   it("should send Content-Length and Content-Type headers", done => {
     let body = JSON.stringify({ "odata.metadata": "http://example.org/", value: [] }, null, 2);
     let httpSender = httpSenderThatShouldReceiveJsonContentHeaders(body.length.toString(), done);
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSender);
   });
   it("should send the request body with minimal metadata", done => {
     let body = JSON.stringify({ "odata.metadata": "http://example.org/", value: [] }, null, 2);
     let httpSender = httpSenderThatShouldReceiveRequestBody(
       body, done);
-    let responseSender = new GetResponseSender(httpSender);
+    let responseSender = new GetHttpResponder();
 
-    responseSender.success([]);
+    responseSender.success([], httpSender);
   });
 });
 
@@ -233,7 +239,7 @@ class EntityInitializer implements IEntityInitializer {
   }
 }
 
-class GetResponseSenderStub implements IGetResponseSender {
+class GetResponseSenderStub implements IGetHttpResponder {
   public success(entities: any[]) {
     //
   }
@@ -265,6 +271,10 @@ class Repository<T> implements IRepository<T> {
   }
 
   public insertEntity(entity: any, type: EntityType, cb: (result: AnyResult) => void) {
+    //
+  }
+
+  public batch(ops: IOperation[], schema: Schema, cb: (result: AnyResult) => void) {
     //
   }
 }

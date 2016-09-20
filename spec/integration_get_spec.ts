@@ -8,7 +8,7 @@ import { Result } from "../src/result";
 import sparqlProviderModule = require("../src/sparql/sparql_provider");
 import rdfstore = require("rdfstore");
 
-describe("The query engine should evaluate", () => {
+describe("The GetHandler should evaluate", () => {
 
   /* @todo get test queries from array */
   createQuerySpec("/Posts", answer => {
@@ -222,7 +222,7 @@ describe("The query engine should evaluate", () => {
             },
           };
           let getHandler = new GetHandler(new Schema(), new GetRequestParser(), repository, responseSender);
-          try { getHandler.query({ relativeUrl: query, body: "" }); }
+          try { getHandler.query({ relativeUrl: query, body: "" }, null); }
           catch (e) {
             assert.strictEqual(e.stack || e, "no exception");
             done();

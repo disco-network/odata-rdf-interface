@@ -5,6 +5,19 @@ export interface ISelectQueryStringBuilder {
                                       filter?: IFilterExpression): string;
 }
 
+export interface IInsertQueryStringBuilder {
+  insertAsSparql(prefixes: IPrefix[], uri: string,
+                 properties: { rdfProperty: string, value: ISparqlLiteral }[]): string;
+}
+
+export interface ISparqlLiteral {
+  representAsSparql(): string;
+}
+
+export interface IPrefixBuilder {
+  prefixesAsSparql(prefixes: IPrefix[]): string;
+}
+
 export interface IGraphPatternStringBuilder {
   buildGraphPatternString(pattern: gpatterns.TreeGraphPattern): string;
   buildGraphPatternStringAmendFilterExpression(pattern: gpatterns.TreeGraphPattern, filter?: IFilterExpression): string;
@@ -25,14 +38,39 @@ export interface IPrefix {
 
 export class SelectQueryStringBuilder implements ISelectQueryStringBuilder {
 
-  constructor(private selectSkeletonBuilder: ISelectSkeletonBuilder,
+  constructor(private prefixBuilder: IPrefixBuilder,
+              private selectSkeletonBuilder: ISelectSkeletonBuilder,
               private patternBuilder: IGraphPatternStringBuilder) {}
 
   public fromGraphPatternAndFilterExpression(prefixes: IPrefix[], graphPattern: gpatterns.TreeGraphPattern,
                                              filter?: IFilterExpression) {
-    let prefixStr = prefixes.map(p => `PREFIX ${p.prefix}: <${p.uri}>`).join(" ");
+    const prefixStr = this.prefixBuilder.prefixesAsSparql(prefixes);
     return this.selectSkeletonBuilder.buildSkeleton(
       prefixStr, this.patternBuilder.buildGraphPatternStringAmendFilterExpression(graphPattern, filter));
+  }
+}
+
+export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
+
+  constructor(private prefixBuilder: IPrefixBuilder) {}
+
+  public insertAsSparql(prefixes: IPrefix[], uri: string,
+                        properties: { rdfProperty: string, value: ISparqlLiteral }[]): string {
+    let query = this.prefixBuilder.prefixesAsSparql(prefixes);
+    if (query !== "") query += " ";
+
+    query += `INSERT { ${this.triplesAsSparql(uri, properties)} }`;
+    return query;
+  }
+
+  private triplesAsSparql(uri: string, properties: { rdfProperty: string, value: ISparqlLiteral }[]): string {
+    return properties.map(p => `<${uri}> ${p.rdfProperty} ${p.value.representAsSparql()}`).join(" . ");
+  }
+}
+
+export class PrefixBuilder implements IPrefixBuilder {
+  public prefixesAsSparql(prefixes) {
+    return prefixes.map(p => `PREFIX ${p.prefix}: <${p.uri}>`).join(" ");
   }
 }
 
@@ -92,5 +130,55 @@ export class GraphPatternStringBuilder implements IGraphPatternStringBuilder {
     if (unionsString !== "") append(unionsString);
 
     return result;
+  }
+}
+export class SparqlString implements ISparqlLiteral {
+  constructor(private value: string) {}
+
+  public representAsSparql() {
+    return "'" + this.escapedValue() + "'";
+  }
+
+  public toString(): string {
+    return `[SparqlString ${JSON.stringify(this.value)}]`;
+  }
+
+  private escapedValue() {
+    const escape = [
+      { from: /\\/g, to: "\\\\" },
+      { from: /'/g, to: "\\'"},
+      { from: /"/g, to: '\\"'},
+      { from: /\f/g, to: "\\f"},
+      { from: /[\b]/g, to: "\\b"},
+      { from: /\r/g, to: "\\r"},
+      { from: /\n/g, to: "\\n"},
+      { from: /\t/g, to: "\\t"}];
+
+    return escape.reduce((prev, rule) => prev.replace(rule.from, rule.to), this.value);
+  }
+}
+
+export class SparqlNumber implements ISparqlLiteral {
+  constructor(private value: string) {}
+
+  public representAsSparql() {
+    return "'" + parseFloat(this.value) + "'";
+  }
+
+  public toString(): string {
+    return `[SparqlNumber ${JSON.stringify(this.value)}]`;
+  }
+}
+
+export class SparqlUri implements ISparqlLiteral {
+  constructor(private uri: string) {}
+
+  public representAsSparql() {
+    return "<" + this.verifiedUri() + ">";
+  }
+
+  private verifiedUri() {
+    if (this.uri.indexOf(">") !== -1 || this.uri.indexOf("<") !== -1) throw new Error("invalid uri");
+    else return this.uri;
   }
 }
