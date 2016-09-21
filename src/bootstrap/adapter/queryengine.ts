@@ -10,13 +10,13 @@ import { IVisitor } from "./filters";
 export { OptionsHandler } from "../../odata/queryengine"
 
 export class GetHandler extends base.GetHandler<IVisitor> {
-  constructor(schema: Schema, sparqlProvider: ISparqlProvider) {
-    super(schema, new GetRequestParser(), new ODataRepository(sparqlProvider), new base.GetHttpResponder());
+  constructor(schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
+    super(schema, new GetRequestParser(), new ODataRepository(sparqlProvider, graphUri), new base.GetHttpResponder());
   }
 }
 
 export class PostHandler extends base.PostHandler<IVisitor> {
-  constructor(schema: Schema, sparqlProvider: ISparqlProvider) {
-    super(new PostRequestParser(), new EntityInitializer(), new ODataRepository(sparqlProvider), schema);
+  constructor(schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
+    super(new PostRequestParser(), new EntityInitializer(), new ODataRepository(sparqlProvider, graphUri), schema);
   }
 }

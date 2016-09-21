@@ -14,10 +14,11 @@ export class EntityInitializer implements base.IEntityInitializer {
       if (Object.prototype.hasOwnProperty.call(entity, propertyName)) {
         const setter = this.resolver.resolveSetter(entityType.getProperty(propertyName), entity[propertyName]);
         const setterValue = setter.value;
+        const propertyType = setter.property.getEntityType();
         if (this.isRef(setterValue)) {
           prerequisites.push({
             type: "get",
-            entityType: entityType.getName(),
+            entityType: propertyType.getName(),
             pattern: {
               [setterValue.indexProperty.getName()]: setterValue.id,
             },

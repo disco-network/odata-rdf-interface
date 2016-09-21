@@ -16,12 +16,8 @@ export const assertEx = {
   deepEqual: function(lhs, rhs) {
     if (!doesDeepEqual(lhs, rhs)) {
       throw new Error(`expected lhs to deeply equal rhs
-lhs: ${JSON.stringify(lhs, (k,v) => hasPropDirectlyOrInPrototype(v, "toString") 
-  ? (v.toString() !== "[object Object]" ? v.toString() : v)
-  : v, 2)}
-rhs: ${JSON.stringify(rhs, (k,v) => hasPropDirectlyOrInPrototype(v, "toString") 
-  ? (v.toString() !== "[object Object]" ? v.toString() : v)
-  : v, 2)}`);
+lhs: ${JSON.stringify(lhs, null, 2)}
+rhs: ${JSON.stringify(rhs, null, 2)}`);
     }
   },
 };
@@ -45,6 +41,7 @@ function doesDeepEqual(lhs, rhs): boolean {
     case "undefined":
       return lhs === rhs;
     case "object":
+      if (lhs === null || rhs === null) return lhs === rhs;
       for (const prop of Object.keys(lhs)) {
         if (!Object.prototype.hasOwnProperty.call(rhs, prop) || !doesDeepEqual(lhs[prop], rhs[prop]))
           return false;

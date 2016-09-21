@@ -12,8 +12,9 @@ import {
 import { PrefixBuilder } from "../sparql/querystringbuilder";
 
 export class ODataRepository extends base.ODataRepository<IVisitor> {
-  constructor(sparqlProvider: ISparqlProvider) {
-    super(sparqlProvider, new GetQueryStringBuilder(), new PostQueryStringBuilder(), new InsertQueryStringBuilder());
+  constructor(sparqlProvider: ISparqlProvider, graphUri: string) {
+    super(sparqlProvider, new GetQueryStringBuilder(), new PostQueryStringBuilder(),
+          new InsertQueryStringBuilder(graphUri));
   }
 }
 
@@ -26,8 +27,8 @@ export class GetQueryStringBuilder extends base.GetQueryStringBuilder<IVisitor> 
 }
 
 export class InsertQueryStringBuilder extends BaseInsertQueryStringBuilder {
-  constructor() {
-    super(new PrefixBuilder());
+  constructor(graphUri: string) {
+    super(new PrefixBuilder(), graphUri);
   }
 }
 

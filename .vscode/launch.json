@@ -2,26 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Server",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceRoot}/lib/src/server.js",
-            "stopOnEntry": false,
-            "args": [],
-            "cwd": "${workspaceRoot}",
-            "preLaunchTask": null,
-            "runtimeExecutable": null,
-            "runtimeArgs": [
-                "--nolazy"
-            ],
-            "env": {
-                "NODE_ENV": "development"
-            },
-            "externalConsole": false,
-            "sourceMaps": true,
-            "outDir": "${workspaceRoot}/lib"
-        },
-        {
             "name": "Debug Tests",
             "type": "node",
             "request": "launch",
@@ -39,7 +19,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/lib"
+            "outDir": "${workspaceRoot}/build/lib"
         },
         {
             "name": "Debug Tests Without Build",
@@ -59,7 +39,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/lib"
+            "outDir": "${workspaceRoot}/build/lib"
         },
         {
             "name": "Debug Mutation Tests (bad performance)",
@@ -79,7 +59,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/lib"
+            "outDir": "${workspaceRoot}/build/lib"
         },
         {
             "name": "Attach",

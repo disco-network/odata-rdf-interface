@@ -35,8 +35,7 @@ declare module "abnfjs/interpreter" {
 }
 
 declare module "rdfstore" {
-    let x: any;
-    export = x;
+    export function create(callback: (err, store) => void);
 }
 
 declare module "async" {

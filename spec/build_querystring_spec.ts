@@ -165,7 +165,7 @@ describe("SelectQueryStringBuilder:", () => {
 });
 
 describe("InsertQueryStringBuilder:", () => {
-  it("should produce '[PREFIXES] INSERT { <test> ns:prop '1' } WHERE {}",
+  it("should produce [PREFIXES] INSERT DATA { GRAPH <[GRAPH]> { <test> ns:prop '1' } }",
   () => {
     const prefixes = [{ prefix: "ns", uri: "http://ns.a/" }];
     const properties = [{ rdfProperty: "ns:prop", value: { representAsSparql: () => "'1'"} }];
@@ -174,10 +174,10 @@ describe("InsertQueryStringBuilder:", () => {
       assert.deepEqual(p, prefixes);
       return "[PREFIXES]";
     };
-    const producer = new qbuilder.InsertQueryStringBuilder(prefixProducer);
+    const producer = new qbuilder.InsertQueryStringBuilder(prefixProducer, "[GRAPH]");
 
     const sparql = producer.insertAsSparql(prefixes, "test", properties);
-    assert.strictEqual(sparql, "[PREFIXES] INSERT { <test> ns:prop '1' } WHERE {}");
+    assert.strictEqual(sparql, "[PREFIXES] INSERT DATA { GRAPH <[GRAPH]> { <test> ns:prop '1' } }");
   });
 });
 

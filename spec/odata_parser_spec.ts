@@ -1,9 +1,8 @@
 import { assert } from "chai";
-import { stub } from "sinon";
 
 import {
   IPostRequestParser, PostRequestParser, GetRequestParser,
-  IODataParser, ODataParser, IFilterVisitor
+  IODataParser, ODataParser, IFilterVisitor,
 } from "../src/odata/parser";
 import queryTestCases = require("./helpers/querytestcases");
 
@@ -155,12 +154,12 @@ function initODataParser(): IODataParser {
 }
 
 class Visitor implements IFilterVisitor {
-  public visitStringLiteral() {}
-  public visitNumericLiteral() {}
-  public visitAndExpression() {}
-  public visitOrExpression() {}
-  public visitEqExpression() {}
-  public visitParentheses() {}
-  public visitPropertyValue() {}
-  public visitAnyExpression() {}
+  public visitStringLiteral() { /* */ }
+  public visitNumericLiteral() { /* */ }
+  public visitAndExpression() { /* */ }
+  public visitOrExpression() { /* */ }
+  public visitEqExpression() { /* */ }
+  public visitParentheses() { /* */ }
+  public visitPropertyValue() { /* */ }
+  public visitAnyExpression() { /* */ }
 }

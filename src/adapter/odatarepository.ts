@@ -68,6 +68,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         });
       }
       else if (this.isInsertOp(op)) {
+        /* @todo what about inverse properties??? */
         const keyValuePairs: { property: string, value: ISparqlLiteral }[] = [];
         let errored = false;
         for (const property of Object.keys(op.value)) {
@@ -104,7 +105,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     });
   }
 
-  public eqExpressionFromKeyValue(pair: { key: string; value: base.IPrimitive }): IEqExpression<IMinimalVisitor> {
+  public eqExpressionFromKeyValue = (pair: { key: string; value: base.IPrimitive }): IEqExpression<IMinimalVisitor> => {
     return new EqExpression(
       this.propertyExpressionFromName(pair.key),
       this.primitiveLiteralExpressionFromValue(pair.value)
@@ -188,7 +189,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
   private translateResonseToEntityUris(results,
                                        model: IQueryAdapterModel<TExpressionVisitor>) {
-    return results.map(res => res[model.getMapping().variables.getVariable()]);
+    /* @todo check token === "uri" */
+    return results.map(res => res[model.getMapping().variables.getVariable().substr(1)].value);
   }
 
   private translateResponseToOData = (results,

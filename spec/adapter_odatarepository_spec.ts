@@ -8,8 +8,8 @@ import {
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
 import { IInsertQueryStringBuilder, IPrefix, ISparqlLiteral } from "../src/sparql/querystringbuilder";
 
-describe("Adapter.ODataRepository (insertion):", () => {
-  it("Insert an entity called 'post1' with Id = '1'", (done) => {
+describe("Adapter.ODataRepository:", () => {
+  it("should insert an entity called 'post1' with Id = '1'", done => {
     const sparql = "INSERT {SOMETHING}";
 
     let myPostQueryStringBuilder = new PostQueryStringBuilder();
@@ -24,9 +24,9 @@ describe("Adapter.ODataRepository (insertion):", () => {
 
     let insertQueryStringBuilder = new InsertQueryStringBuilder();
     insertQueryStringBuilder.insertAsSparql = (prefixes, uri, properties) => {
-      assert.strictEqual(uri, "post1");
+      assert.strictEqual(uri, "post10");
       assertEx.deepEqual(properties, [
-        { rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'1'") },
+        { rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'10'") },
       ]);
       return "INSERT {SOMETHING}";
     };
@@ -36,9 +36,61 @@ describe("Adapter.ODataRepository (insertion):", () => {
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",
-      identifier: "post1",
+      identifier: "post10",
       value: {
-        Id: "1",
+        Id: "10",
+      },
+    }], new schema.Schema(), results => {
+      assert.strictEqual(results.success(), true);
+      assert.strictEqual(results.result(), "@todo dunno");
+      assert.strictEqual(sparqlQueryCount, 1);
+      done();
+    });
+  });
+
+  xit("should insert an entity referencing to Post #1", done => {
+    const sparql = "INSERT {SOMETHING}";
+
+    let myPostQueryStringBuilder = new PostQueryStringBuilder();
+
+    let mySparqlProvider = new SparqlProvider();
+    let sparqlQueryCount = 0;
+    mySparqlProvider.query = (query, cb) => {
+      switch (sparqlQueryCount) {
+        case 0:
+          assert.strictEqual(query, sparql /* @todo */);
+          cb(results.Result.success([{
+
+          }]));
+          break;
+        case 1:
+          assert.strictEqual(query, sparql);
+          cb(results.Result.success("ok"));
+        break;
+        default:
+          assert.strictEqual("sparqlQueryCount", "valid");
+          break;
+      }
+      ++sparqlQueryCount;
+    };
+
+    let insertQueryStringBuilder = new InsertQueryStringBuilder();
+    insertQueryStringBuilder.insertAsSparql = (prefixes, uri, properties) => {
+      assert.strictEqual(uri, "post10");
+      assertEx.deepEqual(properties, [
+        { rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'10'") },
+      ]);
+      return "INSERT {SOMETHING}";
+    };
+
+    let odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(), myPostQueryStringBuilder,
+                                  insertQueryStringBuilder);
+    odataRepository.batch([{
+      type: "insert",
+      entityType: "Post",
+      identifier: "post10",
+      value: {
+        Id: "10",
       },
     }], new schema.Schema(), results => {
       assert.strictEqual(results.success(), true);

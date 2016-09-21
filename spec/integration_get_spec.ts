@@ -215,7 +215,7 @@ describe("The GetHandler should evaluate", () => {
         let graphName = "http://example.org/";
         storeSeed(store, graphName, () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-          let repository = new ODataRepository(sparqlProvider);
+          let repository = new ODataRepository(sparqlProvider, graphName);
           let responseSender = {
             success: function(entities) {
               cb(Result.success(entities)); done();

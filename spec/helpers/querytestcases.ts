@@ -20,7 +20,7 @@ let jsonStrings = parsedEntities.map(e => JSON.stringify(e));
 let initializedEntities = [
   [{
       type: "get",
-      entityType: "Post",
+      entityType: "Content",
       pattern: {
         Id: "1",
       },
@@ -29,7 +29,7 @@ let initializedEntities = [
       entityType: "Post",
       identifier: match.any,
       value: {
-        Id: "3",
+        Id: match.any,
         Content: { type: "ref", resultIndex: 0 },
   }}],
   [{

@@ -52,14 +52,14 @@ export class SelectQueryStringBuilder implements ISelectQueryStringBuilder {
 
 export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
 
-  constructor(private prefixBuilder: IPrefixBuilder) {}
+  constructor(private prefixBuilder: IPrefixBuilder, private graph: string) {}
 
   public insertAsSparql(prefixes: IPrefix[], uri: string,
                         properties: { rdfProperty: string, value: ISparqlLiteral }[]): string {
     let query = this.prefixBuilder.prefixesAsSparql(prefixes);
     if (query !== "") query += " ";
 
-    query += `INSERT { ${this.triplesAsSparql(uri, properties)} } WHERE {}`;
+    query += `INSERT DATA { GRAPH <${this.graph}> { ${this.triplesAsSparql(uri, properties)} } }`;
     return query;
   }
 

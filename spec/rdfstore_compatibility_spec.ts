@@ -86,6 +86,23 @@ SELECT * WHERE {
     assert.strictEqual(answer.error, null);
   });
 
+  it("should store inserted triples", done => {
+    const prefixes = "PREFIX disco: <http://disco-network.org/resource/> ";
+    const graphName = "http://example.org";
+    const firstQuery = "INSERT DATA { GRAPH <" + graphName + "> { <test> disco:id '1' } }";
+    const secondQuery = "SELECT * WHERE { ?test disco:id ?id }";
+    rdfstore.create((error, store) => {
+      store.executeWithEnvironment(prefixes + firstQuery, [graphName], [], (err, results) => {
+        assert.strictEqual(err, null);
+        store.executeWithEnvironment(prefixes + secondQuery, [graphName], [], (err2, results2) => {
+          assert.strictEqual(err2, null);
+          assert.strictEqual(results2.length, 1);
+          done();
+        });
+      });
+    });
+  });
+
   function createSpec(query: string, cb: (results: any) => void) {
     let prefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ";
     prefixes += "PREFIX disco: <http://disco-network.org/resource/> ";

@@ -17,7 +17,7 @@ let raw = {
     },
     Content: {
       properties: {
-        Id: { type: "Edm.Int64", rdfName: "id" },
+        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
         Title: { type: "Edm.String", rdfName: "title" },
         Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture" },
       },

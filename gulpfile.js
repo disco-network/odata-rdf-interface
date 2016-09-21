@@ -120,5 +120,10 @@ gulp.task("tests", ["build-tests"], function () {
     .pipe(mocha());
 });
 
+gulp.task("tests-no-build", function () {
+  return gulp.src("./build/tests/spec/*.js")
+    .pipe(mocha());
+})
+
 //alternative name for the "tests" task
 gulp.task("specs", ["tests"]);
