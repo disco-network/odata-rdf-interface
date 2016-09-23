@@ -19,7 +19,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/build/lib"
+            "outDir": "${workspaceRoot}/build/tests"
         },
         {
             "name": "Debug Tests Without Build",
@@ -39,7 +39,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/build/lib"
+            "outDir": "${workspaceRoot}/build/tests"
         },
         {
             "name": "Debug Mutation Tests (bad performance)",

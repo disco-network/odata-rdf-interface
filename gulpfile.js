@@ -33,25 +33,22 @@ var sourceMapsConfig = {
 
 var tsProject = tsc.createProject("tsconfig.json");
 
-function build(sourcePath, targetPath) {
-  var tsResult = gulp.src(sourcePath)
+function build(sourcePath, base, targetPath) {
+  var tsResult = gulp.src(sourcePath, { base: base })
     .pipe(sourcemaps.init())
-    .pipe(tsc(tsProject));
+    .pipe(tsProject(tsc.reporter.defaultReporter()));
 
   return merge([
-    tsResult.dts
-      .pipe(gulp.dest("build/lib")),
-    tsResult.js
-      .pipe(sourcemaps.write("../maps", sourceMapsConfig))
+    tsResult
       .pipe(gulp.dest("build/" + targetPath))
   ]);
 }
 
 gulp.task("build-spec", function () {
-  return build(["spec/**/*.ts", "src/**/*.ts", "typings/*.ts"], "tests");
+  return build(["spec/**/*.ts", "src/**/*.ts", "typings/*.d.ts"], ".", "tests");
 });
 gulp.task("build-lib", function () {
-  return build(["src/**/*.ts", "typings/*.ts"], "lib");
+  return build(["src/**/*.ts", "typings/*.d.ts"], "./src", "lib");
 });
 
 gulp.task("build-package.json", function () {
@@ -69,14 +66,14 @@ gulp.task("build-package.json", function () {
     "license": appPackageJson.license,
     "bugs": appPackageJson.bugs
   }
-  fs.mkdirSync(path.join(__dirname, "build"));
+  // Is this necessary in any case? fs.mkdirSync(path.join(__dirname, "build"));
   fs.writeFileSync(path.join(__dirname, "build", "package.json"), JSON.stringify(npmPackageJson, null, 2));
 });
 
 function copyStaticSrc() {
   return gulp.src([
     "./src/**/**/odata4-mod.abnf"
-  ]);
+  ], { base: "./src" });
 }
 gulp.task("copy-static-lib", ["copy-license"], function () {
   return copyStaticSrc().pipe(gulp.dest("build/lib"));
@@ -94,7 +91,9 @@ gulp.task("copy-license", function () {
 gulp.task("build", function (cb) {
   return runSequence(
     "clean-all",
-    ["build-lib", "copy-static-lib", "build-package.json"],
+    "build-lib",
+    "copy-static-lib",
+    "build-package.json",
     cb
   );
 });
@@ -110,7 +109,8 @@ gulp.task("clean-all", ["clean-all-old"], function () {
 gulp.task("build-tests", function (cb) {
   return runSequence(
     "clean-all",
-    ["build-spec", "copy-static-spec"],
+    "build-spec",
+    "copy-static-spec",
     cb
   );
 });

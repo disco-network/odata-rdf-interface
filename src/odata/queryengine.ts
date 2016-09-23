@@ -1,4 +1,8 @@
-import odataParser = require("../odata/parser");
+import {
+  IGetRequestParser, IPostRequestParser,
+  GetRequestType, EqExpression, PropertyValue, NumericLiteral,
+} from "../odata/parser";
+import { IEqExpressionVisitor, IPropertyValueVisitor, INumericLiteralVisitor } from "../odata/filters/expressions";
 import entityReader = require("../odata/entity_reader_base");
 import { IRepository }  from "../odata/repository";
 import { Schema } from "../odata/schema";
@@ -8,7 +12,7 @@ export interface IGetHandler extends IHttpRequestHandler {
 }
 
 export interface IGetHttpResponder {
-  success(entities: any[], responseSender: IHttpResponseSender): void;
+  success(entityOrEntities: any, responseSender: IHttpResponseSender): void;
 }
 
 export interface IPostHandler extends IHttpRequestHandler {
@@ -21,19 +25,34 @@ export interface IPostRequestResult {
   success: boolean;
 }
 
-export class GetHandler<T> implements IGetHandler {
+export interface IMinimalVisitor extends INumericLiteralVisitor, IEqExpressionVisitor, IPropertyValueVisitor {}
+export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
 
   constructor(private schema: Schema,
-              private parser: odataParser.IGetRequestParser<T>,
+              private parser: IGetRequestParser<T>,
               private repository: IRepository<T>,
               private getHttpResponder: IGetHttpResponder) {}
 
   public query(request: IHttpRequest, httpResponseSender: IHttpResponseSender) {
     let parsed = this.parser.parse(request);
-    let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
-    this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
-      this.getHttpResponder.success(result.result(), httpResponseSender);
-    });
+    const type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
+    switch (parsed.type) {
+      case GetRequestType.Collection:
+        this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
+          this.getHttpResponder.success(result.result(), httpResponseSender);
+        });
+        break;
+      case GetRequestType.ById:
+        const propertyExpr = new PropertyValue(["Id"]);
+        const numericLiteral = new NumericLiteral(parsed.id);
+        const filterExpression = new EqExpression<T>(propertyExpr, numericLiteral);
+        this.repository.getEntities(type, {}, filterExpression, result => {
+          this.getHttpResponder.success(result.result()[0], httpResponseSender);
+        });
+        break;
+      default:
+        throw new Error("This GetRequestType is not supported.");
+    }
   }
 }
 
@@ -60,7 +79,7 @@ export class GetHttpResponder implements IGetHttpResponder {
 
 export class PostHandler<T> implements IPostHandler {
 
-  constructor(private parser: odataParser.IPostRequestParser,
+  constructor(private parser: IPostRequestParser,
               private entityInitializer: entityReader.IEntityInitializer,
               private repository: IRepository<T>,
               private schema: Schema) {

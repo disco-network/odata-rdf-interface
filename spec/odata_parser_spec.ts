@@ -1,7 +1,7 @@
 import { assert } from "chai";
 
 import {
-  IPostRequestParser, PostRequestParser, GetRequestParser,
+  IPostRequestParser, PostRequestParser, GetRequestParser, GetRequestType,
   IODataParser, ODataParser, IFilterVisitor,
 } from "../src/odata/parser";
 import queryTestCases = require("./helpers/querytestcases");
@@ -129,7 +129,9 @@ describe("GetRequestParser:", () => {
     };
 
     const parsed = parser.parse({ relativeUrl: "/Posts?$filter=a/b/c eq 1", body: "" });
-    parsed.filterExpression.accept(eqVisitor);
+    assert.strictEqual(GetRequestType[parsed.type], GetRequestType[GetRequestType.Collection]);
+    if (parsed.type === GetRequestType.Collection)
+      parsed.filterExpression.accept(eqVisitor);
   });
 
   it("should also return the expand tree", () => {
@@ -137,7 +139,18 @@ describe("GetRequestParser:", () => {
 
     let parsed = parser.parse({ relativeUrl: "/Posts?$expand=Children", body: "" });
 
-    assert.deepEqual(parsed.expandTree, { Children: {} });
+    assert.strictEqual(GetRequestType[parsed.type], GetRequestType[GetRequestType.Collection]);
+    if (parsed.type === GetRequestType.Collection)
+      assert.deepEqual(parsed.expandTree, { Children: {} });
+  });
+
+  it("should parse /:set(:id)", () => {
+    const parser = initGetRequestParser();
+    const parsed = parser.parse({ relativeUrl: "/Posts(1)", body: "" });
+
+    assert.strictEqual(GetRequestType[parsed.type], GetRequestType[GetRequestType.ById]);
+    if (parsed.type === GetRequestType.ById)
+      assert.strictEqual(parsed.entitySetName, "Posts");
   });
 });
 

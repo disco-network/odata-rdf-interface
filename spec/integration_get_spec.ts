@@ -21,6 +21,12 @@ describe("The GetHandler should evaluate", () => {
     "before spec";
   });
 
+  createQuerySpec("/Posts(1)", answer => {
+    const result = answer.result();
+    expectSuccess(answer);
+    assert.strictEqual(result.Id, "1");
+  });
+
   createQuerySpec("/Posts?$expand=Content", answer => {
     let result = answer.result();
     expectSuccess(answer);
