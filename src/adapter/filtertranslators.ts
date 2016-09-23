@@ -56,6 +56,15 @@ export class VisitorBase implements IVisitor {
   }
 }
 
+export interface IEqualsUriExpressionVisitor {
+  visitEqualsUriExpression(expr: IEqualsUriExpression<this>): void;
+}
+
+export interface IEqualsUriExpression<TVisitor extends IEqualsUriExpressionVisitor> extends IValue<TVisitor> {
+  getUri(): string;
+  accept(visitor: TVisitor): void;
+}
+
 export interface ITypeofVisitor<T extends IVisitor> {
   new(state: IVisitorState): T;
 }
@@ -193,6 +202,28 @@ export function generatePropertyVisitor(anyTranslatorFactory: IAnyExpressionTran
       }
     } as IVisitorConstructible;
   };
+}
+
+export function EqualsUriExpressionVisitor(Base: IVisitorConstructible): IVisitorConstructible {
+  return class extends Base implements IEqualsUriExpressionVisitor {
+    public visitEqualsUriExpression(expr: IEqualsUriExpression<this>) {
+      const variable = this.getState().filterContext.mapping.scope.unscoped().variables.getVariable();
+      this.passResult(new EqualsUriExpressionTranslator(expr.getUri(), variable));
+    }
+  };
+}
+
+export class EqualsUriExpressionTranslator implements IExpressionTranslator {
+
+  constructor(private uri: string, private variable: string) {}
+
+  public getPropertyTree() {
+    return ScopedPropertyTree.create();
+  }
+
+  public toSparqlFilterClause(): string {
+    return `( ${this.variable} = <${this.uri}> )`; // @<uri> generation: avoid SPARQL injection
+  }
 }
 
 export interface IVisitorState {

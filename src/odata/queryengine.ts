@@ -39,7 +39,7 @@ export class GetHandler<T> implements IGetHandler {
 
 export class GetHttpResponder implements IGetHttpResponder {
 
-  public success(entities: any[], httpResponseSender: IHttpResponseSender) {
+  public success(entityOrEntities: any, httpResponseSender: IHttpResponseSender) {
     httpResponseSender.sendStatusCode(200);
 
     httpResponseSender.sendHeader("Access-Control-Allow-Origin", "*");
@@ -47,7 +47,7 @@ export class GetHttpResponder implements IGetHttpResponder {
 
     let body = JSON.stringify({
       "odata.metadata": "http://example.org/",
-      "value": entities,
+      "value": entityOrEntities,
     }, null, 2);
     httpResponseSender.sendHeader("Content-Type", "application/json;charset=utf-8");
     httpResponseSender.sendHeader("Content-Length", body.length.toString());
@@ -73,7 +73,11 @@ export class PostHandler<T> implements IPostHandler {
     let entity = this.entityInitializer.fromParsed(parsed.entity, type);
     this.repository.batch(entity, this.schema, result => {
       responseSender.sendStatusCode(201, "Created");
-      responseSender.sendBody("@todo");
+      const insertedEntity = result.result()[result.result().length - 1].result().odata[0];
+      responseSender.sendBody(JSON.stringify({
+        "odata.metadata": "http://example.org/",
+        "value": insertedEntity,
+      }, null, 2));
       responseSender.finishResponse();
     });
   }

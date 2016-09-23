@@ -30,6 +30,7 @@ export class EntityInitializer implements base.IEntityInitializer {
         }
       }
       else {
+        /* @todo force Id generation */
         let property = entityType.getProperty(propertyName);
         if (property.isAutoIncrementable()) {
           object[propertyName] = property.genNextAutoIncrementValue();

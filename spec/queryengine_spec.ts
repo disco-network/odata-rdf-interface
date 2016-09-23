@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import { assert, assertEx, match as eqMatch } from "../src/assert";
 import { stub, match } from "sinon";
 
 import { GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder } from "../src/odata/queryengine";
@@ -18,14 +18,14 @@ describe("OData.PostHandler:", () => {
     let entityInitializer = new EntityInitializer();
     stub(entityInitializer, "fromParsed").returns([]);
     let repository = new Repository<IFilterVisitor>();
-    stub(repository, "batch").callsArgWith(2, Result.success("ok"));
+    stub(repository, "batch").callsArgWith(2, Result.success([Result.success({ odata: ["ok"] })]));
 
     let engine = new PostHandler(parser, entityInitializer, repository, new Schema());
 
     engine.query({ relativeUrl: "/Posts", body: "{}" }, httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
   });
 
-  it("should insert an entity and send an empty response, sending exactly one body", done => {
+  it("should insert an entity and send a response with exactly one body containing the new entity", done => {
     let parser = new PostRequestParser();
     stub(parser, "parse")
       .withArgs({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" })
@@ -50,15 +50,18 @@ describe("OData.PostHandler:", () => {
       .returns(ops);
 
     let repository = new Repository<IFilterVisitor>();
-    let insertEntity = stub(repository, "batch")
+    let batch = stub(repository, "batch")
       .withArgs(ops, match.any, match.any)
-      .callsArgWith(2, Result.success("ok"));
+      .callsArgWith(2, Result.success([Result.success({}), Result.success({ odata: [{ newPost: true }] })]));
 
     let responseSender = new HttpResponseSender();
-    let sendBody = stub(responseSender, "sendBody");
+    let sendBody = stub(responseSender, "sendBody",
+      body => assertEx.deepEqual(JSON.parse(body), {
+        "odata.metadata": eqMatch.any,
+        "value": { newPost: true } }));
     stub(responseSender, "finishResponse", () => {
       assert.strictEqual(sendBody.calledOnce, true);
-      assert.strictEqual(insertEntity.calledOnce, true);
+      assert.strictEqual(batch.calledOnce, true);
       done();
     });
 

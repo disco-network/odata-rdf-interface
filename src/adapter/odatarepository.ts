@@ -23,6 +23,7 @@ import {
 
 import postQueries = require("../adapter/postquery");
 import translators = require("../adapter/filtertranslators");
+import { IEqualsUriExpression, IEqualsUriExpressionVisitor } from "../adapter/filtertranslators";
 import filterPatterns = require("../adapter/filterpatterns");
 import expandTreePatterns = require("../adapter/expandtree");
 import mappings = require("../adapter/mappings");
@@ -37,7 +38,7 @@ const prefixes = [
 ];
 
 export interface IMinimalVisitor extends IAndExpressionVisitor, IEqExpressionVisitor,
-  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor {}
+  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor, IEqualsUriExpressionVisitor {}
 
 export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   implements base.IRepository<TExpressionVisitor> {
@@ -95,13 +96,18 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         if (errored === true) return cb(null, batchResults);
 
         this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
-          keyValuePairs, (res: results.AnyResult) => {
-            batchResults.push(results.Result.success("inserted"));
-            cb(null, batchResults);
+          keyValuePairs, () => {
+            this.getEntityByUri(schema.getEntityType(op.entityType), op.identifier, (res, m) => {
+              batchResults.push(this.translateResponse(res, m, (result, model) => ({
+                odata: this.translateResponseToOData(result, model),
+                uris: this.translateResonseToEntityUris(result, model),
+              })));
+              cb(null, batchResults);
+            });
           });
       }
-    }, (err, result) => {
-      cbResults(results.Result.success("@todo dunno"));
+    }, (err, batchResults) => {
+      cbResults(results.Result.success(batchResults));
     });
   }
 
@@ -147,6 +153,11 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
   private isInsertOp(op: base.IOperation): op is base.IInsertOperation {
     return op.type === "insert";
+  }
+
+  private getEntityByUri(entityType: EntityType, uri: string,
+                         cb: (r: results.AnyResult, model: IQueryAdapterModel<TExpressionVisitor>) => void) {
+    this.runGet(entityType, {}, new EqualsUriExpression<TExpressionVisitor>(uri), cb);
   }
 
   private runGet<T>(entityType: EntityType, expandTree: any, filterExpression: IValue<TExpressionVisitor>,
@@ -203,6 +214,20 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
       model.getEntitySetType(), model.getExpandTree());
     let resultBuilder = new JsonResultBuilder();
     return resultBuilder.run(response, queryContext);
+  }
+}
+
+class EqualsUriExpression<T extends IEqualsUriExpressionVisitor> implements IEqualsUriExpression<T> {
+
+  constructor(private uri: string) {
+  }
+
+  public accept(visitor: T) {
+    visitor.visitEqualsUriExpression(this);
+  }
+
+  public getUri() {
+    return this.uri;
   }
 }
 

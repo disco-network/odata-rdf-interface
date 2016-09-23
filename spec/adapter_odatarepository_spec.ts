@@ -11,18 +11,28 @@ import { IInsertQueryStringBuilder, IPrefix, ISparqlLiteral } from "../src/sparq
 describe("Adapter.ODataRepository:", () => {
   it("should insert an entity called 'post1' with Id = '1'", done => {
     const sparql = "INSERT {SOMETHING}";
+    let queryModel: IQueryAdapterModel<{}>;
 
-    let myPostQueryStringBuilder = new PostQueryStringBuilder();
+    const myPostQueryStringBuilder = new PostQueryStringBuilder();
 
-    let mySparqlProvider = new SparqlProvider();
+    const mySparqlProvider = new SparqlProvider();
     let sparqlQueryCount = 0;
     mySparqlProvider.query = (query, cb) => {
-      ++sparqlQueryCount; /* @construction */
-      assert.strictEqual(query, sparql);
-      cb(results.Result.success("ok"));
+      ++sparqlQueryCount;
+      if (sparqlQueryCount === 1) {
+        assert.strictEqual(query, sparql);
+        cb(results.Result.success("ok"));
+      }
+      else if (sparqlQueryCount === 2) {
+        assert.strictEqual(query, "SELECT {SOMETHING}");
+        cb(results.Result.success([{
+          [queryModel.getMapping().variables.getVariable().substr(1)]: { value: "uri" },
+          [queryModel.getMapping().variables.getElementaryPropertyVariable("Id").substr(1)]: { value: "new" },
+        }]));
+      }
     };
 
-    let insertQueryStringBuilder = new InsertQueryStringBuilder();
+    const insertQueryStringBuilder = new InsertQueryStringBuilder();
     insertQueryStringBuilder.insertAsSparql = (prefixes, uri, properties) => {
       assert.strictEqual(uri, "post10");
       assertEx.deepEqual(properties, [
@@ -31,7 +41,13 @@ describe("Adapter.ODataRepository:", () => {
       return "INSERT {SOMETHING}";
     };
 
-    let odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(), myPostQueryStringBuilder,
+    const getStringProducer = new GetQueryStringBuilder();
+    getStringProducer.fromQueryAdapterModel = model => {
+      queryModel = model;
+      return "SELECT {SOMETHING}";
+    };
+
+    const odataRepository = create(mySparqlProvider, getStringProducer, myPostQueryStringBuilder,
                                   insertQueryStringBuilder);
     odataRepository.batch([{
       type: "insert",
@@ -42,8 +58,12 @@ describe("Adapter.ODataRepository:", () => {
       },
     }], new schema.Schema(), results => {
       assert.strictEqual(results.success(), true);
-      assert.strictEqual(results.result(), "@todo dunno");
-      assert.strictEqual(sparqlQueryCount, 1);
+      assert.deepEqual(results.result()[0].result().odata, [{
+        Id: "new",
+        ContentId: null,
+        ParentId: null,
+      }]);
+      assert.strictEqual(sparqlQueryCount, 2);
       done();
     });
   });

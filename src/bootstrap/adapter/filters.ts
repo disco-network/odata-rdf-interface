@@ -11,10 +11,9 @@ import {
 import {
   AnyExpressionTranslator, IAnyExpressionTranslatorFactory,
 } from "../../adapter/filters/propertyexpression";
-import { IFilterContext, IExpressionTranslator } from "../../adapter/filtertranslators";
-
-export interface IVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
-                       IParenthesesVisitor, IPropertyVisitor {}
+import {
+  IFilterContext, IExpressionTranslator, IEqualsUriExpressionVisitor, EqualsUriExpressionVisitor,
+} from "../../adapter/filtertranslators";
 
 export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorFactory {
   public create(propertyPath: string[], lambdaVar: ILambdaVariable, lambdaExpression: IExpressionTranslator,
@@ -24,8 +23,11 @@ export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorF
   }
 }
 
+export interface IVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
+                       IParenthesesVisitor, IPropertyVisitor, IEqualsUriExpressionVisitor {}
+
 export const Visitor: ITypeofVisitor<IVisitor> = AssembledVisitor<IVisitor>(VisitorBase, [
-  LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor,
+  LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor, EqualsUriExpressionVisitor,
   generatePropertyVisitor(new AnyExpressionTranslatorFactory()),
 ]);
 
