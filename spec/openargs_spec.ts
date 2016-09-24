@@ -40,7 +40,7 @@ describe("OpenArgsCompatibilityChecker:", () => {
   });
 });
 
-let IContract = openArgs.defContract(null as Contract);
+let IContract = openArgs.defContract(null as any as Contract);
 
 interface ContractGetter extends openArgs.IArgsGetter<Contract, ContractGetter> {}
 class Contract implements openArgs.IContractImplementer<ContractGetter> {

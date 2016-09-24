@@ -3,7 +3,7 @@ import { IBranchingArgs } from "./branchingargs";
 
 export interface INode {
   hash(): string;
-  apply(args: TraversingArgs): TraversingArgs;
+  apply(args: TraversingArgs): TraversingArgs | undefined;
 }
 
 export class NullNode {
@@ -25,7 +25,9 @@ export class Tree {
     let subArgs = this.node.apply(args);
     for (let key of Object.keys(this.branches)) {
       let branch = this.branches[key];
-      branch.traverse(subArgs);
+      if (subArgs)
+        branch.traverse(subArgs);
+      else throw new Error("Leaf nodes can't have branches");
     }
   }
 

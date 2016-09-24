@@ -36,6 +36,7 @@ function doesDeepEqual(lhs, rhs): boolean {
   switch (typeof lhs) {
     case "string":
     case "number":
+    case "boolean":
     case "symbol":
     case "function":
     case "undefined":

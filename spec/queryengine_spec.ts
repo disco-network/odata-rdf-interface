@@ -1,14 +1,15 @@
-import { assert } from "chai";
+import { assert, assertEx, match as eqMatch } from "../src/assert";
 import { stub, match } from "sinon";
 
 import { GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder } from "../src/odata/queryengine";
-import { IPostRequestParser, IGetRequestParser, IFilterVisitor } from "../src/odata/parser";
+import { IPostRequestParser, IGetRequestParser, IFilterVisitor, GetRequestType } from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
 import { IRepository, IOperation } from "../src/odata/repository";
 import { IValue } from "../src/odata/filters/expressions";
 import { Result, AnyResult } from "../src/result";
 import { Schema, EntityType } from "../src/odata/schema";
 import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";
+import { IEqExpression, IPropertyValue, INumericLiteral } from "../src/odata/filters/expressions";
 
 describe("OData.PostHandler:", () => {
 
@@ -18,14 +19,14 @@ describe("OData.PostHandler:", () => {
     let entityInitializer = new EntityInitializer();
     stub(entityInitializer, "fromParsed").returns([]);
     let repository = new Repository<IFilterVisitor>();
-    stub(repository, "batch").callsArgWith(2, Result.success("ok"));
+    stub(repository, "batch").callsArgWith(2, Result.success([Result.success({ odata: ["ok"] })]));
 
     let engine = new PostHandler(parser, entityInitializer, repository, new Schema());
 
     engine.query({ relativeUrl: "/Posts", body: "{}" }, httpSenderThatShouldReceiveStatusCode(201, done, "Created"));
   });
 
-  it("should insert an entity and send an empty response, sending exactly one body", done => {
+  it("should insert an entity and send a response with exactly one body containing the new entity", done => {
     let parser = new PostRequestParser();
     stub(parser, "parse")
       .withArgs({ relativeUrl: "/Posts", body: "{ ContentId: \"1\" }" })
@@ -50,15 +51,18 @@ describe("OData.PostHandler:", () => {
       .returns(ops);
 
     let repository = new Repository<IFilterVisitor>();
-    let insertEntity = stub(repository, "batch")
+    let batch = stub(repository, "batch")
       .withArgs(ops, match.any, match.any)
-      .callsArgWith(2, Result.success("ok"));
+      .callsArgWith(2, Result.success([Result.success({}), Result.success({ odata: [{ newPost: true }] })]));
 
     let responseSender = new HttpResponseSender();
-    let sendBody = stub(responseSender, "sendBody");
+    let sendBody = stub(responseSender, "sendBody",
+      body => assertEx.deepEqual(JSON.parse(body), {
+        "odata.metadata": eqMatch.any,
+        "value": { newPost: true } }));
     stub(responseSender, "finishResponse", () => {
       assert.strictEqual(sendBody.calledOnce, true);
-      assert.strictEqual(insertEntity.calledOnce, true);
+      assert.strictEqual(batch.calledOnce, true);
       done();
     });
 
@@ -69,12 +73,61 @@ describe("OData.PostHandler:", () => {
 });
 
 describe("OData.GetHandler", () => {
+  it("should return a single entity when requested /:set(:id)", done => {
+    const parser = new GetRequestParser();
+    parser.parse = request => {
+      assert.strictEqual(request.relativeUrl, "/Content(1)");
+      assert.strictEqual(request.body, "");
+      return {
+        type: GetRequestType.ById,
+        entitySetName: "Content",
+        id: 1,
+      };
+    };
+
+    const schema = new Schema();
+
+    const repository = new Repository<IFilterVisitor>();
+    repository.getEntities = (type, expand, filter, cb) => {
+      assert.strictEqual(type.getName(), "Content");
+      assert.deepEqual(expand, {});
+      filter!.accept({ visitEqExpression: (eq: IEqExpression<IFilterVisitor>) => {
+
+        eq.getLhs().accept({ visitPropertyValue: (property: IPropertyValue<IFilterVisitor>) => {
+          assert.deepEqual(property.getPropertyPath(), ["Id"]);
+        } } as IFilterVisitor);
+
+        eq.getRhs().accept({ visitNumericLiteral: (id: INumericLiteral<IFilterVisitor>) => {
+          assert.strictEqual(id.getNumber(), 1);
+        } } as IFilterVisitor);
+
+      } } as IFilterVisitor);
+
+      cb(Result.success(["ENTITY #1"]));
+    };
+
+    const responseSender = new GetResponseSenderStub();
+
+    const getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
+
+    let successCounter = 0;
+    responseSender.success = entity => {
+      ++successCounter;
+      assert.deepEqual(entity, "ENTITY #1");
+      assert.strictEqual(successCounter, 1);
+      done();
+    };
+
+    getHandler.query({ relativeUrl: "/Content(1)", body: "" }, null as any);
+  });
+
   it("should return a complete entity set in JSON, sending exactly one body", done => {
     let parser = new GetRequestParser();
     stub(parser, "parse")
       .withArgs({ relativeUrl: "/Posts", body: "" })
       .returns({
         entitySetName: "Posts",
+        type: GetRequestType.Collection,
         filterExpression: null,
         expandTree: {},
       });
@@ -92,7 +145,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts", body: "" }, null);
+    getHandler.query({ relativeUrl: "/Posts", body: "" }, null as any);
   });
 
   it("should return an expanded entity set, sending exactly one body", done => {
@@ -101,6 +154,7 @@ describe("OData.GetHandler", () => {
       .withArgs({ relativeUrl: "/Posts?$expand=Children", body: "" })
       .returns({
         entitySetName: "Posts",
+        type: GetRequestType.Collection,
         filterExpression: null,
         expandTree: { Children: {} },
       });
@@ -119,7 +173,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, null);
+    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, null as any);
   });
 });
 
@@ -240,7 +294,7 @@ class EntityInitializer implements IEntityInitializer {
 }
 
 class GetResponseSenderStub implements IGetHttpResponder {
-  public success(entities: any[]) {
+  public success(entities: any) {
     //
   }
 }
@@ -265,7 +319,7 @@ class HttpResponseSender implements IHttpResponseSender {
 
 class Repository<T> implements IRepository<T> {
 
-  public getEntities(entityType: EntityType, expandTree: any, filter: IValue<T>,
+  public getEntities(entityType: EntityType, expandTree: any, filter: IValue<T> | undefined,
                      cb: (result: Result<any[], any>) => void) {
     //
   }

@@ -8,23 +8,23 @@
     "uuid": "^2.0.3"
   },
   "devDependencies": {
-    "rdfstore": "git+https://git@github.com/disco-network/rdfstore-js.git",
     "chai": "^3.5.0",
     "del": "^2.2.2",
     "gulp": "~3.9.1",
     "gulp-mocha": "^3.0.0",
     "gulp-sourcemaps": "~1.6.0",
     "gulp-tslint": "~5.0.0",
-    "gulp-typescript": "~2.13.6",
+    "gulp-typescript": "^3.0.0",
     "merge2": "^1.0.2",
     "mocha": "^2.3.3",
+    "rdfstore": "git+https://git@github.com/disco-network/rdfstore-js.git",
     "run-sequence": "^1.2.2",
     "sinon": "^1.17.5",
     "stryker": "^0.4.2",
     "stryker-api": "^0.2.0",
     "stryker-mocha-runner": "^0.1.0",
     "tslint": "~3.13.0",
-    "typescript": "~1.8.10"
+    "typescript": "^2.0.3"
   },
   "description": "This project is supposed to become a Node.js-based OData endpoint working on top of an RDF store.",
   "main": "build/lib/index.js",

@@ -11,10 +11,9 @@ import {
 import {
   AnyExpressionTranslator, IAnyExpressionTranslatorFactory,
 } from "../../adapter/filters/propertyexpression";
-import { IFilterContext, IExpressionTranslator } from "../../adapter/filtertranslators";
-
-export interface IVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
-                       IParenthesesVisitor, IPropertyVisitor {}
+import {
+  IFilterContext, IExpressionTranslator, IEqualsUriExpressionVisitor, EqualsUriExpressionVisitor,
+} from "../../adapter/filtertranslators";
 
 export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorFactory {
   public create(propertyPath: string[], lambdaVar: ILambdaVariable, lambdaExpression: IExpressionTranslator,
@@ -24,21 +23,23 @@ export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorF
   }
 }
 
+export interface IVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
+                       IParenthesesVisitor, IPropertyVisitor, IEqualsUriExpressionVisitor {}
+
 export const Visitor: ITypeofVisitor<IVisitor> = AssembledVisitor<IVisitor>(VisitorBase, [
-  LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor,
+  LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor, EqualsUriExpressionVisitor,
   generatePropertyVisitor(new AnyExpressionTranslatorFactory()),
 ]);
 
 export class FilterExpressionFactory {
 
-  private visitor: IVisitor;
-
-  constructor() {
-    const state: IVisitorState = { filterContext: null }; /* @smell */
-    this.visitor = new Visitor(state);
-  }
+  private visitor?: IVisitor;
 
   public create(expression: IValue<IVisitor>, context: IFilterContext) {
-    return this.visitor.create(expression, context);
+    return this.lazyLoadVisitor(context).create(expression, context);
+  }
+
+  private lazyLoadVisitor(context: IFilterContext): IVisitor {
+    return this.visitor = this.visitor || new Visitor({ filterContext: context });
   }
 }

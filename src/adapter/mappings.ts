@@ -9,7 +9,7 @@ declare class Map<Key, Value> {
 
 export class ScopedMapping {
   private root: Mapping;
-  private parent: ScopedMapping;
+  private parent: ScopedMapping | undefined;
   private namespaces: { [id: string]: Mapping };
   private scopes = new Map<UniqueScopeIdentifier, ScopedMapping>();
 

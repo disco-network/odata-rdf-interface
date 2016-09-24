@@ -1,4 +1,4 @@
-import { assert, assertEx, match } from "../src/assert";
+import { assertEx, match } from "../src/assert";
 
 import * as rdfstore from "rdfstore";
 import { SparqlProvider } from "../src/sparql/sparql_provider";
@@ -53,6 +53,22 @@ describe("integration tests", () => {
       }));
     }
   });
+
+  it("POST an entity, retrieve it directly from the response body", done => {
+    initOdataServer((get, post) => {
+      post.query({ relativeUrl: "/Content", body: "{ \"Title\": \"Lorem\" }" }, new HttpResponseSender(() => null,
+      body => {
+        assertEx.deepEqual(JSON.parse(body), {
+          "odata.metadata": match.any,
+          "value": {
+            "Id": match.any,
+            "Title": "Lorem",
+          },
+        });
+        done();
+      }));
+    });
+  });
 });
 
 function initOdataServer(cb: (get: GetHandler, post: PostHandler) => void) {
@@ -87,6 +103,6 @@ class HttpResponseSender implements IHttpResponseSender {
   }
 
   public finishResponse(): any {
-
+    //
   }
 }

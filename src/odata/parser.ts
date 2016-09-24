@@ -25,14 +25,27 @@ export interface IGetRequestParser<TFilterVisitor> {
   parse(request: IHttpRequest): IParsedGetRequest<TFilterVisitor>;
 }
 
-export interface IParsedGetRequest<TFilterVisitor> {
+export type IParsedGetRequest<TFilterVisitor> = IParsedGetCollectionRequest<TFilterVisitor> | IParsedGetByIdRequest;
+
+export interface IParsedGetCollectionRequest<TFilterVisitor> {
+  type: GetRequestType.Collection;
   entitySetName: string;
   expandTree: any;
-  filterExpression: IValue<TFilterVisitor>;
+  filterExpression: IValue<TFilterVisitor> | undefined;
+}
+
+export interface IParsedGetByIdRequest {
+  type: GetRequestType.ById;
+  entitySetName: string;
+  id: number;
 }
 
 export interface IODataParser {
   parse(query: string): any;
+}
+
+export enum GetRequestType {
+  ById, Collection
 }
 
 export class PostRequestParser implements IPostRequestParser {
@@ -58,18 +71,38 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
   private odataParser = new ODataParser();
 
   public parse(request: IHttpRequest): IParsedGetRequest<IFilterVisitor> {
-    let ast = this.odataParser.parse(request.relativeUrl);
-    let expandTree = {};
-    (ast.queryOptions.expand || []).forEach(e => {
-      let currentBranch = expandTree;
-      e.path.forEach(prop => currentBranch = currentBranch[prop] = currentBranch[prop] || {});
-    });
-    let filterTree = ast.queryOptions.filter ? this.parseFilterExpression(ast.queryOptions.filter) : null;
-    return {
-      entitySetName: ast.resourcePath.entitySetName,
-      expandTree: expandTree,
-      filterExpression: filterTree,
-    };
+    const ast = this.odataParser.parse(request.relativeUrl);
+
+    const entitySetName = ast.resourcePath.entitySetName;
+
+    if (ast.resourcePath.navigation.type === "none") {
+      const expandTree = {};
+      (ast.queryOptions.expand || []).forEach(e => {
+        let currentBranch = expandTree;
+        e.path.forEach(prop => currentBranch = currentBranch[prop] = currentBranch[prop] || {});
+      });
+      const filterTree = ast.queryOptions.filter ? this.parseFilterExpression(ast.queryOptions.filter) : undefined;
+      return {
+        type: GetRequestType.Collection,
+        entitySetName: entitySetName,
+        expandTree: expandTree,
+        filterExpression: filterTree,
+      };
+    }
+    else if (ast.resourcePath.navigation.type === "collection-navigation") {
+      const rawId = ast.resourcePath.navigation.path.keyPredicate.simpleKey;
+      let id: number;
+      switch (rawId.type) {
+        case "decimalValue": id = parseInt(rawId.value, 10); break;
+        default: throw new Error(`Literal type ${rawId.type} is not supported as key predicate`);
+      }
+      return {
+        type: GetRequestType.ById,
+        entitySetName: entitySetName,
+        id: id,
+      };
+    }
+    else throw new Error("unknown collection navigation type");
   }
 
   public parseFilterExpression(raw): IValue<IFilterVisitor> {

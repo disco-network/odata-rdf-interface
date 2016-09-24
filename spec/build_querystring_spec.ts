@@ -135,7 +135,7 @@ describe("SelectQueryStringBuilder:", () => {
   });
 
   function spec(name: string, args: {
-    prefixes: qbuilder.IPrefix[]; pattern: gpatterns.TreeGraphPattern; filter: qbuilder.IFilterExpression;
+    prefixes: qbuilder.IPrefix[]; pattern: gpatterns.TreeGraphPattern; filter?: qbuilder.IFilterExpression;
     patternString: string; prefixString: string; queryString: string
   }) {
     it(name, () => {

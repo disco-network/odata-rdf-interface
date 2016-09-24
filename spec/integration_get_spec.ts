@@ -21,6 +21,12 @@ describe("The GetHandler should evaluate", () => {
     "before spec";
   });
 
+  createQuerySpec("/Posts(1)", answer => {
+    const result = answer.result();
+    expectSuccess(answer);
+    assert.strictEqual(result.Id, "1");
+  });
+
   createQuerySpec("/Posts?$expand=Content", answer => {
     let result = answer.result();
     expectSuccess(answer);
@@ -222,7 +228,7 @@ describe("The GetHandler should evaluate", () => {
             },
           };
           let getHandler = new GetHandler(new Schema(), new GetRequestParser(), repository, responseSender);
-          try { getHandler.query({ relativeUrl: query, body: "" }, null); }
+          try { getHandler.query({ relativeUrl: query, body: "" }, null as any); }
           catch (e) {
             assert.strictEqual(e.stack || e, "no exception");
             done();
