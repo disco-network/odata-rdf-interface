@@ -35,18 +35,19 @@ GET queries that are currently supported:
 POST queries *should* be supported (experimental because of the lack of deeper test cases).
 
 # development
-To develop this project, please use NPM to install further development dependencies, especially gulp.
+To develop this project, please use NPM to install dependencies, especially gulp.
 
-To compile TypeScript, use the following command:
+To build the NPM package into /build/, use the following command:
 
     $ gulp build
 
-To compile all and run the tests (based on jasmine), run:
+To compile and run the tests (based on mocha/chai/sinon), run:
 
     $ gulp specs
 
 # what's missing?
 
+ * UUID generation support
+ * PUT / PATCH / DELETE etc.
  * $batch queries
- * UPDATE etc.
  * specification conformity... we currently only support some cherry-picked essential features.
