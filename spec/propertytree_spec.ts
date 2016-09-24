@@ -19,7 +19,7 @@ describe("Property trees", () => {
     let branch = new TestBranch();
     tree.branchNode(branch);
     tree.branchNode(branch);
-    tree.traverse(null);
+    tree.traverse({} as any);
 
     assert.strictEqual(counter, 1);
   });
@@ -35,6 +35,7 @@ describe("Property trees", () => {
       }
       public apply(): any {
         if (this.count) ++counter;
+        return {};
       }
     }
     let tree1 = new propertyTree.Tree();
@@ -49,7 +50,7 @@ describe("Property trees", () => {
     tree2.branchTree(branch2a);
 
     tree2.copyTo(tree1);
-    tree1.traverse(null);
+    tree1.traverse({} as any);
 
     assert.strictEqual(counter, 1);
   });

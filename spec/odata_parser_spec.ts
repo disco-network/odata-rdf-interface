@@ -131,7 +131,7 @@ describe("GetRequestParser:", () => {
     const parsed = parser.parse({ relativeUrl: "/Posts?$filter=a/b/c eq 1", body: "" });
     assert.strictEqual(GetRequestType[parsed.type], GetRequestType[GetRequestType.Collection]);
     if (parsed.type === GetRequestType.Collection)
-      parsed.filterExpression.accept(eqVisitor);
+      parsed.filterExpression!.accept(eqVisitor);
   });
 
   it("should also return the expand tree", () => {

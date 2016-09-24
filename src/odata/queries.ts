@@ -7,6 +7,6 @@ export interface IQuery {
 
 export interface IQueryModel<TExpressionVisitor> {
   entitySetType: Schema.EntityType;
-  filterOption: IValue<TExpressionVisitor>;
+  filterOption?: IValue<TExpressionVisitor>;
   expandTree: any;
 }

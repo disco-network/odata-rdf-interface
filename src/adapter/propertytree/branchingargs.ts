@@ -126,18 +126,18 @@ export class BranchingArgsGuard {
     return args.type() === "any";
   }
 
-  public static assertProperty(args: IBranchingArgs): args is IPropertyBranchingArgs {
-    if (this.isProperty(args)) return true;
+  public static assertProperty(args: IBranchingArgs) {
+    if (this.isProperty(args)) return args;
     else throw new Error("PropertyBranchingArgs expected");
   }
 
-  public static assertInScopeVariable(args: IBranchingArgs): args is IInScopeVariableBranchingArgs {
-    if (this.isInScopeVariable(args)) return true;
+  public static assertInScopeVariable(args: IBranchingArgs) {
+    if (this.isInScopeVariable(args)) return args;
     else throw new Error("InScopeVariableBranchingArgs expected");
   }
 
-  public static assertAny(args: IBranchingArgs): args is IAnyBranchingArgs {
-    if (this.isAny(args)) return true;
+  public static assertAny(args: IBranchingArgs) {
+    if (this.isAny(args)) return args;
     else throw new Error("AnyBranchingArgs expected");
   }
 }

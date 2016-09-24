@@ -72,7 +72,7 @@ export class AnyExpressionTranslator implements filterTranslators.IExpressionTra
 
 export class PropertyPath {
 
-  constructor(private propertyNames?: string[], private filterContext?: filterTranslators.IFilterContext) {}
+  constructor(private propertyNames: string[], private filterContext: filterTranslators.IFilterContext) {}
 
   public getFinalElementaryPropertyVariable() {
     let mapping = this.getVariableMappingAfterLambdaPrefix();
@@ -191,8 +191,9 @@ export class PropertyPath {
   }
 
   public getEntityTypeAfterLambdaPrefix() {
-    if (this.pathStartsWithLambdaPrefix()) {
-      return this.getPrefixLambdaVariable().entityType;
+    const prefix = this.getPrefixLambdaVariable();
+    if (prefix !== undefined) {
+      return prefix.entityType;
     }
     else {
       return this.filterContext.scope.entityType;
@@ -204,12 +205,15 @@ export class PropertyPath {
   }
 
   public getPrefixLambdaVariable() {
-    return this.propertyNames[0] && this.getLambdaVariableScope().get(this.propertyNames[0]);
+    const firstPropertyName = this.propertyNames[0];
+    if (firstPropertyName !== undefined)
+      return this.getLambdaVariableScope().get(firstPropertyName);
   }
 
   private createAndReturnPropertyTreeBranchOfLambdaPrefix(tree: ScopedPropertyTree) {
-    if (this.pathStartsWithLambdaPrefix()) {
-      let inScopeVar = this.getPrefixLambdaVariable().name;
+    const prefix = this.getPrefixLambdaVariable();
+    if (prefix !== undefined) {
+      let inScopeVar = prefix.name;
       return tree.inScopeVariables.createBranch(inScopeVar);
     }
     else {

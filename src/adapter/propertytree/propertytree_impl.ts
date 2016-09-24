@@ -52,8 +52,7 @@ export class ComplexBranchFactory implements base.ITreeFactoryCandidate {
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args))
-      return new ComplexBranch(args);
+    return new ComplexBranch(BranchingArgsGuard.assertProperty(args));
   }
 }
 
@@ -113,8 +112,7 @@ export class ElementarySingleValuedBranchFactory implements base.ITreeFactoryCan
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args))
-      return new ElementarySingleValuedBranch(args, this.branchFactory);
+    return new ElementarySingleValuedBranch(BranchingArgsGuard.assertProperty(args), this.branchFactory);
   }
 }
 
@@ -126,8 +124,8 @@ class DirectElementarySingleValuedBranchFactory implements base.ITreeFactoryCand
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args) && this.doesApply(args))
-      return new DirectElementarySingleValuedBranch(args);
+    if (this.doesApply(args))
+      return new DirectElementarySingleValuedBranch(BranchingArgsGuard.assertProperty(args));
     else
       throw new Error("property is not elementary and single-valued");
   }
@@ -147,9 +145,12 @@ export class ElementarySingleValuedBranch implements base.INode {
     const path: Property[] = this.resolver.resolveGetter(this.branchingArgs.schema());
     const nodes: base.INode[] = path.map(prop => this.branchFactory.create(new PropertyBranchingArgs(prop)));
 
-    let currentArgs = args.clone();
+    let currentArgs: ITraversingArgs | undefined = args.clone();
     for (let node of nodes) {
-      currentArgs = node.apply(currentArgs);
+      if (currentArgs)
+        currentArgs = node.apply(currentArgs);
+      else
+        throw new Error("Leaf nodes can't have branches");
     }
     return currentArgs;
   }
@@ -179,7 +180,7 @@ export class DirectElementarySingleValuedBranch implements base.INode {
 
   constructor(private branchingArgs: IPropertyBranchingArgs) {}
 
-  public apply(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
+  public apply(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs | undefined {
     let basePattern = this.selectPattern(args.patternSelector);
     let mapping = args.mapping;
     let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name());
@@ -199,10 +200,7 @@ export class DirectElementarySingleValuedBranch implements base.INode {
         subPattern = basePattern.optionalBranch(propertyName, variableName);
     }
 
-    let result = args.clone();
-    result.patternSelector = args.patternSelector.getOtherSelector(subPattern);
-    result.mapping = undefined;
-    return result;
+    return undefined;
   }
 
   public hash() {
@@ -226,8 +224,7 @@ export class InScopeVariableBranchFactory implements base.ITreeFactoryCandidate 
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertInScopeVariable(args))
-      return new InScopeVariableBranch(args);
+    return new InScopeVariableBranch(BranchingArgsGuard.assertInScopeVariable(args));
   }
 }
 
@@ -265,8 +262,7 @@ export class ComplexBranchFactoryForFiltering implements base.ITreeFactoryCandid
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args))
-      return new ComplexBranchForFiltering(args);
+    return new ComplexBranchForFiltering(BranchingArgsGuard.assertProperty(args));
   }
 }
 
@@ -312,8 +308,7 @@ export class ElementaryBranchFactoryForFiltering implements base.ITreeFactoryCan
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertProperty(args))
-      return new ElementaryBranchForFiltering(args);
+    return new ElementaryBranchForFiltering(BranchingArgsGuard.assertProperty(args));
   }
 }
 
@@ -321,7 +316,7 @@ export class ElementaryBranchForFiltering implements base.INode {
 
   constructor(private branchingArgs: IPropertyBranchingArgs) {}
 
-  public apply(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
+  public apply(args: IGraphPatternArgs & IMappingArgs): undefined {
     let basePattern = this.selectPattern(args.patternSelector);
     let mapping = args.mapping;
     let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name());
@@ -333,10 +328,7 @@ export class ElementaryBranchForFiltering implements base.INode {
     else
       subPattern = basePattern.optionalBranch(propertyName, variableName);
 
-    let result = args.clone();
-    result.patternSelector = args.patternSelector.getOtherSelector(subPattern);
-    result.mapping = undefined;
-    return result;
+    return undefined;
   }
 
   public hash() {
@@ -356,8 +348,7 @@ export class AnyBranchFactory implements base.ITreeFactoryCandidate {
   }
 
   public create(args: IBranchingArgs) {
-    if (BranchingArgsGuard.assertAny(args))
-      return new AnyBranch(args);
+    return new AnyBranch(BranchingArgsGuard.assertAny(args));
   }
 }
 

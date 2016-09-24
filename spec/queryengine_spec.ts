@@ -91,7 +91,7 @@ describe("OData.GetHandler", () => {
     repository.getEntities = (type, expand, filter, cb) => {
       assert.strictEqual(type.getName(), "Content");
       assert.deepEqual(expand, {});
-      filter.accept({ visitEqExpression: (eq: IEqExpression<IFilterVisitor>) => {
+      filter!.accept({ visitEqExpression: (eq: IEqExpression<IFilterVisitor>) => {
 
         eq.getLhs().accept({ visitPropertyValue: (property: IPropertyValue<IFilterVisitor>) => {
           assert.deepEqual(property.getPropertyPath(), ["Id"]);
@@ -118,7 +118,7 @@ describe("OData.GetHandler", () => {
       done();
     };
 
-    getHandler.query({ relativeUrl: "/Content(1)", body: "" }, null);
+    getHandler.query({ relativeUrl: "/Content(1)", body: "" }, null as any);
   });
 
   it("should return a complete entity set in JSON, sending exactly one body", done => {
@@ -145,7 +145,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts", body: "" }, null);
+    getHandler.query({ relativeUrl: "/Posts", body: "" }, null as any);
   });
 
   it("should return an expanded entity set, sending exactly one body", done => {
@@ -173,7 +173,7 @@ describe("OData.GetHandler", () => {
     let schema = new Schema();
     let getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
-    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, null);
+    getHandler.query({ relativeUrl: "/Posts?$expand=Children", body: "" }, null as any);
   });
 });
 
@@ -319,7 +319,7 @@ class HttpResponseSender implements IHttpResponseSender {
 
 class Repository<T> implements IRepository<T> {
 
-  public getEntities(entityType: EntityType, expandTree: any, filter: IValue<T>,
+  public getEntities(entityType: EntityType, expandTree: any, filter: IValue<T> | undefined,
                      cb: (result: Result<any[], any>) => void) {
     //
   }

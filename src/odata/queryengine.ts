@@ -47,7 +47,8 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
         const numericLiteral = new NumericLiteral(parsed.id);
         const filterExpression = new EqExpression<T>(propertyExpr, numericLiteral);
         this.repository.getEntities(type, {}, filterExpression, result => {
-          this.getHttpResponder.success(result.result()[0], httpResponseSender);
+          if (result.success())
+            this.getHttpResponder.success(result.result()[0], httpResponseSender);
         });
         break;
       default:

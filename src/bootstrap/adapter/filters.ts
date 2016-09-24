@@ -33,14 +33,13 @@ export const Visitor: ITypeofVisitor<IVisitor> = AssembledVisitor<IVisitor>(Visi
 
 export class FilterExpressionFactory {
 
-  private visitor: IVisitor;
-
-  constructor() {
-    const state: IVisitorState = { filterContext: null }; /* @smell */
-    this.visitor = new Visitor(state);
-  }
+  private visitor?: IVisitor;
 
   public create(expression: IValue<IVisitor>, context: IFilterContext) {
-    return this.visitor.create(expression, context);
+    return this.lazyLoadVisitor(context).create(expression, context);
+  }
+
+  private lazyLoadVisitor(context: IFilterContext): IVisitor {
+    return this.visitor = this.visitor || new Visitor({ filterContext: context });
   }
 }

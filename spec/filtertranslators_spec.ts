@@ -220,7 +220,7 @@ describe("Adapter.AnyExpressionTranslator", () => {
         lambdaVariableScope: new LambdaVariableScope(),
       },
       mapping: {
-        scope: null,
+        scope: null!,
       },
     }, createFilterPatternStrategy());
 
@@ -282,8 +282,8 @@ describe("A lambda variable scope", () => {
   it("should recall lambda expressions", () => {
     let lambda: ILambdaVariable = {
       name: "it",
-      entityType: null,
-      scopeId: null,
+      entityType: null!,
+      scopeId: null!,
     };
     let scope = new LambdaVariableScope();
     scope.add(lambda);
@@ -297,8 +297,8 @@ describe("A lambda variable scope", () => {
     let scope = new LambdaVariableScope();
     scope.add({
       name: "it",
-      entityType: null,
-      scopeId: null,
+      entityType: null!,
+      scopeId: null!,
     });
     let cloned = scope.clone();
 
@@ -309,8 +309,8 @@ describe("A lambda variable scope", () => {
     let scope = new LambdaVariableScope();
     let cloned = scope.clone();
 
-    scope.add({ name: "a", entityType: null, scopeId: null });
-    cloned.add({ name: "b", entityType: null, scopeId: null });
+    scope.add({ name: "a", entityType: null!, scopeId: null! });
+    cloned.add({ name: "b", entityType: null!, scopeId: null! });
 
     assert.strictEqual(cloned.exists("a"), false);
     assert.strictEqual(scope.exists("b"), false);
@@ -318,14 +318,14 @@ describe("A lambda variable scope", () => {
 
   it("should have chainable write methods", () => {
     assert.strictEqual(new LambdaVariableScope()
-      .add({ name: "a", entityType: null, scopeId: null })
+      .add({ name: "a", entityType: null!, scopeId: null! })
       .exists("a"), true);
   });
 
   it("should throw when assigning a variable twice", () => {
     assert.throws(() => new LambdaVariableScope()
-      .add({ name: "it", entityType: null, scopeId: null })
-      .add({ name: "it", entityType: null, scopeId: null }));
+      .add({ name: "it", entityType: null!, scopeId: null! })
+      .add({ name: "it", entityType: null!, scopeId: null! }));
   });
 });
 
@@ -333,13 +333,13 @@ describe("A property path", () => {
   it("should detect the in-scope variable prefix", () => {
     let path = new PropertyPath([ "it" ], {
       scope: {
-        entityType: null,
+        entityType: null!,
         lambdaVariableScope: new LambdaVariableScope().add({
-        name: "it", entityType: null, scopeId: null,
+        name: "it", entityType: null!, scopeId: null!,
       }),
       },
       mapping: {
-        scope: null,
+        scope: null!,
       },
     });
 
@@ -348,7 +348,7 @@ describe("A property path", () => {
 });
 
 function createNullState(): IVisitorState {
-  return { filterContext: null };
+  return { filterContext: null! };
 }
 
 class TestExpression {

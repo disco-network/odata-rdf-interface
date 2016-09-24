@@ -31,7 +31,7 @@ export interface IParsedGetCollectionRequest<TFilterVisitor> {
   type: GetRequestType.Collection;
   entitySetName: string;
   expandTree: any;
-  filterExpression: IValue<TFilterVisitor>;
+  filterExpression: IValue<TFilterVisitor> | undefined;
 }
 
 export interface IParsedGetByIdRequest {
@@ -81,7 +81,7 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
         let currentBranch = expandTree;
         e.path.forEach(prop => currentBranch = currentBranch[prop] = currentBranch[prop] || {});
       });
-      const filterTree = ast.queryOptions.filter ? this.parseFilterExpression(ast.queryOptions.filter) : null;
+      const filterTree = ast.queryOptions.filter ? this.parseFilterExpression(ast.queryOptions.filter) : undefined;
       return {
         type: GetRequestType.Collection,
         entitySetName: entitySetName,

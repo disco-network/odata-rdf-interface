@@ -23,7 +23,7 @@ export class OpenArgs<Get extends ParentGet, ParentGet> {
   public get = this.getDynamic as any as Get;
 
   private map = new Map();
-  private parent: IOpenArgsReadonly<ParentGet>;
+  private parent?: IOpenArgsReadonly<ParentGet>;
 
   constructor(parent?: IOpenArgsReadonly<Get>) {
     this.parent = parent;
@@ -50,7 +50,7 @@ export class OpenArgs<Get extends ParentGet, ParentGet> {
 }
 
 export interface IContractImplementer<ParentGet> {
-  initializeWithPreviousArgs(args: IOpenArgsReadonly<ParentGet>);
+  initializeWithPreviousArgs(args?: IOpenArgsReadonly<ParentGet>);
 }
 
 export interface IContractSpec<T extends IContractImplementer<Get>, Get> {
@@ -60,7 +60,7 @@ export interface IContractSpec<T extends IContractImplementer<Get>, Get> {
 export interface ISimpleContractSpec<Get> extends IContractSpec<IContractImplementer<Get>, Get> {}
 
 export function defContract<T extends IContractImplementer<Get>, Get>(defaultValue?: T): IContractSpec<T, Get> {
-  return { defaultValue: defaultValue };
+  return { defaultValue: defaultValue as T };
 }
 
 export interface IOpenArgsCompatibilityCheckerReadonly {

@@ -8,6 +8,7 @@
         "removeComments": true,
         "moduleResolution": "node",
         "outDir": "build/lib/",
-        "sourceMap": true
+        "sourceMap": true,
+        "strictNullChecks": true
     }
 }

@@ -7,8 +7,8 @@ import { ForeignKeyPropertyResolver, Value, Ref } from "./foreignkeyproperties";
 export class EntityInitializer implements base.IEntityInitializer {
   private resolver = new ForeignKeyPropertyResolver();
 
-  public fromParsed(entity: any, entityType: schema.EntityType): IOperation[] {
-    let prerequisites = [];
+  public fromParsed(entity: any, entityType: schema.EntityType) {
+    let prerequisites: IOperation[] = [];
     let object = {};
     for (let propertyName of entityType.getPropertyNames()) {
       if (Object.prototype.hasOwnProperty.call(entity, propertyName)) {

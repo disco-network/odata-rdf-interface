@@ -267,13 +267,15 @@ export class EntityCollection implements IEntityValue {
   ///
   public applyResult(result: any): void {
 
-    let id = this.context.getUniqueIdOfResult(result);
-    if (!Object.prototype.hasOwnProperty.call(this.entities, id)) {
+    if (this.context.hasResultUniqueId(result)) {
+      let id = this.context.getUniqueIdOfResult(result);
+      if (!Object.prototype.hasOwnProperty.call(this.entities, id)) {
 
-      this.entities[id] = EntityFactory.fromEntityKind(this.kind, this.context);
+        this.entities[id] = EntityFactory.fromEntityKind(this.kind, this.context);
+      }
+
+      this.entities[id].applyResult(result);
     }
-
-    this.entities[id].applyResult(result);
   }
 
   public serializeToODataJson() {
@@ -281,72 +283,86 @@ export class EntityCollection implements IEntityValue {
   }
 }
 
+export interface ComplexEntityData {
+  value: { [id: string]: IEntityValue };
+  id: any;
+}
+
 export class ComplexEntity implements IEntityValue {
   private context: IQueryContext;
-  private value: { [id: string]: IEntityValue } = undefined;
-  private id: any;
+  private data?: ComplexEntityData = undefined;
 
   constructor(context: IQueryContext) {
     this.context = context;
   }
 
   public applyResult(result: any): void {
-    let resultId = this.context.getUniqueIdOfResult(result);
-    let firstResultOrSameId = this.id === undefined || resultId === this.id;
 
-    if (firstResultOrSameId) {
-      if (this.value === undefined) {
-        this.initializeWithId(resultId);
-      }
+    if (this.context.hasResultUniqueId(result)) {
+      const resultId = this.context.getUniqueIdOfResult(result);
+
+      const data = this.getOrInitDataWithResultId(resultId);
       this.context.forEachPropertyOfResult(result, (resultOfProperty, property, hasValueInResult) => {
-        this.applyResultToProperty(resultOfProperty, property, hasValueInResult);
+        this.applyResultToProperty(resultOfProperty, property, hasValueInResult, data);
       });
-    }
-    else {
-      throw new Error("found different values for a property of quantity one");
     }
   }
 
   public serializeToODataJson(): any {
-    if (this.id === undefined) return null;
-    let serialized = {};
+    const data = this.data;
+    if (data === undefined) return null;
+    else {
+      let serialized = {};
 
-    let serializeProperty = property => {
-      let propertyName = property.getName();
-      let entity = this.getPropertyEntity(property);
-      let entityExists = this.hasPropertyEntity(property);
-      serialized[propertyName] = entityExists ? entity.serializeToODataJson() : null;
-    };
+      let serializeProperty = property => {
+        let propertyName = property.getName();
+        let entity = this.getPropertyEntity(property, data);
+        let entityExists = this.hasPropertyEntity(property, data);
+        serialized[propertyName] = entityExists ? entity.serializeToODataJson() : null;
+      };
 
-    this.context.forEachPropertySchema(serializeProperty);
+      this.context.forEachPropertySchema(serializeProperty);
 
-    return serialized;
+      return serialized;
+    }
   }
 
-  private initializeWithId(id) {
-    this.id = id;
-    this.value = {};
+  private isFirstResultOrSameId(id) {
+    return this.data === undefined || this.data.id === id;
   }
 
-  private applyResultToProperty(result: any, property: Property, hasValueInResult: boolean) {
-    if (!this.hasPropertyEntity(property)) {
+  private getOrInitDataWithResultId(id) {
+    if (this.isFirstResultOrSameId(id)) {
+      if (this.data === undefined) {
+        this.data = {
+          id: id,
+          value: {},
+        };
+      }
+      return this.data;
+    }
+    else throw new Error("found different values for a property of quantity one");
+  }
+
+  private applyResultToProperty(result: any, property: Property, hasValueInResult: boolean, data: ComplexEntityData) {
+    if (!this.hasPropertyEntity(property, data)) {
       this.setPropertyEntity(property,
-        EntityFactory.fromPropertyWithContext(property, this.context));
+        EntityFactory.fromPropertyWithContext(property, this.context), data);
     }
 
-    if (hasValueInResult) this.value[property.getName()].applyResult(result);
+    if (hasValueInResult) data.value[property.getName()].applyResult(result);
   }
 
-  private hasPropertyEntity(property: Property) {
-    return this.getPropertyEntity(property) !== undefined;
+  private hasPropertyEntity(property: Property, data: ComplexEntityData) {
+    return this.getPropertyEntity(property, data) !== undefined;
   }
 
-  private getPropertyEntity(property: Property) {
-    return this.value[property.getName()];
+  private getPropertyEntity(property: Property, data: ComplexEntityData) {
+    return data.value[property.getName()];
   }
 
-  private setPropertyEntity(property: Property, value) {
-    this.value[property.getName()] = value;
+  private setPropertyEntity(property: Property, value, data: ComplexEntityData) {
+    data.value[property.getName()] = value;
   }
 }
 
@@ -404,7 +420,9 @@ export interface IQueryContext {
   forEachElementaryPropertySchema(fn: (property: Property) => void): void;
   forEachComplexPropertySchema(fn: (property: Property) => void): void;
 
-  getUniqueIdOfResult(result): string;
+  hasResultUniqueId(result): result is { __hasId; };
+  getUniqueIdOfResult(result: { __hasId; }): string;
+  getUniqueIdOfResult(result): string | undefined;
   getSubContext(property: string): IQueryContext;
 }
 
@@ -424,11 +442,11 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
     let expandGraphPattern = this.createExpandGraphPattern(model);
 
     let filterExpression = this.createFilterExpression(model);
-    let filterGraphPattern = this.createFilterGraphPattern(model, filterExpression);
+    let filterGraphPattern = filterExpression && this.createFilterGraphPattern(model, filterExpression);
 
     let graphPattern = new gpatterns.TreeGraphPattern(model.getMapping().variables.getVariable());
     graphPattern.newConjunctivePattern(expandGraphPattern);
-    graphPattern.newConjunctivePattern(filterGraphPattern);
+    if (filterGraphPattern) graphPattern.newConjunctivePattern(filterGraphPattern);
 
     return this.sparqlSelectBuilder.fromGraphPatternAndFilterExpression(prefixes, graphPattern, filterExpression);
   }
@@ -439,18 +457,17 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
   }
 
   private createFilterGraphPattern(model: IQueryAdapterModel<TExpressionVisitor>,
-                                   filterExpression?: translators.IExpressionTranslator): gpatterns.TreeGraphPattern {
-    if (filterExpression) {
-
-      let filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
-        filterExpression.getPropertyTree());
-      return filterGraphPattern;
-    }
+                                   filterExpression: translators.IExpressionTranslator): gpatterns.TreeGraphPattern {
+    let filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
+      filterExpression.getPropertyTree());
+    return filterGraphPattern;
   }
 
-  private createFilterExpression(model: IQueryAdapterModel<TExpressionVisitor>): translators.IExpressionTranslator {
-    if (model.getFilterExpression() !== null) {
-      return this.filterExpressionFactory.create(model.getFilterExpression(), model.getFilterContext());
+  private createFilterExpression(model: IQueryAdapterModel<TExpressionVisitor>):
+    translators.IExpressionTranslator | undefined {
+    const filterExpression = model.getFilterExpression();
+    if (filterExpression !== undefined) {
+      return this.filterExpressionFactory.create(filterExpression, model.getFilterContext());
     }
   }
 }
@@ -460,7 +477,7 @@ export interface IQueryAdapterModel<TVisitor> {
   getMapping(): mappings.Mapping;
   getEntitySetType(): EntityType;
   getExpandTree(): any;
-  getFilterExpression(): IValue<TVisitor>;
+  getFilterExpression(): IValue<TVisitor> | undefined;
 }
 
 export class QueryAdapterModel<TExpressionVisitor> implements IQueryAdapterModel<TExpressionVisitor> {
@@ -520,7 +537,14 @@ export class QueryContext implements IQueryContext {
               private remainingExpandBranch) {
   }
 
-  public getUniqueIdOfResult(result): string {
+  public hasResultUniqueId(result): result is { __hasId; } {
+    return this.getUniqueIdOfResult(result) !== undefined;
+  }
+
+  public getUniqueIdOfResult(result: { __hasId; }): string;
+  public getUniqueIdOfResult(result: any): string | undefined;
+
+  public getUniqueIdOfResult(result): string | undefined {
     let variableName = this.mapping.getElementaryPropertyVariable("Id");
     let obj = result && result[variableName.substr(1)];
     if (obj) return obj.value;

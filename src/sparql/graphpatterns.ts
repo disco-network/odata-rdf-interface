@@ -54,15 +54,15 @@ export class TreeGraphPattern {
     return branches;
   }
 
-  public getOptionalPatterns(): TreeGraphPattern[] {
-    let patterns = [];
-    let addBranch = (property, branch) => {
-      let gp = new TreeGraphPattern(this.name());
+  public getOptionalPatterns() {
+    const patterns: TreeGraphPattern[] = [];
+    const addBranch = (property, branch) => {
+      const gp = new TreeGraphPattern(this.name());
       gp.branch(property, branch);
       patterns.push(gp);
     };
-    let addInverseBranch = (property, branch) => {
-      let gp = new TreeGraphPattern(this.name());
+    const addInverseBranch = (property, branch) => {
+      const gp = new TreeGraphPattern(this.name());
       gp.inverseBranch(property, branch);
       patterns.push(gp);
     };
@@ -166,7 +166,7 @@ export class TreeGraphPattern {
   }
 
   /** Create a graph pattern with independent root variable. Append it with AND, i.e. " . " */
-  public newConjunctivePattern(pattern?: TreeGraphPattern): TreeGraphPattern {
+  public newConjunctivePattern(pattern: TreeGraphPattern): TreeGraphPattern {
     pattern = pattern || new TreeGraphPattern(this.name());
     this.conjunctivePatterns.push(pattern);
     return pattern;
