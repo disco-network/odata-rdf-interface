@@ -3,7 +3,6 @@
 /spec
 .npmignore
 .travis.yml
-gulpfile.js
 tsconfig.json
 tslint.json
 typings.json
