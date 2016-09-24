@@ -31,7 +31,7 @@
   "typings": "build/lib/index.d.ts",
   "scripts": {
     "test": "gulp specs",
-    "prepublish": "npm install && gulp build"
+    "postinstall": "npm install && gulp build"
   },
   "repository": {
     "type": "git",
