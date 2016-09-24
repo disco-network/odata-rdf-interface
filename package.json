@@ -30,7 +30,8 @@
   "main": "build/lib/index.js",
   "typings": "build/lib/index.d.ts",
   "scripts": {
-    "test": "gulp specs"
+    "test": "gulp specs",
+    "prepublish": "npm install && gulp build"
   },
   "repository": {
     "type": "git",
