@@ -7,9 +7,35 @@ import {
 import queryTestCases = require("./helpers/querytestcases");
 
 describe("ODataParser @todo inject this dependency @todo create abstraction", function() {
+  it("should parse GET /:set(:id)", () => {
+    const parsed = initODataParser().parse("/Posts(1)");
+
+    assert.deepEqual(parsed, {
+      type: "resourceQuery",
+      queryOptions: {},
+      resourcePath: {
+        type: "entitySet",
+        entitySetName: "Posts",
+        navigation: {
+          type: "collection-navigation",
+          path: {
+            type: "collection-navigation",
+            singleNavigation: undefined,
+            keyPredicate: {
+              simpleKey: {
+                type: "decimalValue",
+                value: "1",
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("should parse an OData filter expression", function() {
-    let parser = initODataParser();
-    let evaluated = parser.parse("Posts?$filter=a/b/c eq 1");
+    const parser = initODataParser();
+    const evaluated = parser.parse("/Posts?$filter=a/b/c eq 1");
 
     assert.isDefined(evaluated.queryOptions);
     assert.isDefined(evaluated.queryOptions.filter);
@@ -20,7 +46,7 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
 
   it("should parse an OData expand expression", function() {
     let parser = initODataParser();
-    let result = parser.parse("Posts?$expand=Children/ReferredFrom");
+    let result = parser.parse("/Posts?$expand=Children/ReferredFrom");
 
     assert.strictEqual(result.queryOptions.expand.length, 1);
     assert.strictEqual(result.queryOptions.expand[0].path[0], "Children");
@@ -29,14 +55,14 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
 
   it("should parse a string with \"", () => {
     let parser = initODataParser();
-    let result = parser.parse("Posts?$filter='''' eq ''");
+    let result = parser.parse("/Posts?$filter='''' eq ''");
 
     assert.strictEqual(result.queryOptions.filter.lhs.value, "'");
   });
 
   it("should parse a simple filter expression", () => {
     let parser = initODataParser();
-    let result = parser.parse("Posts?$filter='2' eq '1'");
+    let result = parser.parse("/Posts?$filter='2' eq '1'");
 
     let filterOption = result.queryOptions.filter;
     assert.strictEqual(filterOption.type, "operator");
@@ -47,7 +73,7 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
 
   it("should parse a simple member expression", () => {
     let parser = initODataParser();
-    let result = parser.parse("Posts?$filter=Id eq '1'");
+    let result = parser.parse("/Posts?$filter=Id eq '1'");
 
     let filterOption = result.queryOptions.filter;
     assert.strictEqual(filterOption.lhs.type, "member-expression");
@@ -58,7 +84,7 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
 
   it("should parse a simple any expression", () => {
     let parser = initODataParser();
-    let result = parser.parse("Posts?$filter=Children/any(it: it/Id eq 2)");
+    let result = parser.parse("/Posts?$filter=Children/any(it: it/Id eq 2)");
 
     let filterOption = result.queryOptions.filter;
     assert.strictEqual(filterOption.type, "member-expression");
@@ -70,7 +96,7 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
 
   it("should accept parentheses in a filter expression", () => {
     let parser = initODataParser();
-    let result = parser.parse("Posts?$filter=(Id eq '1')");
+    let result = parser.parse("/Posts?$filter=(Id eq '1')");
 
     let filterOption = result.queryOptions.filter;
     assert.strictEqual(filterOption.type, "parentheses-expression");
