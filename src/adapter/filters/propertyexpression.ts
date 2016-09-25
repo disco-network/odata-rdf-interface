@@ -145,7 +145,6 @@ export class PropertyPath {
     let entityType = this.getEntityTypeAfterLambdaPrefix();
     for (const segment of namesWithoutLambdaPrefix) {
       let property = entityType.getProperty(segment);
-      console.log("124 " + entityType);
       entityType = property.getEntityType();
       transformedPath.push.apply(transformedPath, resolver.resolveGetter(property));
     }

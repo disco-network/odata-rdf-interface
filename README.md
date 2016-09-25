@@ -47,6 +47,7 @@ To compile and run the tests (based on mocha/chai/sinon), run:
 
 # what's missing?
 
+ * $metadata
  * UUID generation support
  * PUT / PATCH / DELETE etc.
  * $batch queries

@@ -8,10 +8,21 @@ export class EntityInitializer implements base.IEntityInitializer {
   private resolver = new ForeignKeyPropertyResolver();
 
   public fromParsed(entity: any, entityType: schema.EntityType) {
-    let prerequisites: IOperation[] = [];
-    let object = {};
+    const prerequisites: IOperation[] = [];
+    const object = {};
+    const identifier = uuid.v4().replace(/-/g, ""); // hopefully this produces an unique identifier
     for (let propertyName of entityType.getPropertyNames()) {
-      if (Object.prototype.hasOwnProperty.call(entity, propertyName)) {
+      const property = entityType.getProperty(propertyName);
+
+      if (property.isGenerated() === true) {
+        if (property.isGeneratedUUID()) {
+          object[propertyName] = identifier;
+        }
+        else if (property.isAutoIncrementable()) {
+          object[propertyName] = property.genNextAutoIncrementValue();
+        }
+      }
+      else if (Object.prototype.hasOwnProperty.call(entity, propertyName)) {
         const setter = this.resolver.resolveSetter(entityType.getProperty(propertyName), entity[propertyName]);
         const setterValue = setter.value;
         const propertyType = setter.property.getEntityType();
@@ -29,19 +40,12 @@ export class EntityInitializer implements base.IEntityInitializer {
           object[setter.property.getName()] = setterValue.value;
         }
       }
-      else {
-        /* @todo force Id generation */
-        let property = entityType.getProperty(propertyName);
-        if (property.isAutoIncrementable()) {
-          object[propertyName] = property.genNextAutoIncrementValue();
-        }
-      }
     }
 
     return prerequisites.concat([{
       type: "insert",
       entityType: entityType.getName(),
-      identifier: uuid.v4().replace(/-/g, ""), // hopefully this produces a unique identifier
+      identifier: identifier,
       value: object,
     }]);
   }

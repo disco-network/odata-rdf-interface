@@ -4,7 +4,7 @@ let raw = {
   entityTypes: {
     Post: {
       properties: {
-        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
+        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", generated: "auto-increment" },
         ContentId: { type: "Edm.Int64", foreignProperty: "Content" },
         ParentId: { type: "Edm.Int64", foreignProperty: "Parent" },
         Parent: { type: "Post", optional: true, quantity: "one-to-many",
@@ -17,7 +17,7 @@ let raw = {
     },
     Content: {
       properties: {
-        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", nullable: "auto-increment" },
+        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", generated: "auto-increment" },
         Title: { type: "Edm.String", rdfName: "title" },
         Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture" },
       },
@@ -155,8 +155,16 @@ export class Property extends RdfBasedSchemaResource {
     }
   }
 
+  public isGenerated(): boolean {
+    return this.getRaw().generated !== false && this.getRaw().generated !== undefined;
+  }
+
+  public isGeneratedUUID(): boolean {
+    return this.getRaw().generated === "uuid";
+  }
+
   public isAutoIncrementable(): boolean {
-    return this.getRaw().nullable === "auto-increment";
+    return this.getRaw().generated === "auto-increment";
   }
 
   public genNextAutoIncrementValue(): string {
