@@ -54,7 +54,7 @@ describe("Adapter.ODataRepository:", () => {
       entityType: "Post",
       identifier: "post10",
       value: {
-        Id: "10",
+        Id: { type: "Edm.String", value: "10" },
       },
     }], new schema.Schema(), results => {
       assert.strictEqual(results.success(), true);
@@ -110,7 +110,7 @@ describe("Adapter.ODataRepository:", () => {
       entityType: "Post",
       identifier: "post10",
       value: {
-        Id: "10",
+        Id: { type: "Edm.String", value: "10" },
       },
     }], new schema.Schema(), results => {
       assert.strictEqual(results.success(), true);

@@ -1,4 +1,5 @@
 import schema = require("./schema");
+import { EdmLiteral } from "./edm";
 import { IValue } from "./filters/expressions";
 import results = require("../result");
 
@@ -10,19 +11,18 @@ export interface IRepository<TVisitor> {
 }
 
 export type IOperation = IGetOperation | IInsertOperation;
-export type IPrimitive = string | number;
 
 export interface IGetOperation {
   type: "get";
   entityType: string;
-  pattern: { [id: string]: IPrimitive };
+  pattern: { [id: string]: EdmLiteral };
 }
 
 export interface IInsertOperation {
   type: "insert";
   entityType: string;
   identifier: string;
-  value: { [id: string]: IPrimitive | IReference };
+  value: { [id: string]: EdmLiteral | IReference };
 }
 
 export interface IReference {

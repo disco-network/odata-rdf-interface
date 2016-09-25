@@ -1,5 +1,6 @@
-import { assertEx, match } from "../src/assert";
-import { uuidKeySchema, autoIncrementSchema } from "./helpers/schemata";
+import { assert, assertEx, match } from "../src/assert";
+import { uuidKeySchema, autoIncrementSchema, diverselyTypedSchema } from "./helpers/schemata";
+import { EdmConverter } from "../src/odata/edm";
 
 import base = require("../src/odata/entityreader");
 import queryTestCases = require("./helpers/querytestcases");
@@ -39,13 +40,15 @@ describe("OData.EntityInitializer:", () => {
       entityType: "Entity",
       identifier: match.is(isSameId),
       value: {
-        Id: match.is(isSameId),
+        Id: { type: "Edm.Guid", value: match.is(isSameId) },
       },
     }]);
   });
 
   it("should overwrite user-defined properties which should be generated UUIDs", () => {
-    const entity = create().fromParsed({ Id: "[user-defined]" }, uuidKeySchema.getEntityType("Entity"));
+    const entity = create().fromParsed({
+      Id: { type: "Edm.String", value: "[user-defined]" },
+    }, uuidKeySchema.getEntityType("Entity"));
 
     assertEx.deepEqual(entity, [{
       type: "insert",
@@ -58,7 +61,9 @@ describe("OData.EntityInitializer:", () => {
   });
 
   it("should overwrite user-defined properties which should be auto-incremented", () => {
-    const entity = create().fromParsed({ Id: "[user-defined]" }, autoIncrementSchema.getEntityType("Entity"));
+    const entity = create().fromParsed({
+      Id: { type: "Edm.String", value: "[user-defined]" },
+    }, autoIncrementSchema.getEntityType("Entity"));
 
     assertEx.deepEqual(entity, [{
       type: "insert",
@@ -70,9 +75,15 @@ describe("OData.EntityInitializer:", () => {
     }]);
   });
 
-  xit("should throw when the generated value doesn't match the property type");
+  it("should throw when the value is incompatible with the property type", () => {
+    assert.throws(() => create().fromParsed({
+      Int32: { type: "Edm.String", value: "two" },
+    }, diverselyTypedSchema.getEntityType("Entity")));
+  });
+
+  xit("should throw when the generated value is incompatible with the property type");
 });
 
 function create() {
-  return new base.EntityInitializer();
+  return new base.EntityInitializer(new EdmConverter());
 }

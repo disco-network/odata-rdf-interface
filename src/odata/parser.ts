@@ -3,6 +3,7 @@ import abnfParser = require("abnfjs/parser");
 import abnfInterpreter = require("abnfjs/interpreter");
 import fs = require("fs");
 import { IHttpRequest } from "./http";
+import { EdmLiteral } from "./edm";
 import {
   IValue, IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor,
   IStringLiteralVisitor, INumericLiteralVisitor, IParenthesesVisitor, IPropertyValueVisitor, IAnyExpressionVisitor,
@@ -18,7 +19,7 @@ export interface IPostRequestParser {
 
 export interface IParsedPostRequest {
   entitySetName: string;
-  entity: any;
+  entity: ParsedEntity;
 }
 
 export interface IGetRequestParser<TFilterVisitor> {
@@ -56,9 +57,32 @@ export class PostRequestParser implements IPostRequestParser {
     let ast = this.odataParser.parse(request.relativeUrl);
     return {
       entitySetName: ast.resourcePath.entitySetName,
-      entity: JSON.parse(request.body),
+      entity: this.parseBody(request.body),
     };
   }
+
+  private parseBody(body: string) {
+    const json = JSON.parse(body);
+    const parsed: ParsedEntity = {};
+    for (const key of Object.keys(json)) {
+      const value = json[key];
+      switch (typeof value) {
+        case "string":
+          parsed[key] = { type: "Edm.String", value: value };
+          break;
+        case "number":
+          parsed[key] = { type: "Edm.Int32", value: value };
+          break;
+        default:
+          throw new Error("unsupported value for property");
+      }
+    }
+    return parsed;
+  }
+}
+
+export interface ParsedEntity {
+  [id: string]: EdmLiteral;
 }
 
 export interface IFilterVisitor extends IStringLiteralVisitor, INumericLiteralVisitor,
@@ -121,10 +145,6 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
         throw new Error("Unsupported filter expression");
     }
   }
-
-  /*
-   * @construct tests for visiting the expresssions + especially ParenthesesExpression recursion
-   */
 
   public parseFilterOperation(raw): IValue<IFilterVisitor> {
     const lhs = this.parseFilterExpression(raw.lhs);

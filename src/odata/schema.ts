@@ -1,12 +1,10 @@
-/** @module */
-
 let raw = {
   entityTypes: {
     Post: {
       properties: {
-        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", generated: "auto-increment" },
-        ContentId: { type: "Edm.Int64", foreignProperty: "Content" },
-        ParentId: { type: "Edm.Int64", foreignProperty: "Parent" },
+        Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
+        ContentId: { type: "Edm.Int32", foreignProperty: "Content" },
+        ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
         Parent: { type: "Post", optional: true, quantity: "one-to-many",
           foreignSet: "Posts", inverseProperty: "Children",
           rdfName: "parent", nullable: true },
@@ -17,7 +15,7 @@ let raw = {
     },
     Content: {
       properties: {
-        Id: { autoIncrement_nextValue: 3, type: "Edm.Int64", rdfName: "id", generated: "auto-increment" },
+        Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
         Title: { type: "Edm.String", rdfName: "title" },
         Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture" },
       },
@@ -25,7 +23,7 @@ let raw = {
     },
     Culture: {
       properties: {
-        Id: { type: "Edm.Int64", rdfName: "id" },
+        Id: { type: "Edm.Int32", rdfName: "id" },
       },
       rdfName: "Culture",
     },

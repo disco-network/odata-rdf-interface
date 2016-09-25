@@ -1,4 +1,5 @@
-import { Property, EntityType } from "./schema";
+import { Property } from "./schema";
+import { EdmLiteral } from "./edm";
 
 export class ForeignKeyPropertyResolver {
   public resolveGetter(property: Property): Getter {
@@ -10,7 +11,7 @@ export class ForeignKeyPropertyResolver {
     else return [property];
   }
 
-  public resolveSetter(property: Property, value: any): Setter {
+  public resolveSetter(property: Property, value: EdmLiteral): Setter {
     if (property.foreignProperty() !== undefined) {
       let firstProperty = property.foreignProperty();
       let secondProperty = firstProperty.getEntityType().getProperty("Id");
@@ -26,10 +27,7 @@ export class ForeignKeyPropertyResolver {
     else {
       return {
         property: property,
-        value: {
-          type: "value",
-          value: value,
-        },
+        value: value,
       };
     }
   }
@@ -38,16 +36,13 @@ export class ForeignKeyPropertyResolver {
 export type Getter = Property[];
 export interface Setter {
   property: Property;
-  value: Value | Ref;
+  value: SetterValue;
 }
 
-export interface Value {
-  type: "value";
-  value: any;
-}
+export type  SetterValue = EdmLiteral | Ref;
 
 export interface Ref {
   type: "ref";
   indexProperty: Property;
-  id: number;
+  id: EdmLiteral;
 }

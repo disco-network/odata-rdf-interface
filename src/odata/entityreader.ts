@@ -1,25 +1,32 @@
 import * as base from "./entity_reader_base";
-import * as schema from "./schema";
+import { EntityType } from "./schema";
 import * as uuid from "uuid";
 import { IOperation } from "./repository";
-import { ForeignKeyPropertyResolver, Value, Ref } from "./foreignkeyproperties";
+import { ParsedEntity } from "./parser";
+import { EdmLiteral, EdmConverter } from "./edm";
+import { ForeignKeyPropertyResolver, Ref as ForeignKeyRef, SetterValue } from "./foreignkeyproperties";
 
 export class EntityInitializer implements base.IEntityInitializer {
   private resolver = new ForeignKeyPropertyResolver();
 
-  public fromParsed(entity: any, entityType: schema.EntityType) {
+  constructor(private edmConverter: EdmConverter) {}
+
+  public fromParsed(entity: ParsedEntity, entityType: EntityType) {
     const prerequisites: IOperation[] = [];
-    const object = {};
+    const object: { [id: string]: EdmLiteral | Ref } = {};
     const identifier = uuid.v4().replace(/-/g, ""); // hopefully this produces an unique identifier
     for (let propertyName of entityType.getPropertyNames()) {
       const property = entityType.getProperty(propertyName);
 
       if (property.isGenerated() === true) {
         if (property.isGeneratedUUID()) {
-          object[propertyName] = identifier;
+          object[propertyName] = this.edmConverter.convert({ type: "Edm.Guid", value: identifier },
+                                                           property.getEntityType().getName());
         }
         else if (property.isAutoIncrementable()) {
-          object[propertyName] = property.genNextAutoIncrementValue();
+          object[propertyName] = this.edmConverter.convert({ type: "Edm.String",
+                                                             value: property.genNextAutoIncrementValue() },
+                                                           property.getEntityType().getName());
         }
       }
       else if (Object.prototype.hasOwnProperty.call(entity, propertyName)) {
@@ -37,7 +44,8 @@ export class EntityInitializer implements base.IEntityInitializer {
           object[setter.property.getName()] = { type: "ref", resultIndex: prerequisites.length - 1 };
         }
         else {
-          object[setter.property.getName()] = setterValue.value;
+          object[setter.property.getName()] = this.edmConverter.convert(setterValue,
+                                                                        property.getEntityType().getName());
         }
       }
     }
@@ -50,7 +58,12 @@ export class EntityInitializer implements base.IEntityInitializer {
     }]);
   }
 
-  private isRef(value: Value | Ref): value is Ref {
+  private isRef(value: SetterValue): value is ForeignKeyRef {
     return value.type === "ref";
   }
+}
+
+export interface Ref {
+  type: "ref";
+  resultIndex: number;
 }

@@ -121,16 +121,22 @@ describe("PostRequestParser (generated tests)", () => {
 });
 
 describe("PostRequestParser:", () => {
-  it("should parse the JSON body", () => {
-    let parser = initPostRequestParser();
+  it("should parse string properties as { type: 'Edm.String', value: ... }", () => {
+    const parsed = initPostRequestParser().parse({
+      relativeUrl: "/Entities", body: `{ "String": "Lorem ipsum" }`,
+    });
 
-    let parsed = parser.parse({ relativeUrl: "/Posts", body: "{ \"ContentId\": \"1\" }" });
+    assert.deepEqual(parsed.entity, { String: { type: "Edm.String", value: "Lorem ipsum" } });
+  });
 
-    assert.deepEqual(parsed.entity, { ContentId: "1" });
+  it("should parse string properties as { type: 'Edn.Int32', value: ... }", () => {
+    const parsed = initPostRequestParser().parse({
+      relativeUrl: "/Entities", body: `{ "Int32": 42 }`,
+    });
+
+    assert.deepEqual(parsed.entity, { Int32: { type: "Edm.Int32", value: 42 } });
   });
 });
-
-/* @construction body spec */
 
 describe("GetRequestParser:", () => {
   it("should also return the correct entity set name", () => {

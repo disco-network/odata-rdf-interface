@@ -3,7 +3,7 @@ import {
   GetRequestType, EqExpression, PropertyValue, NumericLiteral,
 } from "../odata/parser";
 import { IEqExpressionVisitor, IPropertyValueVisitor, INumericLiteralVisitor } from "../odata/filters/expressions";
-import entityReader = require("../odata/entity_reader_base");
+import entityInitializer = require("../odata/entity_reader_base");
 import { IRepository }  from "../odata/repository";
 import { Schema } from "../odata/schema";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
@@ -81,7 +81,7 @@ export class GetHttpResponder implements IGetHttpResponder {
 export class PostHandler<T> implements IPostHandler {
 
   constructor(private parser: IPostRequestParser,
-              private entityInitializer: entityReader.IEntityInitializer,
+              private entityInitializer: entityInitializer.IEntityInitializer,
               private repository: IRepository<T>,
               private schema: Schema) {
   }

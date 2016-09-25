@@ -82,6 +82,16 @@ SELECT * WHERE {
   }
 }`, answer => assert.strictEqual(answer.error, null));
 
+  createSpec("SELECT * WHERE { OPTIONAL { ?s ?p ?o } FILTER(BOUND(?s)) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length > 0, true);
+  });
+
+  createSpec("SELECT * WHERE { OPTIONAL { ?s <http://unknown.prop/> ?o } FILTER(BOUND(?s)) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 0);
+  });
+
   createSpec("PREFIX disco: <http://disco-network.org/resource/> INSERT { <test> disco:id '1' } WHERE {}", answer => {
     assert.strictEqual(answer.error, null);
   });

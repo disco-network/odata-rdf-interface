@@ -11,6 +11,7 @@ import {
 import {
   IQueryModel as IODataQueryModel,
 } from "../odata/queries";
+import { EdmLiteral } from "../odata/edm";
 import * as async from "async";
 
 import sparqlProvider = require("../sparql/sparql_provider_base");
@@ -69,27 +70,38 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         });
       }
       else if (this.isInsertOp(op)) {
-        /* @todo what about inverse properties??? */
+        /* @todo @important what about inverse properties??? */
         const keyValuePairs: { property: string, value: ISparqlLiteral }[] = [];
         let errored = false;
         for (const property of Object.keys(op.value)) {
           const value = op.value[property];
-          if (typeof value === "string") {
-            keyValuePairs.push({ property: property, value: new SparqlString(value) });
-          }
-          else if (typeof value === "number") {
-            keyValuePairs.push({ property: property, value: new SparqlNumber(value.toString())});
-          }
-          else if (typeof value === "object" && value.type === "ref") {
-            const resultForValue = batchResults[value.resultIndex].result();
-            if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
-              keyValuePairs.push({ property: property, value: new SparqlUri(resultForValue.uris[0]) });
-            }
-            else {
-              batchResults.push(results.Result.error("referenced result is not single-valued"));
-              errored = true;
+          switch (value.type) {
+            case "Edm.String":
+              if (value.value !== null)
+                keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
               break;
-            }
+            case "Edm.Int32":
+              if (value.value !== null)
+                keyValuePairs.push({ property: property, value: new SparqlNumber(value.value.toString()) });
+              break;
+            case "Edm.Guid":
+              if (value.value !== null)
+                keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
+              break;
+            case "ref":
+              const resultForValue = batchResults[value.resultIndex].result();
+              if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
+                /* @todo do we need conversion logic here? */
+                keyValuePairs.push({ property: property, value: new SparqlUri(resultForValue.uris[0]) });
+              }
+              else {
+                batchResults.push(results.Result.error("referenced result is not single-valued"));
+                errored = true;
+                break;
+              }
+              break;
+            default:
+              getNever(value, `${value["type"]} is not a valid type for the property ${property}.`);
           }
         }
 
@@ -111,15 +123,25 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     });
   }
 
-  public eqExpressionFromKeyValue = (pair: { key: string; value: base.IPrimitive }): IEqExpression<IMinimalVisitor> => {
+  public eqExpressionFromKeyValue = (pair: { key: string; value: EdmLiteral }): IEqExpression<IMinimalVisitor> => {
     return new EqExpression(
       this.propertyExpressionFromName(pair.key),
       this.primitiveLiteralExpressionFromValue(pair.value)
     );
   }
 
-  public primitiveLiteralExpressionFromValue(value: base.IPrimitive):
+  public primitiveLiteralExpressionFromValue(value: EdmLiteral):
     IStringLiteral<IMinimalVisitor> | INumericLiteral<IMinimalVisitor> {
+
+    switch (value.type) {
+      case "Edm.String":
+      case "Edm.Guid":
+        return new StringLiteral(value.value);
+      case "Edm.Int32":
+        return new NumericLiteral(value.value);
+      default:
+        getNever(value, "Unsupported EDM value");
+    }
 
     if (typeof value === "string") {
       return new StringLiteral(value);
@@ -215,6 +237,10 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     let resultBuilder = new JsonResultBuilder();
     return resultBuilder.run(response, queryContext);
   }
+}
+
+function getNever(value: never, msg: string): never {
+  throw new Error(msg);
 }
 
 class EqualsUriExpression<T extends IEqualsUriExpressionVisitor> implements IEqualsUriExpression<T> {

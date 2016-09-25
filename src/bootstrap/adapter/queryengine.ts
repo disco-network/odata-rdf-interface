@@ -1,5 +1,6 @@
 import base = require("../../odata/queryengine");
 import { Schema } from "../../odata/schema";
+import { EdmConverter } from "../../odata/edm";
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 
 import { EntityInitializer } from "../odata/entityreader";
@@ -17,6 +18,7 @@ export class GetHandler extends base.GetHandler<IVisitor> {
 
 export class PostHandler extends base.PostHandler<IVisitor> {
   constructor(schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
-    super(new PostRequestParser(), new EntityInitializer(), new ODataRepository(sparqlProvider, graphUri), schema);
+    super(new PostRequestParser(), new EntityInitializer(new EdmConverter()),
+          new ODataRepository(sparqlProvider, graphUri), schema);
   }
 }
