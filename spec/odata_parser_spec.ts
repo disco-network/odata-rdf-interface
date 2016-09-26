@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import { assert, assertEx, match } from "../src/assert";
 
 import {
   IPostRequestParser, PostRequestParser, GetRequestParser, GetRequestType,
@@ -102,6 +102,18 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
     assert.strictEqual(filterOption.type, "parentheses-expression");
     assert.strictEqual(filterOption.inner.type, "operator");
   });
+
+  it("should parse 'null' in $filter expressions", () => {
+    const parsed = initODataParser().parse("/Posts?$filter=ParentId eq null");
+    const filter = parsed.queryOptions.filter;
+
+    assertEx.deepEqual(filter, {
+      type: "operator",
+      op: "eq",
+      lhs: match.any,
+      rhs: { type: "null" },
+    });
+  });
 });
 
 describe("PostRequestParser (generated tests)", () => {
@@ -129,7 +141,7 @@ describe("PostRequestParser:", () => {
     assert.deepEqual(parsed.entity, { String: { type: "Edm.String", value: "Lorem ipsum" } });
   });
 
-  it("should parse string properties as { type: 'Edn.Int32', value: ... }", () => {
+  it("should parse string properties as { type: 'Edm.Int32', value: ... }", () => {
     const parsed = initPostRequestParser().parse({
       relativeUrl: "/Entities", body: `{ "Int32": 42 }`,
     });
@@ -201,6 +213,7 @@ function initODataParser(): IODataParser {
 class Visitor implements IFilterVisitor {
   public visitStringLiteral() { /* */ }
   public visitNumericLiteral() { /* */ }
+  public visitNull() { /* */ }
   public visitAndExpression() { /* */ }
   public visitOrExpression() { /* */ }
   public visitEqExpression() { /* */ }

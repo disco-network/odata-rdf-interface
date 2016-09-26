@@ -70,6 +70,16 @@ describe("Adapter.BinaryExprVisitor:", () => {
     assert.strictEqual(sparql, "(LHS = RHS)");
   });
 
+  it("should translate EQ expressions with possibly unbound operands", () => {
+    const visitor = new MyBinaryVisitor(createNullState());
+
+    const expr = new TestBinaryExpression<typeof visitor>(true, true);
+    expr.accept = v => v.visitEqExpression(expr);
+    const sparql = visitor.create(expr).toSparqlFilterClause();
+
+    assert.strictEqual(sparql, "((LHS = RHS) || !(BOUND(LHS) || BOUND(RHS)))");
+  });
+
   it("should translate OR expressions", () => {
     const visitor = new MyBinaryVisitor(createNullState());
 
@@ -352,7 +362,7 @@ function createNullState(): IVisitorState {
 }
 
 class TestExpression {
-  constructor(public value: string) {}
+  constructor(public value: string, public canBeUnbound = false) {}
 
   public accept(visitor: ITestExprVisitor) {
     visitor.visitTest(this);
@@ -363,20 +373,24 @@ interface ITestExprVisitor { visitTest(expr: TestExpression); }
 function TestExprVisitor(Base: new(state: IVisitorState) => IVisitor) {
   return class extends Base {
     public visitTest(expr: TestExpression) {
-      this.passResult(new TestTranslator(expr.value));
+      this.passResult(new TestTranslator(expr.value, expr.canBeUnbound));
     }
   };
 }
 
 class TestTranslator implements IExpressionTranslator {
-  constructor(private value: string) {}
+  constructor(private value: string, private unboundPossible = false) {}
 
   public getPropertyTree() { return new ScopedPropertyTree(); }
   public toSparqlFilterClause(): string { return this.value; }
+  public canBeUnbound() { return this.unboundPossible; };
 }
 
 class TestBinaryExpression<TVisitor> {
+
+  constructor(private unbound1 = false, private unbound2 = false) {}
+
   public accept(v: TVisitor) { throw new Error("not implemented"); }
-  public getLhs() { return new TestExpression("LHS"); }
-  public getRhs() { return new TestExpression("RHS"); }
+  public getLhs() { return new TestExpression("LHS", this.unbound1); }
+  public getRhs() { return new TestExpression("RHS", this.unbound2); }
 }

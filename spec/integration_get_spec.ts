@@ -212,6 +212,25 @@ describe("The GetHandler should evaluate", () => {
     "before execution";
   });
 
+  createQuerySpec("/Posts?$filter=Id eq 1 and ParentId eq ParentId", answer => {
+    expectSuccess(answer);
+    assert.strictEqual(answer.result().length, 1);
+  });
+
+  createQuerySpec("/Posts?$filter=ParentId eq null", answer => {
+    expectSuccess(answer);
+    assert.strictEqual(answer.result().length, 1);
+  }, () => {
+    "before spec";
+  });
+
+  createQuerySpec("/Posts?$filter=ParentId eq ParentId", answer => {
+    expectSuccess(answer);
+    assert.strictEqual(answer.result().length, 2);
+  }, () => {
+    "before spec";
+  });
+
   function createQuerySpec(query: string, cb: (results) => void, before: () => void = () => null,
                            pending: boolean = false) {
     let fn = pending ? xit : it;

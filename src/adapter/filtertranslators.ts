@@ -3,6 +3,7 @@ import { ScopedPropertyTree } from "../odata/filters/propertytree";
 import { IValue, IBinaryExpression,
   IStringLiteralVisitor, IStringLiteral,
   INumericLiteralVisitor, INumericLiteral,
+  INullVisitor, INull,
   IAndExpressionVisitor, IAndExpression,
   IOrExpressionVisitor, IOrExpression,
   IEqExpressionVisitor, IEqExpression,
@@ -82,7 +83,7 @@ export function AssembledVisitor<T extends IVisitor>
 }
 
 export interface ILiteralVisitor
-  extends IStringLiteralVisitor, INumericLiteralVisitor {}
+  extends IStringLiteralVisitor, INumericLiteralVisitor, INullVisitor {}
 
 export function LiteralVisitor
   (Base: IVisitorConstructible) {
@@ -99,6 +100,10 @@ export function LiteralVisitor
 
     public visitNumericLiteral(expr: INumericLiteral<this>) {
       this.passResult(new LiteralTranslator<number>(expr.getNumber(), num => "'" + num + "'"));
+    }
+
+    public visitNull(expr: INull<this>) {
+      this.passResult(new NullTranslator());
     }
   } as IVisitorConstructible;
 }
@@ -124,7 +129,8 @@ export function BinaryExprVisitor
     }
 
     public visitEqExpression(expr: IEqExpression<this>) {
-      this.visitBinaryExpression(expr, "=");
+      const [lhs, rhs] = this.createBinaryOperands(expr);
+      this.passResult(new EqExpressionTranslator(lhs, rhs) as any);
     }
 
     private visitBinaryExpression(expr: IBinaryExpression<this>, sparqlOperator: string) {
@@ -136,6 +142,30 @@ export function BinaryExprVisitor
       return [ this.create(expr.getLhs()), this.create(expr.getRhs()) ];
     }
   } as IVisitorConstructible;
+}
+
+export class EqExpressionTranslator implements IExpressionTranslator {
+  constructor(private lhs: IExpressionTranslator, private rhs: IExpressionTranslator) {}
+
+  public getPropertyTree(): ScopedPropertyTree {
+    return FilterExpressionHelper.getPropertyTree([ this.lhs, this.rhs ]);
+  }
+
+  public toSparqlFilterClause() {
+    const lhs = this.lhs.toSparqlFilterClause();
+    const rhs = this.rhs.toSparqlFilterClause();
+    const clauseWithoutBoundCondition = `(${lhs} = ${rhs})`;
+    if (this.lhs.canBeUnbound() === false || this.rhs.canBeUnbound() === false)
+      return clauseWithoutBoundCondition;
+    else {
+      const boundCondition = `!(BOUND(${lhs}) || BOUND(${rhs}))`;
+      return `(${clauseWithoutBoundCondition} || ${boundCondition})`;
+    }
+  }
+
+  public canBeUnbound() {
+    return false;
+  }
 }
 
 export interface IParenthesesVisitor extends IParenthesesVisitorImported {}
@@ -224,42 +254,69 @@ export class EqualsUriExpressionTranslator implements IExpressionTranslator {
   public toSparqlFilterClause(): string {
     return `( ${this.variable} = <${this.uri}> )`; // @<uri> generation: avoid SPARQL injection
   }
+
+  public canBeUnbound() {
+    return false;
+  }
 }
 
 export interface IVisitorState {
   filterContext: IFilterContext;
 }
 
+export class NullTranslator implements IExpressionTranslator {
+
+  public getPropertyTree() {
+    return ScopedPropertyTree.create();
+  }
+
+  public toSparqlFilterClause() {
+    return "?__null__";
+  }
+
+  public canBeUnbound() {
+    return true;
+  }
+}
+
 export class LiteralTranslator<ValueType> implements IExpressionTranslator {
 
-    private value: ValueType;
+  private value: ValueType;
 
-    constructor(value: ValueType, private toSparql: (v: ValueType) => string) {
-      this.value = value;
-    }
+  constructor(value: ValueType, private toSparql: (v: ValueType) => string) {
+    this.value = value;
+  }
 
-    public getPropertyTree(): ScopedPropertyTree {
-      return ScopedPropertyTree.create();
-    }
+  public getPropertyTree(): ScopedPropertyTree {
+    return ScopedPropertyTree.create();
+  }
 
-    public toSparqlFilterClause(): string {
-      return this.toSparql(this.value);
-    }
+  public toSparqlFilterClause(): string {
+    return this.toSparql(this.value);
+  }
+
+  public canBeUnbound() {
+    return false;
+  }
 }
 
 export class BinaryOperatorTranslator implements IExpressionTranslator {
 
-    constructor(private lhs: IExpressionTranslator,  private sparqlOperator: string,
-                private rhs: IExpressionTranslator) {
-    }
+  constructor(private lhs: IExpressionTranslator,  private sparqlOperator: string,
+              private rhs: IExpressionTranslator) {
+  }
 
-    public getPropertyTree(): ScopedPropertyTree {
-      return FilterExpressionHelper.getPropertyTree([ this.lhs, this.rhs ]);
-    }
+  public getPropertyTree(): ScopedPropertyTree {
+    return FilterExpressionHelper.getPropertyTree([ this.lhs, this.rhs ]);
+  }
 
-    public toSparqlFilterClause(): string {
-      return `(${this.lhs.toSparqlFilterClause()} ${this.sparqlOperator} ${this.rhs.toSparqlFilterClause()})`;
-    }
+  public toSparqlFilterClause(): string {
+    return `(${this.lhs.toSparqlFilterClause()} ${this.sparqlOperator} ${this.rhs.toSparqlFilterClause()})`;
+  }
+
+  public canBeUnbound() {
+    return false;
+  }
 }
 
 export class FilterExpressionHelper {
@@ -283,6 +340,7 @@ export class Factory<TVisitor> {
 export interface IExpressionTranslator {
   getPropertyTree(): ScopedPropertyTree;
   toSparqlFilterClause(): string;
+  canBeUnbound(): boolean;
 }
 
 export interface IFilterContext {

@@ -4,7 +4,7 @@ import { IValue } from "../../odata/filters/expressions";
 import { ILambdaVariable } from "../../odata/filters/filters";
 
 import {
-  IVisitor, VisitorBase, AssembledVisitor, ITypeofVisitor, IVisitorState,
+  IVisitor, VisitorBase, AssembledVisitor, ITypeofVisitor,
   ILiteralVisitor, IBinaryExprVisitor, IParenthesesVisitor, IPropertyVisitor,
   LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor, generatePropertyVisitor,
 } from "../../adapter/filtertranslators";

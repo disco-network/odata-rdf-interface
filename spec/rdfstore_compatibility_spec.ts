@@ -96,6 +96,37 @@ SELECT * WHERE {
     assert.strictEqual(answer.error, null);
   });
 
+  createSpec("SELECT * WHERE { ?s ?p ?o . FILTER( ?s = ?none ) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 0);
+  });
+
+  createSpec("SELECT * WHERE { ?s ?p ?o . FILTER( ?nope = ?none ) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 0);
+  });
+
+  createSpec("SELECT * WHERE { ?s ?p ?o . FILTER( ?nope = ?none || !(BOUND(?nope) || BOUND(?none)) ) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length > 0, true);
+  });
+
+  createSpec("SELECT * WHERE { ?s ?p ?o . FILTER( ?unbound > 1 || ?o = ?o ) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length > 0, true);
+  });
+
+  createSpec("SELECT * WHERE { ?s ?p ?o . FILTER( ?unbound > 1 && ?o = ?o ) }", answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 0);
+  });
+
+  createSpec(`PREFIX disco: <http://disco-network.org/resource/>
+SELECT * WHERE { { ?x0 disco:id ?x1 . { OPTIONAL { ?x0 disco:parent ?x4 . ?x4 disco:id ?x5 } } } }`, answer => {
+    assert.strictEqual(answer.error, null);
+    assert.strictEqual(answer.result.length, 4);
+});
+
   it("should store inserted triples", done => {
     const prefixes = "PREFIX disco: <http://disco-network.org/resource/> ";
     const graphName = "http://example.org";

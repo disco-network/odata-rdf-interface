@@ -6,8 +6,10 @@ import { IHttpRequest } from "./http";
 import { EdmLiteral } from "./edm";
 import {
   IValue, IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor,
-  IStringLiteralVisitor, INumericLiteralVisitor, IParenthesesVisitor, IPropertyValueVisitor, IAnyExpressionVisitor,
-  IStringLiteral, INumericLiteral, IEqExpression, IAndExpression, IOrExpression, IParentheses,
+  IStringLiteralVisitor, INumericLiteralVisitor, INullVisitor,
+  IParenthesesVisitor, IPropertyValueVisitor, IAnyExpressionVisitor,
+  IStringLiteral, INumericLiteral, INull,
+  IEqExpression, IAndExpression, IOrExpression, IParentheses,
   IPropertyValue, IAnyExpression, ILambdaExpression,
 } from "./filters/expressions";
 
@@ -87,7 +89,7 @@ export interface ParsedEntity {
 
 export interface IFilterVisitor extends IStringLiteralVisitor, INumericLiteralVisitor,
   IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor, IParenthesesVisitor,
-  IPropertyValueVisitor, IAnyExpressionVisitor {}
+  IPropertyValueVisitor, IAnyExpressionVisitor, INullVisitor {}
 
 /* @todo make class more testable by injecting an IGetRequestParser for child expressions */
 export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
@@ -139,6 +141,8 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
         return new StringLiteral(raw.value.toString());
       case "decimalValue":
         return new NumericLiteral(parseInt(raw.value, 10));
+      case "null":
+        return new Null();
       case "parentheses-expression":
         return new ParenthesesExpression(this.parseFilterExpression(raw.inner));
       default:
@@ -216,6 +220,12 @@ export class NumericLiteral implements INumericLiteral<INumericLiteralVisitor> {
 
   public accept(visitor: INumericLiteralVisitor) {
     visitor.visitNumericLiteral(this);
+  }
+}
+
+export class Null implements INull<INullVisitor> {
+  public accept(visitor: INullVisitor) {
+    visitor.visitNull(this);
   }
 }
 

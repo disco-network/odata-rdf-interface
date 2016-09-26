@@ -2,7 +2,9 @@ import { assert, assertEx, match as eqMatch } from "../src/assert";
 import { stub, match } from "sinon";
 
 import { GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder } from "../src/odata/queryengine";
-import { IPostRequestParser, IGetRequestParser, IFilterVisitor, GetRequestType } from "../src/odata/parser";
+import {
+  IPostRequestParser, IGetRequestParser, IFilterVisitor, GetRequestType,
+} from "../src/odata/parser";
 import { IEntityInitializer } from "../src/odata/entity_reader_base";
 import { IRepository, IOperation } from "../src/odata/repository";
 import { IValue } from "../src/odata/filters/expressions";

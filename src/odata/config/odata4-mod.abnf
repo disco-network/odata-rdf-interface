@@ -911,7 +911,7 @@ primitiveColFunctionImport = odataIdentifier
 ;------------------------------------------------------------------------------
 
 ; in URLs
-primitiveLiteral = nullValue                  ; plain values up to int64Value
+primitiveLiteral = nullValue:val                  ; plain values up to int64Value
                  / booleanValue:val 
                  / guidValue 
                  / dateValue
@@ -977,7 +977,7 @@ primitiveValue = booleanValue
                ; - any XML string for strings in Atom and CSDL documents
                ; - any JSON string for JSON documents 
 
-nullValue = 'null' 
+nullValue = 'null' = { return { type: "null" } }
 
 ; TODO: base64url                                                
 binary      = "binary" SQUOTE binaryValue SQUOTE

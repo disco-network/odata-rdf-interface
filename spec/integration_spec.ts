@@ -69,6 +69,22 @@ describe("integration tests", () => {
       }));
     });
   });
+
+  it("POST an entity with Title: null", done => {
+    initOdataServer((get, post) => {
+      post.query({ relativeUrl: "/Content", body: "{ \"Title\": null }" }, new HttpResponseSender(() => null,
+      body => {
+        assertEx.deepEqual(JSON.parse(body), {
+          "odata.metadata": match.any,
+          "value": {
+            "Id": match.any,
+            "Title": null,
+          },
+        });
+        done();
+      }));
+    });
+  });
 });
 
 function initOdataServer(cb: (get: GetHandler, post: PostHandler) => void) {

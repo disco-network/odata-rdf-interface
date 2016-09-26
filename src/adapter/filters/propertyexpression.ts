@@ -25,6 +25,10 @@ export class PropertyValueTranslator implements filterTranslators.IExpressionTra
     return this.propertyPath.getFinalElementaryPropertyVariable();
   }
 
+  public canBeUnbound() {
+    return true;
+  }
+
   private getPropertyPathSegmentRelevantForPropertyTree() {
     return this.propertyPath.getPropertyPathWithoutFinalSegments(0);
   }
@@ -55,6 +59,10 @@ export class AnyExpressionTranslator implements filterTranslators.IExpressionTra
   public toSparqlFilterClause(): string {
 
     return `EXISTS ${this.buildFilterPatternString(this.lambdaExpression)}`;
+  }
+
+  public canBeUnbound() {
+    return false;
   }
 
   private buildFilterPatternString(innerFilterExpression: filterTranslators.IExpressionTranslator) {

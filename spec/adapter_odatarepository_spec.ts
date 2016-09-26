@@ -104,7 +104,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     let odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(), myPostQueryStringBuilder,
-                                  insertQueryStringBuilder);
+                                 insertQueryStringBuilder);
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",

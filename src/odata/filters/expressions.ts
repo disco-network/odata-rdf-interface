@@ -2,6 +2,13 @@ export interface IValue<TVisitor> {
   accept(visitor: TVisitor): void;
 }
 
+export interface INullVisitor {
+  visitNull(expr: INull<this>);
+}
+
+export interface INull<TVisitor extends INullVisitor> extends IValue<TVisitor> {
+}
+
 export interface IStringLiteralVisitor {
   visitStringLiteral(expr: IStringLiteral<this>);
 }
