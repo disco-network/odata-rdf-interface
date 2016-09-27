@@ -125,9 +125,9 @@ export class GraphPatternStringBuilder implements IGraphPatternStringBuilder {
     }
     if (triplesString !== "") appendWithPeriod(triplesString);
     if (subPatternsString !== "") appendWithPeriod(subPatternsString);
-    if (optionalPatternsString !== "") appendWithPeriod(optionalPatternsString);
     if (conjunctivePatternsString !== "") append(conjunctivePatternsString);
     if (unionsString !== "") append(unionsString);
+    if (optionalPatternsString !== "") appendWithPeriod(optionalPatternsString);
 
     return result;
   }

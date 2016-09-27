@@ -472,7 +472,7 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
 
     let graphPattern = new gpatterns.TreeGraphPattern(model.getMapping().variables.getVariable());
     graphPattern.newConjunctivePattern(expandGraphPattern);
-    if (filterGraphPattern) graphPattern.newConjunctivePattern(filterGraphPattern);
+    if (filterGraphPattern) graphPattern.merge(filterGraphPattern);
 
     return this.sparqlSelectBuilder.fromGraphPatternAndFilterExpression(prefixes, graphPattern, filterExpression);
   }

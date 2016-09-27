@@ -215,7 +215,7 @@ describe("The GetHandler should evaluate", () => {
   createQuerySpec("/Posts?$filter=Id eq 1 and ParentId eq ParentId", answer => {
     expectSuccess(answer);
     assert.strictEqual(answer.result().length, 1);
-  });
+  }, () => "before spec");
 
   createQuerySpec("/Posts?$filter=ParentId eq null", answer => {
     expectSuccess(answer);
