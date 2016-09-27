@@ -26,7 +26,7 @@ var sourceMapsConfig = {
   sourceRoot: function (file) {
     // needed to fix relative path in sourceMaps
     // HACK: this solution is coupled with the current folder structure!!
-    var path = "../".repeat((file.relative.match(/\//g) || []).length + 1) + "../src/";
+    var path = "../".repeat((file.relative.match(/\//g) || []).length);
     return path;
   }
 };
@@ -34,14 +34,11 @@ var sourceMapsConfig = {
 var tsProject = tsc.createProject("tsconfig.json");
 
 function build(sourcePath, base, targetPath) {
-  var tsResult = gulp.src(sourcePath, { base: base })
+  return gulp.src(sourcePath, { base: base })
     .pipe(sourcemaps.init())
-    .pipe(tsProject(tsc.reporter.defaultReporter()));
-
-  return merge([
-    tsResult
-      .pipe(gulp.dest("build/" + targetPath))
-  ]);
+    .pipe(tsProject(tsc.reporter.defaultReporter()))
+    .pipe(sourcemaps.write("../../maps", sourceMapsConfig))
+    .pipe(gulp.dest("build/" + targetPath));
 }
 
 gulp.task("build-spec", function () {
