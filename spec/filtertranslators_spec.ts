@@ -216,7 +216,7 @@ describe("Adapter.AnyExpressionTranslator", () => {
       },
     }, /* @todo mock */ createFilterPatternStrategy());
     assert.strictEqual(translator.toSparqlFilterClause(),
-      "EXISTS { { { OPTIONAL { ?x0 disco:parent ?root } } } . FILTER(TEST) }");
+      "EXISTS { { { ?x0 disco:parent ?root } } . FILTER(TEST) }");
   });
   it("should generate the property tree of an /any expression consisting of all path segments except the last one",
   () => {

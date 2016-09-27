@@ -361,26 +361,26 @@ export class AnyBranch implements base.INode {
    * args.patternSelector should be based on the branch on top of X.
    */
   public apply(args: IGraphPatternArgs & IMappingArgs & IScopedMappingArgs): ITraversingArgs {
-    let basePattern = this.selectQueryRootPattern(args);
-    let mapping = args.mapping;
-    let rootVariableName = mapping.variables.getVariable();
-    let collectionPropertyOData = this.branchingArgs.name();
-    let collectionPropertyUri = mapping.properties.getNamespacedUriOfProperty(collectionPropertyOData);
+    const basePattern = this.selectQueryRootPattern(args);
+    const mapping = args.mapping;
+    const rootVariableName = mapping.variables.getVariable();
+    const collectionPropertyOData = this.branchingArgs.name();
+    const collectionPropertyUri = mapping.properties.getNamespacedUriOfProperty(collectionPropertyOData);
 
-    let lambdaVariable = this.branchingArgs.lambdaVariable();
-    let innerScopedMapping = args.scopedMapping.scope(lambdaVariable.scopeId);
+    const lambdaVariable = this.branchingArgs.lambdaVariable();
+    const innerScopedMapping = args.scopedMapping.scope(lambdaVariable.scopeId);
     innerScopedMapping.setNamespace(lambdaVariable.name, lambdaVariable.entityType);
-    let lambdaSparqlVariable = innerScopedMapping.getNamespace(lambdaVariable.name).variables.getVariable();
+    const lambdaSparqlVariable = innerScopedMapping.getNamespace(lambdaVariable.name).variables.getVariable();
 
     if (this.branchingArgs.inverse) {
       basePattern
         .looseBranch(rootVariableName)
-        .optionalInverseBranch(collectionPropertyUri, lambdaSparqlVariable);
+        .inverseBranch(collectionPropertyUri, lambdaSparqlVariable);
     }
     else {
       basePattern
         .looseBranch(rootVariableName)
-        .optionalBranch(collectionPropertyUri, lambdaSparqlVariable);
+        .branch(collectionPropertyUri, lambdaSparqlVariable);
     }
 
     let result = args.clone();
