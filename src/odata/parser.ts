@@ -70,11 +70,16 @@ export class PostRequestParser implements IPostRequestParser {
       const value = json[key];
       switch (typeof value) {
         case "string":
-          parsed[key] = { type: "Edm.String", value: value };
+          parsed[key] = { type: "Edm.String", value: value as string };
           break;
         case "number":
-          parsed[key] = { type: "Edm.Int32", value: value };
+          parsed[key] = { type: "Edm.Int32", value: value as number };
           break;
+        case "object":
+          if (value === null) {
+            parsed[key] = { type: "null" };
+            break;
+          };
         default:
           throw new Error("unsupported value for property");
       }
@@ -84,7 +89,7 @@ export class PostRequestParser implements IPostRequestParser {
 }
 
 export interface ParsedEntity {
-  [id: string]: EdmLiteral;
+  [id: string]: EdmLiteral | undefined;
 }
 
 export interface IFilterVisitor extends IStringLiteralVisitor, INumericLiteralVisitor,

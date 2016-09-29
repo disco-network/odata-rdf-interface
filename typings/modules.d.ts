@@ -39,7 +39,7 @@ declare module "rdfstore" {
 }
 
 declare module "async" {
-    export function reduce<T, U>(collection: T[], initial: U, iterator: (memo: U, item: T, callback: (err, result: U) => void) => void, cb: (err, result: U) => void);
+    export function reduce<T, U>(collection: ReadonlyArray<T>, initial: U, iterator: (memo: U, item: T, callback: (err, result: U) => void) => void, cb: (err, result: U) => void);
 }
 
 declare module "uuid" {

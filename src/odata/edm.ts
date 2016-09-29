@@ -1,9 +1,12 @@
-export class EdmConverter implements IEdmConverter<EdmLiteralType> {
-  public convert(source: EdmLiteral, target: string): EdmLiteral {
+export class EdmConverter implements IEdmConverter {
+  public convert(source: EdmLiteral, target: string, nullable = false): EdmLiteral {
     switch (source.type) {
       case "Edm.String": return this.assignStringTo(source, target);
       case "Edm.Int32": return this.assignInt32To(source, target);
       case "Edm.Guid": return this.assignGuidTo(source, target);
+      case "null":
+        if (nullable === true) return source;
+        else return this.cantConvert(source, target, "trying to assign null to a non-nullable type");
       default: return this.unknownType(source, target);
     }
   }
@@ -16,7 +19,7 @@ export class EdmConverter implements IEdmConverter<EdmLiteralType> {
     else if (target === "Edm.Int32") {
       const parsed = parseInt(source.value, 10);
       if (isNaN(parsed)) return this.cantConvert(source, target, `${source.value} is not a decimal integer`);
-      if (parsed === Infinity) return this.cantConvert(source, target, `${source.value} is too big for Edm.Int32`)
+      if (parsed === Infinity) return this.cantConvert(source, target, `${source.value} is too big for Edm.Int32`);
       return {
         type: "Edm.Int32",
         value: parsed,
@@ -42,7 +45,7 @@ export class EdmConverter implements IEdmConverter<EdmLiteralType> {
   }
 
   private cantConvert(source: EdmLiteral, target: string, msg?: string): never {
-    throw new Error(`Cannot convert from ${source.type} to ${target}` + (msg ? `: ${msg}` : ``));
+    throw new InvalidConversionError(source, target);
   }
 
   private unknownType(source: never, target: string) {
@@ -50,12 +53,23 @@ export class EdmConverter implements IEdmConverter<EdmLiteralType> {
   }
 }
 
-export interface IEdmConverter<T extends string> {
-  convert(source: { type: T }, target: T): { type: T };
+export class InvalidConversionError extends Error {
+  constructor(private source: EdmLiteral, private target: string, message?: string) {
+    super();
+    this.message = `Literal of type ${source.type} cannot be converted to ${target}${message ? ": " + message : ""}`;
+  }
 }
 
-export type EdmLiteral = EdmStringLiteral | EdmInt32Literal | EdmGuidLiteral;
-export type EdmLiteralType = "Edm.String" | "Edm.Int32" | "Edm.Guid";
+export interface IEdmConverter {
+  convert<V extends string>(source: EdmLiteral, target: V): EdmLiteral & { type: V };
+  convert<V extends string>(source: EdmLiteral, target: V, nullable: false): EdmLiteral & { type: V };
+  convert<V extends string>(source: EdmLiteral, target: V, nullable: true): EdmLiteral & { type: "null" | V };
+  convert<V extends string>
+    (source: EdmLiteral, target: V, nullable: boolean): EdmLiteral & { type: "null" | V };
+}
+
+export type EdmLiteral = EdmStringLiteral | EdmInt32Literal | EdmGuidLiteral | NullLiteral;
+export type EdmLiteralType = "Edm.String" | "Edm.Int32" | "Edm.Guid" | "null";
 
 export interface EdmStringLiteral {
   type: "Edm.String";
@@ -70,4 +84,8 @@ export interface EdmInt32Literal {
 export interface EdmGuidLiteral {
   type: "Edm.Guid";
   value: string;
+}
+
+export interface NullLiteral {
+  type: "null";
 }

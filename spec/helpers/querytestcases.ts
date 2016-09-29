@@ -17,7 +17,7 @@ let parsedEntities = [
 
 let jsonStrings = parsedEntities.map(e => JSON.stringify(e));
 
-let initializedEntities = [
+let batchPlans = [
   [{
       type: "get",
       entityType: "Content",
@@ -30,13 +30,14 @@ let initializedEntities = [
       identifier: match.any,
       value: {
         Id: match.any,
+        Parent: { type: "null" },
         Content: { type: "ref", resultIndex: 0 },
   }}],
   [{
     type: "insert",
     entity: {
-      Id: "3",
-      Title: "MyContent",
+      Id: { type: "Edm.Int32", value: 3 },
+      Title: { type: "Edm.String", value: "MyContent" },
     },
   }],
 ];
@@ -57,14 +58,14 @@ let sparqlStrings = [
 ];
 
 export let postQueryTests: IPostQueryTestCase[] = [
-  { query: queries[0], body: jsonStrings[0], entity: initializedEntities[0], entityType: types[0],
+  { query: queries[0], body: jsonStrings[0], entity: batchPlans[0], entityType: types[0],
     sparql: sparqlStrings[0], parsedEntity: parsedEntities[0], entitySetName: entitySetNames[0] },
-  { query: queries[1], body: jsonStrings[1], entity: initializedEntities[1], entityType: types[1],
+  { query: queries[1], body: jsonStrings[1], entity: batchPlans[1], entityType: types[1],
     sparql: sparqlStrings[1], parsedEntity: parsedEntities[1], entitySetName: entitySetNames[1] },
 ];
 
 export let odataRepositoryQueryTests: IODataRepositoryTestCase[] = [
-  { entity: initializedEntities[0], entityType: types[0], sparql: sparqlStrings[0] },
+  { entity: batchPlans[0], entityType: types[0], sparql: sparqlStrings[0] },
 ];
 
 export let odataParserTests: IPostRequestParserTestCase[] = [
@@ -72,7 +73,7 @@ export let odataParserTests: IPostRequestParserTestCase[] = [
 ];
 
 export let entityReaderTests: IEntityReaderTestCase[] = [
-  { input: parsedEntities[0], type: types[0], outputEntity: initializedEntities[0] },
+  { input: parsedEntities[0], type: types[0], outputEntity: batchPlans[0] },
 ];
 
 export interface IPostQueryTestCase {

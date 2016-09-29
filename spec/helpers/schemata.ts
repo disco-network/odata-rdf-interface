@@ -30,13 +30,32 @@ export const diverselyTypedSchema = new Schema({
   entityTypes: {
     Entity: {
       properties: {
-        String: { type: "Edm.String" },
-        Int32: { type: "Edm.Int32" },
-        Uuid: { type: "Edm.Uuid" },
+        String: { type: "Edm.String", optional: true },
+        Int32: { type: "Edm.Int32", optional: true },
+        Uuid: { type: "Edm.Uuid", optional: true },
       },
     },
   },
   entitySets: {
     Entities: { type: "Entity" },
+  },
+});
+
+export const schemaWithMandatoryProperty = new Schema({
+  entityTypes: {
+    Entity: {
+      properties: {
+        Id: { type: "Edm.Guid", generated: "uuid", rdfName: "id" },
+        Value: { type: "Edm.String", rdfName: "value" },
+      },
+      rdfName: "entity",
+    },
+  },
+  entitySets: {
+    Entities: { type: "Entity" },
+  },
+  defaultNamespace: {
+    prefix: "disco",
+    uri: "http://disco-network.org/resource/",
   },
 });

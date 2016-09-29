@@ -7,7 +7,7 @@ export interface IRepository<TVisitor> {
   getEntities(entityType: schema.EntityType, expandTree: any, filterTree: IValue<TVisitor> | undefined,
               cb: (result: results.Result<any[], any>) => void): void;
   /* @deprecated */ insertEntity(entity: any, type: schema.EntityType, cb: (result: results.AnyResult) => void): void;
-  batch(ops: IOperation[], schema: schema.Schema, cb: (results: results.AnyResult) => void);
+  batch(ops: ReadonlyArray<IOperation>, schema: schema.Schema, cb: (results: results.AnyResult) => void);
 }
 
 export type IOperation = IGetOperation | IInsertOperation;
@@ -22,10 +22,10 @@ export interface IInsertOperation {
   type: "insert";
   entityType: string;
   identifier: string;
-  value: { [id: string]: EdmLiteral | IReference };
+  value: { [id: string]: EdmLiteral | IBatchReference };
 }
 
-export interface IReference {
+export interface IBatchReference {
   type: "ref";
   resultIndex: number;
 }

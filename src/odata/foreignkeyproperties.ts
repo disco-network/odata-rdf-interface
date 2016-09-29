@@ -3,17 +3,19 @@ import { EdmLiteral } from "./edm";
 
 export class ForeignKeyPropertyResolver {
   public resolveGetter(property: Property): Getter {
-    if (property.foreignProperty() !== undefined) {
-      let firstProperty = property.foreignProperty();
-      let secondProperty = property.foreignProperty().getEntityType().getProperty("Id");
+    const foreignProperty = property.foreignProperty();
+    if (foreignProperty !== undefined) {
+      let firstProperty = foreignProperty;
+      let secondProperty = firstProperty.getEntityType().getProperty("Id");
       return [firstProperty, secondProperty];
     }
     else return [property];
   }
 
   public resolveSetter(property: Property, value: EdmLiteral): Setter {
-    if (property.foreignProperty() !== undefined) {
-      let firstProperty = property.foreignProperty();
+    const foreignProperty = property.foreignProperty();
+    if (foreignProperty !== undefined) {
+      let firstProperty = foreignProperty;
       let secondProperty = firstProperty.getEntityType().getProperty("Id");
       return {
         property: firstProperty,

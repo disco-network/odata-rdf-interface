@@ -1,0 +1,67 @@
+  public fromParsed(entity: ParsedEntity, entityType: EntityType) {
+    const prerequisites: IOperation[] = [];
+    const object: { [id: string]: EdmLiteral | Ref } = {};
+    const identifier = uuid.v4().replace(/-/g, ""); // hopefully this produces an unique identifier
+    for (let propertyName of entityType.getPropertyNames()) {
+      const property = entityType.getProperty(propertyName);
+
+      if (property.isGenerated() === true) {
+        if (property.isGeneratedUUID()) {
+          object[propertyName] = this.edmConverter.convert({ type: "Edm.Guid", value: identifier },
+                                                           property.getEntityType().getName(),
+                                                           property.isOptional());
+        }
+        else if (property.isAutoIncrementable()) {
+          object[propertyName] = this.edmConverter.convert({ type: "Edm.String",
+                                                             value: property.genNextAutoIncrementValue() },
+                                                           property.getEntityType().getName(),
+                                                           property.isOptional());
+        }
+      }
+      else if (Object.prototype.hasOwnProperty.call(entity, propertyName)
+        || (property.isOptional() === false && property.isCardinalityOne() === true)) {
+        /* @construction
+         * Elementare Properties direkt zuweisen, falls verpflichtend
+         * Komplexe Properties: erst checken, ob es eine Foreign Key Property gibt
+         * Vorschlag:
+         *  1. vorhandene Werte finden und sammeln (Inkonsistenz/Redundanz: Error)
+         *  2. gesammelte Key/Value-Paare konvertieren und checken, solange keine Array-Property
+         *     - besonders die komplexen Properties beachten!
+        */
+        const parsedValue = entity[propertyName] || { type: "null" };
+        const setter = this.resolver.resolveSetter(entityType.getProperty(propertyName), parsedValue);
+        const setterValue = setter.value;
+        const propertyType = setter.property.getEntityType();
+        if (this.isRef(setterValue)) {
+          prerequisites.push({
+            type: "get",
+            entityType: propertyType.getName(),
+            pattern: {
+              [setterValue.indexProperty.getName()]: setterValue.id,
+            },
+          });
+          object[setter.property.getName()] = { type: "ref", resultIndex: prerequisites.length - 1 };
+        }
+        else {
+          try {
+            object[setter.property.getName()] = this.edmConverter.convert(setterValue,
+                                                                          property.getEntityType().getName(),
+                                                                          property.isOptional());
+          }
+          catch (e) {
+            if (e instanceof InvalidConversionError)
+              throw new BadBodyError(`Property ${propertyName} conversion error: ${e.message}`);
+            else
+              throw e;
+          }
+        }
+      }
+    }
+
+    return prerequisites.concat([{
+      type: "insert",
+      entityType: entityType.getName(),
+      identifier: identifier,
+      value: object,
+    }]);
+  }

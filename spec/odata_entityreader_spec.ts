@@ -1,5 +1,6 @@
 import { assert, assertEx, match } from "../src/assert";
-import { uuidKeySchema, autoIncrementSchema, diverselyTypedSchema } from "./helpers/schemata";
+import { uuidKeySchema, autoIncrementSchema, diverselyTypedSchema,
+  schemaWithMandatoryProperty } from "./helpers/schemata";
 import { EdmConverter } from "../src/odata/edm";
 
 import base = require("../src/odata/entityreader");
@@ -73,6 +74,30 @@ describe("OData.EntityInitializer:", () => {
         Id: match.is(val => val !== "[user-defined]"),
       },
     }]);
+  });
+
+  it("should throw a BadBodyError when a mandatory property is null", () => {
+    try {
+      create().fromParsed({
+        Value: { type: "null", value: null },
+      }, schemaWithMandatoryProperty.getEntityType("Entity"));
+    }
+    catch (e) {
+      assert.strictEqual(e instanceof base.BadBodyError, true);
+      return;
+    }
+    assert.strictEqual("no exception", "exception");
+  });
+
+  it("should throw a BadBodyError when a mandatory property is unspecified", () => {
+    try {
+      create().fromParsed({}, schemaWithMandatoryProperty.getEntityType("Entity"));
+    }
+    catch (e) {
+      assert.strictEqual(e instanceof base.BadBodyError, true);
+      return;
+    }
+    assert.strictEqual("no exception", "exception");
   });
 
   it("should throw when the value is incompatible with the property type", () => {

@@ -49,7 +49,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
               private postQueryStringBuilder: postQueries.IQueryStringBuilder,
               private insertQueryStringBuilder: IInsertQueryStringBuilder) {}
 
-  public batch(ops: base.IOperation[], schema: Schema, cbResults: (results: results.AnyResult) => void) {
+  public batch(ops: ReadonlyArray<base.IOperation>, schema: Schema, cbResults: (results: results.AnyResult) => void) {
     async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
       if (this.isGetOp(op)) {
         const entityType = schema.getEntityType(op.entityType);
@@ -87,6 +87,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
             case "Edm.Guid":
               if (value.value !== null)
                 keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
+              break;
+            case "null":
               break;
             case "ref":
               const resultForValue = batchResults[value.resultIndex].result();
@@ -139,6 +141,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         return new StringLiteral(value.value);
       case "Edm.Int32":
         return new NumericLiteral(value.value);
+      case "null":
+        throw new Error("not implemented");
       default:
         getNever(value, "Unsupported EDM value");
     }

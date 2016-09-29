@@ -4,6 +4,7 @@ import {
 } from "../odata/parser";
 import { IEqExpressionVisitor, IPropertyValueVisitor, INumericLiteralVisitor } from "../odata/filters/expressions";
 import entityInitializer = require("../odata/entity_reader_base");
+import { BadBodyError } from "../odata/entityreader";
 import { IRepository }  from "../odata/repository";
 import { Schema } from "../odata/schema";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
@@ -90,16 +91,25 @@ export class PostHandler<T> implements IPostHandler {
     /* @todo verify AST */
     let parsed = this.parser.parse(request);
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
-    let entity = this.entityInitializer.fromParsed(parsed.entity, type);
-    this.repository.batch(entity, this.schema, result => {
-      responseSender.sendStatusCode(201, "Created");
-      const insertedEntity = result.result()[result.result().length - 1].result().odata[0];
-      responseSender.sendBody(JSON.stringify({
-        "odata.metadata": "http://example.org/",
-        "value": insertedEntity,
-      }, null, 2));
-      responseSender.finishResponse();
-    });
+    try {
+      const entity = this.entityInitializer.fromParsed(parsed.entity, type);
+      this.repository.batch(entity, this.schema, result => {
+        responseSender.sendStatusCode(201, "Created");
+        const insertedEntity = result.result()[result.result().length - 1].result().odata[0];
+        responseSender.sendBody(JSON.stringify({
+          "odata.metadata": "http://example.org/",
+          "value": insertedEntity,
+        }, null, 2));
+        responseSender.finishResponse();
+      });
+    }
+    catch (e) {
+      if (e instanceof BadBodyError) {
+        responseSender.sendStatusCode(400, "Unmet Property Constraint (Mandatory)");
+        responseSender.finishResponse();
+      }
+      else throw e;
+    }
   }
 }
 

@@ -7,17 +7,17 @@ let raw = {
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
         Parent: { type: "Post", optional: true, quantity: "one-to-many",
           foreignSet: "Posts", inverseProperty: "Children",
-          rdfName: "parent", nullable: true },
+          rdfName: "parent" },
         Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", inverseProperty: "Parent" },
-        Content: { type: "Content", quantity: "one-to-many", rdfName: "content" },
+        Content: { type: "Content", quantity: "one-to-many", rdfName: "content", optional: false },
       },
       rdfName: "Post",
     },
     Content: {
       properties: {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
-        Title: { type: "Edm.String", rdfName: "title" },
-        Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture" },
+        Title: { type: "Edm.String", rdfName: "title", optional: true },
+        Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture", optional: true },
       },
       rdfName: "Content",
     },
@@ -145,16 +145,24 @@ export class Property extends RdfBasedSchemaResource {
   }
 
   public isOptional(): boolean {
-    if (this.foreignProperty() === undefined) {
+    const foreignProperty = this.foreignProperty();
+    if (foreignProperty === undefined) {
       return this.getRaw().optional === true;
     }
     else {
-      return this.foreignProperty().isOptional();
+      return foreignProperty.isOptional();
     }
   }
 
-  public isGenerated(): boolean {
+  public isGenerated(): this is { __generatedBrand; } {
     return this.getRaw().generated !== false && this.getRaw().generated !== undefined;
+  }
+
+  public getGenerationMethod(this: this & { __generatedBrand; }): GenerationMethod;
+  public getGenerationMethod(this: this): GenerationMethod | undefined;
+  public getGenerationMethod(): GenerationMethod | undefined {
+    if (this.getRaw().generated === "uuid") return GenerationMethod.UUID;
+    else if (this.getRaw().generated === "auto-increment") return GenerationMethod.AutoIncrement;
   }
 
   public isGeneratedUUID(): boolean {
@@ -175,10 +183,11 @@ export class Property extends RdfBasedSchemaResource {
     return this.completeSchema.getEntitySet(setName).getEntityType().getProperty(propName);
   }
 
-  public foreignProperty(): Property {
+  public foreignProperty(): Property | undefined {
     let name = this.getRaw().foreignProperty;
     return name && new Property(this.completeSchema, this.parentType, this.getRaw().foreignProperty);
   }
 }
 
-export enum EntityKind { Elementary, Complex };
+export enum EntityKind { Elementary, Complex }
+export enum GenerationMethod { UUID, AutoIncrement }
