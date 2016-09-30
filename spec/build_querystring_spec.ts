@@ -168,7 +168,7 @@ describe("InsertQueryStringBuilder:", () => {
   it("should produce [PREFIXES] INSERT DATA { GRAPH <[GRAPH]> { <test> ns:prop '1' } }",
   () => {
     const prefixes = [{ prefix: "ns", uri: "http://ns.a/" }];
-    const properties = [{ rdfProperty: "ns:prop", value: { representAsSparql: () => "'1'"} }];
+    const properties = [{ rdfProperty: "ns:prop", inverse: false, value: { representAsSparql: () => "'1'"} }];
     const prefixProducer = new PrefixBuilder();
     prefixProducer.prefixesAsSparql = p => {
       assert.deepEqual(p, prefixes);
