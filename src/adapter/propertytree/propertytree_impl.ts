@@ -15,9 +15,8 @@ import { Property } from "../../odata/schema";
  */
 export class GraphPatternSelector implements IGraphPatternSelector {
 
-  private patternForSingleValuedProperties: gpatterns.TreeGraphPattern;
-
   constructor(private rootPattern: gpatterns.TreeGraphPattern) {
+    this.createNewUnionPattern();
   }
 
   public getRootPattern() {
@@ -25,10 +24,7 @@ export class GraphPatternSelector implements IGraphPatternSelector {
   }
 
   public getUnionPatternForSingleValuedBranches() {
-    if (this.patternForSingleValuedProperties === undefined) {
-      this.patternForSingleValuedProperties = this.createNewUnionPattern();
-    }
-    return this.patternForSingleValuedProperties;
+    return this.createNewUnionPattern();
   }
 
   public getNewUnionPattern() {

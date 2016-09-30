@@ -5,11 +5,11 @@ let raw = {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
         ContentId: { type: "Edm.Int32", foreignProperty: "Content" },
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
-        Parent: { type: "Post", optional: true, quantity: "one-to-many",
+        Parent: { type: "Post", optional: true, cardinality: "one-to-many",
           foreignSet: "Posts", inverseProperty: "Children",
           rdfName: "parent" },
-        Children: { type: "Post", quantity: "many-to-one", foreignSet: "Posts", inverseProperty: "Parent" },
-        Content: { type: "Content", quantity: "one-to-many", rdfName: "content", optional: false },
+        Children: { type: "Post", cardinality: "many-to-one", foreignSet: "Posts", inverseProperty: "Parent" },
+        Content: { type: "Content", cardinality: "one-to-many", rdfName: "content", optional: false },
       },
       rdfName: "Post",
     },
@@ -17,7 +17,7 @@ let raw = {
       properties: {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
         Title: { type: "Edm.String", rdfName: "title", optional: true },
-        Culture: { type: "Culture", quantity: "one-to-many", rdfName: "culture", optional: true },
+        Culture: { type: "Culture", cardinality: "one-to-many", rdfName: "culture", optional: true },
       },
       rdfName: "Content",
     },
@@ -137,7 +137,7 @@ export class Property extends RdfBasedSchemaResource {
   }
 
   public isCardinalityOne(): boolean {
-    return !this.isNavigationProperty() || this.getRaw().quantity.substr(0, 4) === "one-";
+    return !this.isNavigationProperty() || this.getRaw().cardinality.substr(0, 4) === "one-";
   }
 
   public getEntityKind(): EntityKind {

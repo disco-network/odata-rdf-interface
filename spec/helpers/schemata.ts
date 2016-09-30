@@ -59,3 +59,27 @@ export const schemaWithMandatoryProperty = new Schema({
     uri: "http://disco-network.org/resource/",
   },
 });
+
+export const schemaWithInverseProperty = new Schema({
+  entityTypes: {
+    Integer: {
+      properties: {
+        Id: { type: "Edm.Int32", rdfName: "value" },
+        NextInteger: { type: "Integer", rdfName: "next", optional: true, cardinality: "one-to-one" },
+        PrevInteger: {
+          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true,
+          cardinality: "one-to-one" },
+        Prev: { type: "Edm.Int32", foreignProperty: "PrevInteger" },
+        Next: { type: "Edm.Int32", foreignProperty: "NextInteger" },
+      },
+      rdfName: "integer",
+    },
+  },
+  entitySets: {
+    Integers: { type: "Integer" },
+  },
+  defaultNamespace: {
+    prefix: "disco",
+    uri: "http://disco-network.org/resource/",
+  },
+});

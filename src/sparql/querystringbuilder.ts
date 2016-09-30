@@ -7,7 +7,7 @@ export interface ISelectQueryStringBuilder {
 
 export interface IInsertQueryStringBuilder {
   insertAsSparql(prefixes: IPrefix[], uri: string,
-                 properties: { rdfProperty: string, value: ISparqlLiteral }[]): string;
+                 properties: { rdfProperty: string, inverse: boolean, value: ISparqlLiteral }[]): string;
 }
 
 export interface ISparqlLiteral {
@@ -55,7 +55,7 @@ export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
   constructor(private prefixBuilder: IPrefixBuilder, private graph: string) {}
 
   public insertAsSparql(prefixes: IPrefix[], uri: string,
-                        properties: { rdfProperty: string, value: ISparqlLiteral }[]): string {
+                        properties: { rdfProperty: string, inverse: boolean, value: ISparqlLiteral }[]): string {
     let query = this.prefixBuilder.prefixesAsSparql(prefixes);
     if (query !== "") query += " ";
 
@@ -63,8 +63,16 @@ export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
     return query;
   }
 
-  private triplesAsSparql(uri: string, properties: { rdfProperty: string, value: ISparqlLiteral }[]): string {
-    return properties.map(p => `<${uri}> ${p.rdfProperty} ${p.value.representAsSparql()}`).join(" . ");
+  private triplesAsSparql(uri: string,
+                          properties: { rdfProperty: string, inverse: boolean, value: ISparqlLiteral }[]): string {
+    return properties.map(sparqlFromProperty).join(" . ");
+
+    function sparqlFromProperty(p: { rdfProperty: string, inverse: boolean, value: ISparqlLiteral }) {
+      const base = `<${uri}>`;
+      const property = p.rdfProperty;
+      const value = p.value.representAsSparql();
+      return p.inverse ? `${value} ${property} ${base}` : `${base} ${property} ${value}`;
+    }
   }
 }
 
@@ -106,12 +114,9 @@ export class GraphPatternStringBuilder implements IGraphPatternStringBuilder {
       .join(" . ");
     let conjunctivePatternsString = pattern.getConjunctivePatterns()
       .map(p => this.buildGraphPatternString(p))
-      /* we need to filter out empty patterns because of an issue in rdfstore-js */
-      .filter(s => s !== "{  }")
       .join(" . ");
     let unionsString = pattern.getUnionPatterns()
       .map(p => this.buildGraphPatternString(p))
-      .filter(s => s !== "{  }")
       .join(" UNION ");
 
     let result = "";

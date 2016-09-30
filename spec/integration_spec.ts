@@ -5,7 +5,7 @@ import { SparqlProvider } from "../src/sparql/sparql_provider";
 import { GetHandler, PostHandler } from "../src/bootstrap/adapter/queryengine";
 import { IHttpResponseSender } from "../src/odata/http";
 import { Schema } from "../src/odata/schema";
-import { schemaWithMandatoryProperty } from "./helpers/schemata";
+import { schemaWithMandatoryProperty, schemaWithInverseProperty } from "./helpers/schemata";
 
 const graph = "http://test.disco-network.org/";
 const schema = new Schema();
@@ -49,15 +49,22 @@ describe("integration tests", () => {
         get.query({ relativeUrl: "/Posts", body: "" }, new HttpResponseSender(() => null,
         {
           sendBody: body => {
-            assertEx.deepEqual(JSON.parse(body), {
-              "odata.metadata": match.any,
-              "value": [{
-                "Id": match.any,
-                "ContentId": cntId,
-                "ParentId": null,
-              }],
-            });
-            done();
+            try {
+              assertEx.deepEqual(JSON.parse(body), {
+                "odata.metadata": match.any,
+                "value": [{
+                  "Id": match.any,
+                  "ContentId": cntId,
+                  "ParentId": null,
+                }],
+              });
+              done();
+              return;
+            }
+            catch (e) {
+              done(e);
+              return;
+            }
           },
         }));
       }));
@@ -123,6 +130,30 @@ describe("integration tests", () => {
         },
       }));
     }, schemaWithMandatoryProperty);
+  });
+
+  it("POST an entity with an inverse property", done => {
+    initOdataServer((get, post) => {
+      post.query({ relativeUrl: "/Integers", body: `{ "Id": 1 }` }, new HttpResponseSender(() => null,
+      {
+        sendBody: body => {
+          post.query({ relativeUrl: "/Integers", body: `{ "Id": 2, "Prev": 1 }` },
+          new HttpResponseSender(() => null, {
+            sendBody: body2 => {
+              const secondInteger = JSON.parse(body2).value;
+              try {
+                assert.strictEqual(null, secondInteger.Next);
+                assert.strictEqual(1, secondInteger.Prev);
+              } catch (e) {
+                done(e);
+                return;
+              }
+              done();
+            },
+          }));
+        },
+      }));
+    }, schemaWithInverseProperty);
   });
 
   xit("POST and entity with implicit Title: null");

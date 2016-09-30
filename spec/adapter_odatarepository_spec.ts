@@ -36,7 +36,7 @@ describe("Adapter.ODataRepository:", () => {
     insertQueryStringBuilder.insertAsSparql = (prefixes, uri, properties) => {
       assert.strictEqual(uri, "post10");
       assertEx.deepEqual(properties, [
-        { rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'10'") },
+        { rdfProperty: "disco:id", inverse: false, value: match.is(val => val.representAsSparql() === "'10'") },
       ]);
       return "INSERT {SOMETHING}";
     };

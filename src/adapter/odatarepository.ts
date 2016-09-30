@@ -193,7 +193,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
       filterOption: filterExpression,
       expandTree: expandTree || {},
     }); /* @todo injectable */
-    this.sparqlProvider.query(this.getQueryStringBuilder.fromQueryAdapterModel(model), result => {
+    const query = this.getQueryStringBuilder.fromQueryAdapterModel(model);
+    this.sparqlProvider.query(query, result => {
       cb(result, model);
     });
   }
@@ -201,10 +202,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   private runInsert(entityType: EntityType, uri: string, keyValuePairs: { property: string; value: ISparqlLiteral }[],
                     cb: (res: results.AnyResult) => void) {
 
-    const sparqlEntity = keyValuePairs.map(p => ({
-      rdfProperty: entityType.getProperty(p.property).getNamespacedUri(),
-      value: p.value,
-    }));
+    const sparqlEntity = keyValuePairs.map(rdfRepresentationFromKeyValuePair);
     const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri, sparqlEntity);
 
     this.sparqlProvider.query(query, response => {
@@ -213,6 +211,24 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         error => ({ success: false, error: error })
       ));
     });
+
+    function rdfRepresentationFromKeyValuePair(pair: { property: string; value: ISparqlLiteral }) {
+      const property = entityType.getProperty(pair.property);
+      if (property.hasDirectRdfRepresentation() === true) {
+        return {
+          rdfProperty: property.getNamespacedUri(),
+          inverse: false,
+          value: pair.value,
+        };
+      }
+      else {
+        return {
+          rdfProperty: property.getInverseProperty().getNamespacedUri(),
+          inverse: true,
+          value: pair.value,
+        };
+      }
+    }
   }
 
   private translateResponse<T>(response: results.AnyResult,

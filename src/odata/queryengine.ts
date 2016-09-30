@@ -95,7 +95,11 @@ export class PostHandler<T> implements IPostHandler {
       const entity = this.entityInitializer.fromParsed(parsed.entity, type);
       this.repository.batch(entity, this.schema, result => {
         responseSender.sendStatusCode(201, "Created");
-        const insertedEntity = result.result()[result.result().length - 1].result().odata[0];
+        const insertion = result.result()[result.result().length - 1];
+        if (insertion.success() === false) {
+          throw new Error(insertion.error());
+        }
+        const insertedEntity = insertion.result().odata[0];
         responseSender.sendBody(JSON.stringify({
           "odata.metadata": "http://example.org/",
           "value": insertedEntity,
