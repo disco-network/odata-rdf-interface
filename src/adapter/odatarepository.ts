@@ -19,7 +19,7 @@ import gpatterns = require("../sparql/graphpatterns");
 import {
   ISelectQueryStringBuilder, IInsertQueryStringBuilder,
   ISparqlLiteral,
-  SparqlString, SparqlNumber, SparqlUri,
+  SparqlString, SparqlNumber, SparqlUri, SparqlNamespacedUri,
 } from "../sparql/querystringbuilder";
 
 import postQueries = require("../adapter/postquery");
@@ -203,7 +203,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
                     cb: (res: results.AnyResult) => void) {
 
     const sparqlEntity = keyValuePairs.map(rdfRepresentationFromKeyValuePair);
-    const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri, sparqlEntity);
+    const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri,
+      new SparqlNamespacedUri(entityType.getNamespacedUri()), sparqlEntity);
 
     this.sparqlProvider.query(query, response => {
       cb(response.process(
@@ -240,10 +241,12 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     );
   }
 
-  private translateResonseToEntityUris(results,
+  private translateResonseToEntityUris(results: ReadonlyArray<any>,
                                        model: IQueryAdapterModel<TExpressionVisitor>) {
     /* @todo check token === "uri" */
-    return results.map(res => res[model.getMapping().variables.getVariable().substr(1)].value);
+    const uriMap = {};
+    results.forEach(res => uriMap[res[model.getMapping().variables.getVariable().substr(1)].value] = true);
+    return Object.keys(uriMap);
   }
 
   private translateResponseToOData = (results,

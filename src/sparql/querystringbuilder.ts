@@ -1,12 +1,12 @@
 import gpatterns = require("./graphpatterns");
 
 export interface ISelectQueryStringBuilder {
-  fromGraphPatternAndFilterExpression(prefixes: IPrefix[], graphPattern: gpatterns.TreeGraphPattern,
+  fromGraphPatternAndFilterExpression(prefixes: ReadonlyArray<IPrefix>, graphPattern: gpatterns.TreeGraphPattern,
                                       filter?: IFilterExpression): string;
 }
 
 export interface IInsertQueryStringBuilder {
-  insertAsSparql(prefixes: IPrefix[], uri: string,
+  insertAsSparql(prefixes: ReadonlyArray<IPrefix>, uri: string, rdfType: ISparqlLiteral,
                  properties: { rdfProperty: string, inverse: boolean, value: ISparqlLiteral }[]): string;
 }
 
@@ -15,7 +15,7 @@ export interface ISparqlLiteral {
 }
 
 export interface IPrefixBuilder {
-  prefixesAsSparql(prefixes: IPrefix[]): string;
+  prefixesAsSparql(prefixes: ReadonlyArray<IPrefix>): string;
 }
 
 export interface IGraphPatternStringBuilder {
@@ -42,7 +42,7 @@ export class SelectQueryStringBuilder implements ISelectQueryStringBuilder {
               private selectSkeletonBuilder: ISelectSkeletonBuilder,
               private patternBuilder: IGraphPatternStringBuilder) {}
 
-  public fromGraphPatternAndFilterExpression(prefixes: IPrefix[], graphPattern: gpatterns.TreeGraphPattern,
+  public fromGraphPatternAndFilterExpression(prefixes: ReadonlyArray<IPrefix>, graphPattern: gpatterns.TreeGraphPattern,
                                              filter?: IFilterExpression) {
     const prefixStr = this.prefixBuilder.prefixesAsSparql(prefixes);
     return this.selectSkeletonBuilder.buildSkeleton(
@@ -54,12 +54,13 @@ export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
 
   constructor(private prefixBuilder: IPrefixBuilder, private graph: string) {}
 
-  public insertAsSparql(prefixes: IPrefix[], uri: string,
+  public insertAsSparql(prefixes: ReadonlyArray<IPrefix>, uri: string, rdfType: ISparqlLiteral,
                         properties: { rdfProperty: string, inverse: boolean, value: ISparqlLiteral }[]): string {
+    const propertiesWithType = [{ rdfProperty: "rdf:type", inverse: false, value: rdfType }].concat(properties);
     let query = this.prefixBuilder.prefixesAsSparql(prefixes);
     if (query !== "") query += " ";
 
-    query += `INSERT DATA { GRAPH <${this.graph}> { ${this.triplesAsSparql(uri, properties)} } }`;
+    query += `INSERT DATA { GRAPH <${this.graph}> { ${this.triplesAsSparql(uri, propertiesWithType)} } }`;
     return query;
   }
 
@@ -184,6 +185,19 @@ export class SparqlUri implements ISparqlLiteral {
 
   private verifiedUri() {
     if (this.uri.indexOf(">") !== -1 || this.uri.indexOf("<") !== -1) throw new Error("invalid uri");
+    else return this.uri;
+  }
+}
+
+export class SparqlNamespacedUri implements ISparqlLiteral {
+  constructor(private uri: string) {}
+
+  public representAsSparql() {
+    return this.verifiedUri();
+  }
+
+  private verifiedUri() {
+    if (this.uri.indexOf(":") === -1)  throw new Error("invalid namespaced uri");
     else return this.uri;
   }
 }

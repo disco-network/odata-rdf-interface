@@ -6,6 +6,11 @@ export interface IBranchingArgs {
   hash(): string;
 }
 
+export interface ITypeConditionBranchingArgs extends IBranchingArgs {
+  type(): "typeCondition";
+  entityType(): EntityType;
+}
+
 export interface IPropertyBranchingArgs extends IBranchingArgs {
   type(): "property";
   schema(): Property;
@@ -27,6 +32,22 @@ export interface IAnyBranchingArgs extends IBranchingArgs {
   name(): string;
   lambdaVariable(): ILambdaVariable;
   inverse(): boolean;
+}
+
+export class TypeConditionBranchingArgs implements ITypeConditionBranchingArgs {
+
+  constructor(private expectedType: EntityType) {
+  }
+
+  public type(): "typeCondition" { return "typeCondition"; }
+
+  public hash() {
+    return JSON.stringify({ type: this.type(), entityType: this.entityType().getName() });
+  }
+
+  public entityType() {
+    return this.expectedType;
+  }
 }
 
 export class PropertyBranchingArgs implements IPropertyBranchingArgs {
@@ -114,6 +135,11 @@ export class PropertyBranchingArgsFactory {
 }
 
 export class BranchingArgsGuard {
+
+  public static isTypeCondition(args: IBranchingArgs): args is ITypeConditionBranchingArgs {
+    return args.type() === "typeCondition";
+  }
+
   public static isProperty(args: IBranchingArgs): args is IPropertyBranchingArgs {
     return args.type() === "property";
   }
@@ -124,6 +150,11 @@ export class BranchingArgsGuard {
 
   public static isAny(args: IBranchingArgs): args is IAnyBranchingArgs {
     return args.type() === "any";
+  }
+
+  public static assertTypeCondition(args: IBranchingArgs) {
+    if (this.isTypeCondition(args)) return args;
+    else throw new Error("TypeConditionBranchingArgs expected");
   }
 
   public static assertProperty(args: IBranchingArgs) {

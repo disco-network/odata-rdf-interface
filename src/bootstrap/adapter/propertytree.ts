@@ -32,7 +32,8 @@ function getBranchFactoryForExpanding(): propertyTrees.IBranchFactory<IBranching
   const patternMatcher = new propertyTrees.TreeDependencyInjector();
   patternMatcher.registerFactoryCandidates(
       new propertyTreesImpl.ElementarySingleValuedBranchFactory(patternMatcher),
-      new propertyTreesImpl.ComplexBranchFactory()
+      new propertyTreesImpl.ComplexBranchFactory(),
+      new propertyTreesImpl.TypeConditionBranchFactory(),
     );
   return patternMatcher;
 }

@@ -6,6 +6,7 @@ import {
 import {
   IBranchingArgs, BranchingArgsGuard,
   IPropertyBranchingArgs, PropertyBranchingArgs, IInScopeVariableBranchingArgs, IAnyBranchingArgs,
+  ITypeConditionBranchingArgs,
 } from "./branchingargs";
 import { ForeignKeyPropertyResolver } from "../../odata/foreignkeyproperties";
 import { Property } from "../../odata/schema";
@@ -42,6 +43,35 @@ export class GraphPatternSelector implements IGraphPatternSelector {
 
 // ===
 
+export class TypeConditionBranchFactory implements base.ITreeFactoryCandidate {
+  public doesApply(args: IBranchingArgs) {
+    return BranchingArgsGuard.isTypeCondition(args);
+  }
+
+  public create(args: IBranchingArgs) {
+    return new TypeConditionBranch(BranchingArgsGuard.assertTypeCondition(args));
+  }
+}
+
+export class TypeConditionBranch implements base.INode {
+
+  constructor(private branchingArgs: ITypeConditionBranchingArgs) {}
+
+  public apply(args: IGraphPatternArgs & IMappingArgs): undefined {
+    const basePattern = args.patternSelector.getRootPattern();
+
+    basePattern.branch("rdf:type", this.branchingArgs.entityType().getNamespacedUri());
+
+    return undefined;
+  }
+
+  public hash() {
+    return this.branchingArgs.hash();
+  }
+}
+
+// ===
+
 export class ComplexBranchFactory implements base.ITreeFactoryCandidate {
   public doesApply(args: IBranchingArgs) {
     return BranchingArgsGuard.isProperty(args) && args.complex();
@@ -57,10 +87,10 @@ export class ComplexBranch implements base.INode {
   constructor(private branchingArgs: IPropertyBranchingArgs) {}
 
   public apply(args: IGraphPatternArgs & IMappingArgs): ITraversingArgs {
-    let basePattern = this.selectPattern(args.patternSelector);
-    let mapping = args.mapping;
-    let propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name());
-    let variableName = mapping.variables.getComplexProperty(this.branchingArgs.name()).getVariable();
+    const basePattern = this.selectPattern(args.patternSelector);
+    const mapping = args.mapping;
+    const propertyName = mapping.properties.getNamespacedUriOfProperty(this.branchingArgs.name());
+    const variableName = mapping.variables.getComplexProperty(this.branchingArgs.name()).getVariable();
     let subPattern: gpatterns.TreeGraphPattern;
 
     if (this.branchingArgs.mandatory() === true) {

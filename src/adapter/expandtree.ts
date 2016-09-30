@@ -4,7 +4,7 @@ import schema = require("../odata/schema");
 import { IBranchFactory, Tree } from "./propertytree/propertytree";
 import propertyTreeImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs } from "./propertytree/traversingargs";
-import { IBranchingArgs, PropertyBranchingArgsFactory } from "./propertytree/branchingargs";
+import { IBranchingArgs, PropertyBranchingArgsFactory, TypeConditionBranchingArgs } from "./propertytree/branchingargs";
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -68,9 +68,11 @@ export class ExpandTreeGraphPatternStrategy {
     return result;
   }
 
-  private createTree(entityType: schema.EntityType, expandTree) {
+  public createTree(entityType: schema.EntityType, expandTree) {
 
     let tree = new Tree();
+
+    tree.branchNode(this.branchFactory.create(new TypeConditionBranchingArgs(entityType)));
 
     let idProperty = entityType.getProperty("Id");
     tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));

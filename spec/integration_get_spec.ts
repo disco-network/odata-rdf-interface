@@ -295,12 +295,18 @@ function storeSeed(store, graphName, cb) {
   ));
 
   graph.add(store.rdf.createTriple(
+    node("disco:content1"), node("rdf:type"), node("disco:Content")
+  ));
+  graph.add(store.rdf.createTriple(
     node("disco:content1"), node("disco:id"), literal("1")
   ));
   graph.add(store.rdf.createTriple(
     node("disco:content1"), node("disco:title"), literal("Post Nr. 1")
   ));
 
+  graph.add(store.rdf.createTriple(
+    node("disco:content2"), node("rdf:type"), node("disco:Content")
+  ));
   graph.add(store.rdf.createTriple(
     node("disco:content2"), node("disco:id"), literal("2")
   ));

@@ -6,7 +6,8 @@ import {
   ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor,
 } from "../src/adapter/odatarepository";
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
-import { IInsertQueryStringBuilder, IPrefix, ISparqlLiteral } from "../src/sparql/querystringbuilder";
+import {
+  IInsertQueryStringBuilder, IPrefix, ISparqlLiteral, SparqlNamespacedUri } from "../src/sparql/querystringbuilder";
 
 describe("Adapter.ODataRepository:", () => {
   it("should insert an entity called 'post1' with Id = '1'", done => {
@@ -33,7 +34,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     const insertQueryStringBuilder = new InsertQueryStringBuilder();
-    insertQueryStringBuilder.insertAsSparql = (prefixes, uri, properties) => {
+    insertQueryStringBuilder.insertAsSparql = (prefixes, uri, rdfType, properties) => {
       assert.strictEqual(uri, "post10");
       assertEx.deepEqual(properties, [
         { rdfProperty: "disco:id", inverse: false, value: match.is(val => val.representAsSparql() === "'10'") },
@@ -48,7 +49,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     const odataRepository = create(mySparqlProvider, getStringProducer, myPostQueryStringBuilder,
-                                  insertQueryStringBuilder);
+                                   insertQueryStringBuilder);
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",
@@ -95,7 +96,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     let insertQueryStringBuilder = new InsertQueryStringBuilder();
-    insertQueryStringBuilder.insertAsSparql = (prefixes, uri, properties) => {
+    insertQueryStringBuilder.insertAsSparql = (prefixes, uri, rdfType, properties) => {
       assert.strictEqual(uri, "post10");
       assertEx.deepEqual(properties, [
         { rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'10'") },
@@ -142,7 +143,7 @@ class GetQueryStringBuilder<T> implements IGetQueryStringBuilder<T> {
 }
 
 class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
-  public insertAsSparql(prefixes: IPrefix[], uri: string,
+  public insertAsSparql(prefixes: IPrefix[], uri: string, rdfType: ISparqlLiteral,
                         properties: { rdfProperty: string, value: ISparqlLiteral }[]): any {
     //
   }

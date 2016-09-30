@@ -143,7 +143,7 @@ describe("integration tests", () => {
               const secondInteger = JSON.parse(body2).value;
               try {
                 assert.strictEqual(null, secondInteger.Next);
-                assert.strictEqual(1, secondInteger.Prev);
+                assert.strictEqual("1", secondInteger.Prev);
               } catch (e) {
                 done(e);
                 return;
