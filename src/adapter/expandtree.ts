@@ -5,6 +5,7 @@ import { IBranchFactory, Tree } from "./propertytree/propertytree";
 import propertyTreeImpl = require("./propertytree/propertytree_impl");
 import { TraversingArgs } from "./propertytree/traversingargs";
 import { IBranchingArgs, PropertyBranchingArgsFactory, TypeConditionBranchingArgs } from "./propertytree/branchingargs";
+import { PropertySelectionTree, IPropertySelector, PropertySelector } from "../odata/propertyselector";
 
 /**
  * Creates a SPARQL graph pattern involving all direct and elementary
@@ -46,6 +47,7 @@ export class DirectPropertiesTreeStrategy {
 export class ExpandTreeGraphPatternStrategy {
 
   private directPropertiesStrategy: DirectPropertiesTreeStrategy;
+  private propertySelector: IPropertySelector = new PropertySelector();
 
   constructor(private branchFactory: IBranchFactory<IBranchingArgs>,
               private argsFactory: PropertyBranchingArgsFactory) {
@@ -70,22 +72,22 @@ export class ExpandTreeGraphPatternStrategy {
 
   public createTree(entityType: schema.EntityType, expandTree) {
 
-    let tree = new Tree();
+    const selectionTree = this.propertySelector.selectPropertiesForQuery(entityType, expandTree);
+    return this.createTreeFromSelectionTree(entityType, selectionTree);
+  }
 
-    tree.branchNode(this.branchFactory.create(new TypeConditionBranchingArgs(entityType)));
+  private createTreeFromSelectionTree(entityType: schema.EntityType, selectionTree: PropertySelectionTree) {
+    const tree = new Tree();
 
-    let idProperty = entityType.getProperty("Id");
-    tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(idProperty)));
+    if (entityType.isElementary() === false)
+      tree.branchNode(this.branchFactory.create(new TypeConditionBranchingArgs(entityType)));
 
-    let directPropertyTree = this.directPropertiesStrategy.create(entityType, "no-id-property");
-    directPropertyTree.copyTo(tree);
+    for (const propertyName of Object.keys(selectionTree)) {
+      const property = entityType.getProperty(propertyName);
 
-    for (let propertyName of Object.keys(expandTree)) {
-      let property = entityType.getProperty(propertyName);
+      const branch = tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(property)));
 
-      let branch = tree.branchNode(this.branchFactory.create(this.argsFactory.fromProperty(property)));
-
-      let recursive = this.createTree(property.getEntityType(), expandTree[propertyName]);
+      const recursive = this.createTreeFromSelectionTree(property.getEntityType(), selectionTree[propertyName]);
       recursive.copyTo(branch);
     }
 
