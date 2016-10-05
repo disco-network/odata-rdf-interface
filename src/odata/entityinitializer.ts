@@ -3,7 +3,10 @@ import { shouldNotBeReached } from "../controlflow";
 import * as base from "./entityinitializer_base";
 import { EntityType, Property, GenerationMethod } from "./schema";
 import * as uuid from "uuid";
-import { IOperation, IBatchReference } from "./repository";
+import {
+  IOperation, IBatchReference,
+  OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand, BatchEntity,
+} from "./repository";
 import { ParsedEntity } from "./parser";
 import { EdmLiteral, IEdmConverter, InvalidConversionError } from "./edm";
 import { ForeignKeyPropertyResolver } from "./foreignkeyproperties";
@@ -19,6 +22,53 @@ export class EntityDiffInitializer implements base.IEntityDiffInitializer {
     return this.buildBatchPlanCheckPropertyConstraints(assignedProperties, entityType, pattern);
   }
 
+  /**
+   * conditions:
+   * * all specified properties exist in "entityType"
+   * 
+   * actions:
+   * * convert property values to the required entity type
+   */
+  private convertAndValidatePattern(pattern: ParsedEntity, entityType: EntityType) {
+
+    const that = this;
+    const validated = {} as ParsedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+    for (const propertyName of Object.keys(pattern)) {
+      const property = entityType.getProperty(propertyName); /* @todo getProperty(): Property | undefined */
+      if (property !== undefined) {
+        const setter = this.resolver.resolveSetter(property, pattern[propertyName]!);
+        const setterValue = setter.value;
+        switch (setterValue.type) {
+          case "ref":
+            throw new Error(`Pattern illegally contains foreign-key property ${propertyName}.`);
+          default:
+            convertAndAssignProperty(property, setterValue);
+        }
+      }
+      else {
+        throw new Error(`Pattern contains unknown property ${propertyName}.`);
+      }
+    }
+    return validated;
+
+    function convertAndAssignProperty(property: Property, value: EdmLiteral) {
+      if (Object.prototype.hasOwnProperty.call(validated, property.getName())) {
+        throw new BadBodyError(`Trying to assign the property (${property.getName()}) twice`);
+      }
+      else {
+        validated[property.getName()] = that.edmConverter.convert(value, property.getEntityType().getName(),
+                                                                  property.isOptional());
+      }
+    }
+  }
+
+  /**
+   * conditions:
+   * * all specified properties exist in "entityType"
+   * 
+   * actions:
+   * * convert property values to the required entity type
+   */
   private assignParsedPropertiesCheckPropertyExistence(entity: ParsedEntity, entityType: EntityType) {
     const ret: PropertyAssignments = {};
 
@@ -55,11 +105,13 @@ export class EntityDiffInitializer implements base.IEntityDiffInitializer {
     }
   }
 
-  private buildBatchPlanCheckPropertyConstraints(assignments: PropertyAssignments, type: EntityType) {
+  private buildBatchPlanCheckPropertyConstraints(assignments: PropertyAssignments, type: EntityType,
+                                                 pattern: ParsedEntity) {
     const that = this;
     const identifier = uuid.v4().replace(/-/g, ""); // hopefully this produces an unique identifier
     const batchPlanPrerequisites: IOperation[] = [];
-    const insertedValues: { [prop: string]: EdmLiteral | IBatchReference } = {};
+    const insertedValues = {} as BatchEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+
     for (const propertyName of type.getPropertyNames()) {
       const property = type.getProperty(propertyName);
       if (canPropertyBeAssigned(property) === false) {
@@ -98,7 +150,7 @@ export class EntityDiffInitializer implements base.IEntityDiffInitializer {
     return batchPlanPrerequisites.concat([{
       type: "patch",
       entityType: type.getName(),
-      pattern: null,
+      pattern: this.convertAndValidatePattern(pattern, type),
       diff: insertedValues,
     }]) as ReadonlyArray<IOperation>;
 
@@ -134,10 +186,6 @@ export class EntityDiffInitializer implements base.IEntityDiffInitializer {
     function getUserAssignedValue(property: Property): EdmLiteral | EntityRef | undefined;
     function getUserAssignedValue(property: Property): EdmLiteral | EntityRef | undefined {
       return isPropertyAssignedByUser(property) ? assignments[property.getName()] : undefined;
-    }
-
-    function getNullValue(): EdmLiteral {
-      return { type: "null" };
     }
 
     function isPropertyAssignedByUser(property: Property): property is Property & { __assignedBrand } {

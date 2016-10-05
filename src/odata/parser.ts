@@ -99,7 +99,7 @@ export class PostRequestParser implements IPostRequestParser {
 }
 
 export interface ParsedEntity {
-  [id: string]: EdmLiteral | undefined;
+  [id: string]: EdmLiteral;
 }
 
 export interface IFilterVisitor extends IStringLiteralVisitor, INumericLiteralVisitor,

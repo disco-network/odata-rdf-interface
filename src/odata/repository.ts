@@ -28,11 +28,23 @@ export interface IInsertOperation {
 export interface IPatchOperation {
   type: "patch";
   entityType: string;
-  pattern: { [id: string]: EdmLiteral };
-  diff: { [id: string]: EdmLiteral | IBatchReference };
+  pattern: Entity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+  diff: BatchEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
 }
 
 export interface IBatchReference {
   type: "ref";
   resultIndex: number;
 }
+
+export interface BatchEntity {
+  [property: string]: EdmLiteral | IBatchReference;
+}
+
+export interface Entity {
+  [property: string]: EdmLiteral;
+}
+
+export enum OnlyExistingPropertiesBrand {}
+export enum AllPropertiesBrand {}
+export enum CorrectPropertyTypesBrand {}
