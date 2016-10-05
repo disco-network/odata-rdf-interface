@@ -15,6 +15,16 @@ import {
 
 declare let __dirname;
 
+export interface IPatchRequestParser {
+  parse(request: IHttpRequest): IParsedPatchRequest;
+}
+
+export interface IParsedPatchRequest {
+  entitySetName: string;
+  id: EdmLiteral;
+  entity: ParsedEntity;
+}
+
 export interface IPostRequestParser {
   parse(request: IHttpRequest): IParsedPostRequest;
 }

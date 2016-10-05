@@ -3,7 +3,7 @@ import { Schema } from "../../odata/schema";
 import { EdmConverter } from "../../odata/edm";
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 
-import { EntityInitializer } from "../odata/entityreader";
+import { EntityInitializer } from "../odata/entityinitializer";
 import { GetRequestParser, PostRequestParser } from "../odata/parser";
 import { ODataRepository } from "./odatarepository";
 import { IVisitor } from "./filters";

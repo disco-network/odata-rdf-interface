@@ -10,7 +10,7 @@ export interface IRepository<TVisitor> {
   batch(ops: ReadonlyArray<IOperation>, schema: schema.Schema, cb: (results: results.AnyResult) => void);
 }
 
-export type IOperation = IGetOperation | IInsertOperation;
+export type IOperation = IGetOperation | IInsertOperation | IPatchOperation;
 
 export interface IGetOperation {
   type: "get";
@@ -23,6 +23,13 @@ export interface IInsertOperation {
   entityType: string;
   identifier: string;
   value: { [id: string]: EdmLiteral | IBatchReference };
+}
+
+export interface IPatchOperation {
+  type: "patch";
+  entityType: string;
+  pattern: { [id: string]: EdmLiteral };
+  diff: { [id: string]: EdmLiteral | IBatchReference };
 }
 
 export interface IBatchReference {

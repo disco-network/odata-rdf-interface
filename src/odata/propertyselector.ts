@@ -1,4 +1,5 @@
 import { EntityType, EntityKind, Property } from "./schema";
+import { shouldNotBeReached } from "../controlflow";
 
 export interface IPropertySelector {
   selectPropertiesForQuery(entityType: EntityType, expand: any): PropertySelectionTree;
@@ -28,8 +29,7 @@ export class PropertySelector implements IPropertySelector {
         }
       }
       else {
-        const n: never = kind;
-        throw new Error("unexpected EntityKind");
+        shouldNotBeReached(kind, "unexpected EntityKind");
       }
     }
     return tree;

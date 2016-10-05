@@ -3,8 +3,8 @@ import {
   GetRequestType, EqExpression, PropertyValue, NumericLiteral,
 } from "../odata/parser";
 import { IEqExpressionVisitor, IPropertyValueVisitor, INumericLiteralVisitor } from "../odata/filters/expressions";
-import entityInitializer = require("../odata/entity_reader_base");
-import { BadBodyError } from "../odata/entityreader";
+import entityInitializer = require("../odata/entityinitializer_base");
+import { BadBodyError } from "../odata/entityinitializer";
 import { IRepository }  from "../odata/repository";
 import { Schema } from "../odata/schema";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
@@ -17,6 +17,9 @@ export interface IGetHttpResponder {
 }
 
 export interface IPostHandler extends IHttpRequestHandler {
+}
+
+export interface IPatchHandler extends IHttpRequestHandler {
 }
 
 export interface IOptionsHandler extends IHttpRequestHandler {
