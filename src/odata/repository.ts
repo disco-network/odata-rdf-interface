@@ -28,7 +28,7 @@ export interface IInsertOperation {
 export interface IPatchOperation {
   type: "patch";
   entityType: string;
-  pattern: Entity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+  pattern: LiteralValuedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
   diff: BatchEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
 }
 
@@ -41,8 +41,16 @@ export interface BatchEntity {
   [property: string]: EdmLiteral | IBatchReference;
 }
 
-export interface Entity {
+export interface LiteralValuedEntity {
   [property: string]: EdmLiteral;
+}
+
+export interface Entity<T> {
+  [property: string]: T;
+}
+
+export interface ReadonlyEntity<T> {
+  readonly [property: string]: T;
 }
 
 export enum OnlyExistingPropertiesBrand {}
