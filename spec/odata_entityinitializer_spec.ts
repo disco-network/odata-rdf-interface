@@ -16,7 +16,7 @@ describe("OData.EntityInitializer:", () => {
     it(name, () => {
       const entityInitializer = create();
 
-      const entity = entityInitializer.fromParsed(args.input, args.type);
+      const entity = entityInitializer.insertionFromParsed(args.input, args.type);
 
       assertEx.deepEqual(entity, args.outputEntity);
     });
@@ -26,7 +26,7 @@ describe("OData.EntityInitializer:", () => {
     const schema = uuidKeySchema;
     const entityInitializer = create();
 
-    const entity = entityInitializer.fromParsed({}, schema.getEntityType("Entity"));
+    const entity = entityInitializer.insertionFromParsed({}, schema.getEntityType("Entity"));
 
     let id: any = undefined;
     function isSameId(val) {
@@ -47,7 +47,7 @@ describe("OData.EntityInitializer:", () => {
   });
 
   it("should overwrite user-defined properties which should be generated UUIDs", () => {
-    const entity = create().fromParsed({
+    const entity = create().insertionFromParsed({
       Id: { type: "Edm.String", value: "[user-defined]" },
     }, uuidKeySchema.getEntityType("Entity"));
 
@@ -62,7 +62,7 @@ describe("OData.EntityInitializer:", () => {
   });
 
   it("should overwrite user-defined properties which should be auto-incremented", () => {
-    const entity = create().fromParsed({
+    const entity = create().insertionFromParsed({
       Id: { type: "Edm.String", value: "[user-defined]" },
     }, autoIncrementSchema.getEntityType("Entity"));
 
@@ -78,7 +78,7 @@ describe("OData.EntityInitializer:", () => {
 
   it("should throw a BadBodyError when a mandatory property is null", () => {
     try {
-      create().fromParsed({
+      create().insertionFromParsed({
         Value: { type: "null", value: null },
       }, schemaWithMandatoryProperty.getEntityType("Entity"));
     }
@@ -91,7 +91,7 @@ describe("OData.EntityInitializer:", () => {
 
   it("should throw a BadBodyError when a mandatory property is unspecified", () => {
     try {
-      create().fromParsed({}, schemaWithMandatoryProperty.getEntityType("Entity"));
+      create().insertionFromParsed({}, schemaWithMandatoryProperty.getEntityType("Entity"));
     }
     catch (e) {
       assert.strictEqual(e instanceof base.BadBodyError, true);
@@ -101,7 +101,7 @@ describe("OData.EntityInitializer:", () => {
   });
 
   it("should throw when a value is incompatible with the property type", () => {
-    assert.throws(() => create().fromParsed({
+    assert.throws(() => create().insertionFromParsed({
       Int32: { type: "Edm.String", value: "two" },
     }, diverselyTypedSchema.getEntityType("Entity")));
   });
@@ -112,7 +112,7 @@ describe("OData.EntityInitializer:", () => {
 describe("OData.EntityDiffInitializer:", () => {
   it ("should keep missing properties unspecified", () => {
     const schema = diverselyTypedSchema;
-    const parsed = createDiffInitializer().fromParsed(
+    const parsed = create().patchFromParsed(
       { String: { type: "Edm.String", value: "[String]" } }, schema.getEntityType("Entity"),
       { Int32: { type: "Edm.Int32", value: 1 } });
 
@@ -132,8 +132,4 @@ describe("OData.EntityDiffInitializer:", () => {
 
 function create() {
   return new base.EntityInitializer(new EdmConverter());
-}
-
-function createDiffInitializer() {
-  return new base.EntityDiffInitializer(new EdmConverter());
 }

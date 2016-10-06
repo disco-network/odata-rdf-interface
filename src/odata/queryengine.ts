@@ -95,7 +95,7 @@ export class PostHandler<T> implements IPostHandler {
     let parsed = this.parser.parse(request);
     let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     try {
-      const entity = this.entityInitializer.fromParsed(parsed.entity, type);
+      const entity = this.entityInitializer.insertionFromParsed(parsed.entity, type);
       this.repository.batch(entity, this.schema, result => {
         responseSender.sendStatusCode(201, "Created");
         const insertion = result.result()[result.result().length - 1];

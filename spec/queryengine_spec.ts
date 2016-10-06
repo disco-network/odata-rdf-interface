@@ -8,7 +8,7 @@ import {
 import {
   IPostRequestParser, IGetRequestParser, IPatchRequestParser, IFilterVisitor, GetRequestType,
 } from "../src/odata/parser";
-import { IEntityInitializer, IEntityDiffInitializer } from "../src/odata/entityinitializer_base";
+import { IEntityInitializer } from "../src/odata/entityinitializer_base";
 import { IRepository, IOperation } from "../src/odata/repository";
 import { IValue } from "../src/odata/filters/expressions";
 import { Result, AnyResult } from "../src/result";
@@ -25,8 +25,8 @@ describe("OData.PatchHandler:", () => {
       Title: { type: "Edm.String", value: "[Content]" },
     } });
 
-    const entityDiffInitializer = null as any as IEntityDiffInitializer;
-    stub(entityDiffInitializer, "fromParsed").returns([{
+    const entityDiffInitializer = null as any as IEntityInitializer;
+    stub(entityDiffInitializer, "patchFromParsed").returns([{
       type: "patch",
       entityType: "Content",
       identifier: { type: "Edm.String", value: "[ID]" },
@@ -50,7 +50,7 @@ describe("OData.PostHandler:", () => {
     const parser = new PostRequestParser();
     stub(parser, "parse").returns({ entitySetName: "Posts", entity: {} });
     const entityInitializer = new EntityInitializer();
-    stub(entityInitializer, "fromParsed").returns([]);
+    stub(entityInitializer, "insertionFromParsed").returns([]);
     const repository = new Repository<IFilterVisitor>();
     stub(repository, "batch").callsArgWith(2, Result.success([Result.success({ odata: ["ok"] })]));
 
@@ -79,7 +79,7 @@ describe("OData.PostHandler:", () => {
           Content: { type: "ref", resultIndex: 0 },
     }}];
     const entityReader = new EntityInitializer();
-    stub(entityReader, "fromParsed")
+    stub(entityReader, "insertionFromParsed")
       .withArgs({ ContentId: "1" }, match(type => type.getName() === "Post"))
       .returns(ops);
 
@@ -321,7 +321,11 @@ class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
 }
 
 class EntityInitializer implements IEntityInitializer {
-  public fromParsed(entity: any, entityType: EntityType): any {
+  public insertionFromParsed(entity: any, entityType: EntityType): any {
+    //
+  }
+
+  public patchFromParsed(entity: any, entityType: EntityType): any {
     //
   }
 }

@@ -8,13 +8,6 @@ import { ParsedEntity } from "./parser";
  * initializes, validates and converts all properties according to its entity type.
  */
 export interface IEntityInitializer {
-  fromParsed(entity: any, entityType: EntityType): ReadonlyArray<IOperation>;
-}
-
-/**
- * Takes a parsed entity and
- * validates and converts all specified properties according to its entity type.
- */
-export interface IEntityDiffInitializer {
-  fromParsed(entity: ParsedEntity, entityType: EntityType, pattern: ParsedEntity): ReadonlyArray<IOperation>;
+  insertionFromParsed(entity: ParsedEntity, entityType: EntityType): ReadonlyArray<IOperation>;
+  patchFromParsed(entity: ParsedEntity, entityType: EntityType, pattern: ParsedEntity): ReadonlyArray<IOperation>;
 }
