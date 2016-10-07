@@ -23,45 +23,39 @@ export class EntityInitializer implements base.IEntityInitializer {
     return buildBatchPlanCheckPropertyConstraints(assignedProperties, entityType);
 
     function buildBatchPlanCheckPropertyConstraints(assignments: PropertyAssignments, type: EntityType) {
+
       const identifier = uuid.v4().replace(/-/g, ""); // hopefully this produces an unique identifier
       const batchPlanPrerequisites: IOperation[] = [];
       const insertedValues: { [prop: string]: EdmLiteral | IBatchReference } = {};
-      for (const propertyName of type.getPropertyNames()) {
-        const property = type.getProperty(propertyName);
-        if (canPropertyBeAssigned(property) === false) {
-          if (isPropertyAssignedByUser(property) === true) {
-            throw new BadBodyError(`Cannot assign this property: ${propertyName}`);
+
+      that.forEachPropertyInType(type, property => {
+        try {
+          that.throwOnIllegalUserAssignment(property, assignments);
+          if (property.isGenerated()) {
+            const method = property.getGenerationMethod();
+            const value = that.generateValue(method, property, identifier);
+            that.convertAndAssignPropertyOnce(property, insertedValues, value);
           }
-        }
-        if (property.isGenerated()) {
-          const method = property.getGenerationMethod();
-          switch (method) {
-            case GenerationMethod.UUID:
-              insertLiteral(property, { type: "Edm.Guid", value: identifier });
-              break;
-            case GenerationMethod.AutoIncrement:
-              insertLiteral(property, { type: "Edm.String", value: property.genNextAutoIncrementValue() });
-              break;
-            default:
-              shouldNotBeReached(method, "Unexpected property generation method: " + method);
-          }
-        }
-        else {
-          if (shouldPropertyHaveValueOrNull(property)) {
-            const userAssignedValue = isPropertyAssignedByUser(property)
-              ? getUserAssignedValue(property)
+          else if (that.shouldPropertyHaveValueOrNull(property)) {
+            const userAssignedValue = that.isPropertyAssignedByUser(property, assignments)
+              ? that.getUserAssignedValue(property, assignments)
               : getNullValue();
 
             switch (userAssignedValue.type) {
               case "ref":
-                insertReference(property, userAssignedValue);
+                that.assignEntityReference(property, insertedValues, userAssignedValue, batchPlanPrerequisites);
                 break;
               default:
-                insertLiteral(property, userAssignedValue);
+                that.convertAndAssignPropertyOnce(property, insertedValues, userAssignedValue);
             }
           }
         }
-      }
+        catch (e) {
+          if (e instanceof InvalidConversionError)
+            catchInvalidConversion(property, e);
+          else throw e;
+        }
+      });
 
       return batchPlanPrerequisites.concat([{
         type: "insert",
@@ -70,55 +64,12 @@ export class EntityInitializer implements base.IEntityInitializer {
         value: insertedValues,
       }]) as ReadonlyArray<IOperation>;
 
-      function insertReference(property: Property, value: EntityRef) {
-        batchPlanPrerequisites.push({
-          type: "get",
-          entityType: value.entityType.getName(),
-          pattern: { [value.idProperty.getName()]: value.id },
-        });
-        /* @todo checks */
-        insertValueNoChecks(property, { type: "ref", resultIndex: batchPlanPrerequisites.length - 1 });
-      }
-
-      function insertLiteral(property: Property, value: EdmLiteral) {
-        try {
-          insertValueNoChecks(property, that.edmConverter.convert(value, property.getEntityType().getName(),
-            property.isOptional()));
-        }
-        catch (e) {
-          if (e instanceof InvalidConversionError)
-            throw new BadBodyError(`Property ${property.getName()} - conversion error: ${e.message}`);
-          else throw e;
-        }
-      }
-
-      function insertValueNoChecks(property: Property, value: EdmLiteral | IBatchReference) {
-        if (Object.prototype.hasOwnProperty.call(insertedValues, property.getName()) === true)
-          throw new Error(`Strangely, property ${property.getName()} was inserted twice.`);
-        else insertedValues[property.getName()] = value;
-      }
-
-      function getUserAssignedValue(property: Property & { __assignedBrand }): EdmLiteral | EntityRef;
-      function getUserAssignedValue(property: Property): EdmLiteral | EntityRef | undefined;
-      function getUserAssignedValue(property: Property): EdmLiteral | EntityRef | undefined {
-        return isPropertyAssignedByUser(property) ? assignments[property.getName()] : undefined;
+      function catchInvalidConversion(property: Property, e: InvalidConversionError) {
+        throw new BadBodyError(`Property ${property.getName()} - conversion error: ${e.message}`);
       }
 
       function getNullValue(): EdmLiteral {
         return { type: "null" };
-      }
-
-      function isPropertyAssignedByUser(property: Property): property is Property & { __assignedBrand } {
-        return Object.prototype.hasOwnProperty.call(assignments, property.getName()) === true;
-      }
-
-      function canPropertyBeAssigned(property: Property) {
-        return shouldPropertyHaveValueOrNull(property) === true
-          || property.isGenerated() === true;
-      }
-
-      function shouldPropertyHaveValueOrNull(property: Property) {
-        return property.isCardinalityOne() === true && property.foreignProperty() === undefined;
       }
     }
   }
@@ -207,6 +158,19 @@ export class EntityInitializer implements base.IEntityInitializer {
     return ret;
   }
 
+  private getValueToAssign(property: Property, uuidIdentifier: string, assignments: PropertyAssignments,
+                           getUserAssignedValue: (property: Property, assignments) => EdmLiteral | EntityRef) {
+    this.throwOnIllegalUserAssignment(property, assignments);
+    if (property.isGenerated()) {
+      const method = property.getGenerationMethod();
+      return this.generateValue(method, property, uuidIdentifier);
+    }
+    else if (this.shouldPropertyHaveValueOrNull(property) && this.isPropertyAssignedByUser(property, assignments)) {
+      return getUserAssignedValue(property, assignments);
+    }
+    else return undefined;
+  }
+
   private buildBatchPlanCheckPropertyConstraints(assignments: PropertyAssignments, type: EntityType,
                                                  pattern: ParsedEntity) {
     const identifier = uuid.v4().replace(/-/g, ""); // hopefully this produces an unique identifier
@@ -215,32 +179,15 @@ export class EntityInitializer implements base.IEntityInitializer {
 
     this.forEachPropertyInType(type, property => {
       try {
-        if (canPropertyBeAssignedByUser(property) === false && isPropertyAssignedByUser(property) === true) {
-          throw new BadBodyError(`Cannot assign this property: ${property.getName()}`);
-        }
-        if (property.isGenerated()) {
-          const method = property.getGenerationMethod();
-          switch (method) {
-            case GenerationMethod.UUID:
-              this.convertAndAssignPropertyOnce(property, insertedValues, { type: "Edm.Guid", value: identifier });
-              break;
-            case GenerationMethod.AutoIncrement:
-              this.convertAndAssignPropertyOnce(property, insertedValues,
-                                                { type: "Edm.String", value: property.genNextAutoIncrementValue() });
-              break;
-            default:
-              shouldNotBeReached(method, `Unexpected property generation method: ${method}`);
-          }
-        }
-        else if (shouldPropertyHaveValueOrNull(property) && isPropertyAssignedByUser(property)) {
-          const userAssignedValue = getUserAssignedValue(property);
-
-          switch (userAssignedValue.type) {
+        const valueToAssign = this.getValueToAssign(property, identifier, assignments,
+                                                    this.getUserAssignedValue.bind(this));
+        if (valueToAssign !== undefined) {
+          switch (valueToAssign.type) {
             case "ref":
-              this.assignEntityReference(property, insertedValues, userAssignedValue, batchPlanPrerequisites);
+              this.assignEntityReference(property, insertedValues, valueToAssign, batchPlanPrerequisites);
               break;
             default:
-              this.convertAndAssignPropertyOnce(property, insertedValues, userAssignedValue);
+              this.convertAndAssignPropertyOnce(property, insertedValues, valueToAssign);
           }
         }
       }
@@ -261,35 +208,61 @@ export class EntityInitializer implements base.IEntityInitializer {
     function catchInvalidConversion(property: Property, e: InvalidConversionError) {
       throw new BadBodyError(`Property ${property.getName()} - conversion error: ${e.message}`);
     }
-
-    function getUserAssignedValue(property: Property & { __assignedBrand }): EdmLiteral | EntityRef;
-    function getUserAssignedValue(property: Property): EdmLiteral | EntityRef | undefined;
-    function getUserAssignedValue(property: Property): EdmLiteral | EntityRef | undefined {
-      return isPropertyAssignedByUser(property) ? assignments[property.getName()] : undefined;
-    }
-
-    function isPropertyAssignedByUser(property: Property): property is Property & { __assignedBrand } {
-      return Object.prototype.hasOwnProperty.call(assignments, property.getName()) === true;
-    }
-
-    function canPropertyBeAssignedByUser(property: Property) {
-      return shouldPropertyHaveValueOrNull(property) === true
-        || property.isGenerated() === true;
-    }
-
-    function shouldPropertyHaveValueOrNull(property: Property) {
-      return property.isCardinalityOne() === true && property.foreignProperty() === undefined;
-    }
   }
 
   private assignPropertyOnce<T extends EdmLiteral | IBatchReference | EntityRef>(property: Property, entity: Entity<T>,
                                                                                  value: T) {
-    if (Object.prototype.hasOwnProperty.call(entity, property.getName())) {
+    if (this.isPropertySpecifiedIn(property, entity)) {
       throw new BadBodyError(`Strangely, property ${property.getName()} was inserted twice.`);
     }
     else {
       entity[property.getName()] = value;
     }
+  }
+
+  /// unordered
+
+  private getUserAssignedValue(property: Property & { __assignedBrand },
+                               entity: Entity<EdmLiteral | EntityRef>): EdmLiteral | EntityRef;
+  private getUserAssignedValue(property: Property,
+                               entity: Entity<EdmLiteral | EntityRef>): EdmLiteral | EntityRef | undefined;
+  private getUserAssignedValue(property: Property,
+                               entity: Entity<EdmLiteral | EntityRef>): EdmLiteral | EntityRef | undefined {
+    return this.isPropertyAssignedByUser(property, entity) ? entity[property.getName()] : undefined;
+  }
+
+  private isPropertyAssignedByUser(property: Property,
+                                   entity: Entity<EdmLiteral | EntityRef>): property is Property & { __assignedBrand } {
+    return this.isPropertySpecifiedIn(property, entity);
+  }
+
+  /// policy
+
+  private throwOnIllegalUserAssignment(property: Property, assignments: PropertyAssignments) {
+    if (this.canPropertyBeAssignedByUser(property) === false
+        && this.isPropertyAssignedByUser(property, assignments) === true) {
+      throw new BadBodyError(`Cannot assign this property: ${property.getName()}`);
+    }
+  }
+
+  private generateValue(method: GenerationMethod, property: Property, uuidIdentifier: string): EdmLiteral {
+    switch (method) {
+      case GenerationMethod.UUID:
+        return { type: "Edm.Guid", value: uuidIdentifier };
+      case GenerationMethod.AutoIncrement:
+        return { type: "Edm.String", value: property.genNextAutoIncrementValue() };
+      default:
+        return shouldNotBeReached(method, `Unexpected property generation method: ${method}`);
+    }
+  }
+
+  private canPropertyBeAssignedByUser(property: Property) {
+    return this.shouldPropertyHaveValueOrNull(property) === true
+      || property.isGenerated() === true;
+  }
+
+  private shouldPropertyHaveValueOrNull(property: Property) {
+    return property.isCardinalityOne() === true && property.foreignProperty() === undefined;
   }
 
   /// entity logic
@@ -308,11 +281,10 @@ export class EntityInitializer implements base.IEntityInitializer {
   private convertAndAssignPropertyOnce(property: Property,
                                        entity: Entity<any>,
                                        value: EdmLiteral) {
-    this.assignPropertyOnce(property, entity, this.edmConverter.convert(value, property.getEntityType().getName(),
-                                                                        property.isOptional()));
+    this.assignPropertyOnce(property, entity, this.convertToPropertyType(property, value));
   }
 
-  private isPropertySpecifiedIn(property: Property, entity: Entity<EdmLiteral>) {
+  private isPropertySpecifiedIn(property: Property, entity: Entity<any>) {
     return Object.prototype.hasOwnProperty.call(entity, property.getName());
   }
 
