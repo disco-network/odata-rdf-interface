@@ -7,6 +7,7 @@ import entityInitializer = require("../odata/entityinitializer_base");
 import { BadBodyError } from "../odata/entityinitializer";
 import { IRepository }  from "../odata/repository";
 import { Schema } from "../odata/schema";
+import { EdmLiteral, EdmConverter } from "../odata/edm";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
 
 export interface IGetHandler extends IHttpRequestHandler {
@@ -31,6 +32,7 @@ export interface IPostRequestResult {
 
 export interface IMinimalVisitor extends INumericLiteralVisitor, IEqExpressionVisitor, IPropertyValueVisitor {}
 export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
+  private edmConverter = new EdmConverter(); /* @todo move */
 
   constructor(private schema: Schema,
               private parser: IGetRequestParser<T>,
@@ -48,8 +50,16 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
         break;
       case GetRequestType.ById:
         const propertyExpr = new PropertyValue(["Id"]);
-        const numericLiteral = new NumericLiteral(parsed.id);
-        const filterExpression = new EqExpression<T>(propertyExpr, numericLiteral);
+        const edmLiteral = this.edmConverter.convert(parsed.id, type.getProperty("Id").getEntityType().getName());
+        let literal: NumericLiteral;
+        switch (edmLiteral.type) {
+          case "Edm.Int32":
+            literal = new NumericLiteral(edmLiteral.value);
+            break;
+          default:
+            throw new Error(`This type is not supported as key.`);
+        }
+        const filterExpression = new EqExpression<T>(propertyExpr, literal);
         this.repository.getEntities(type, {}, filterExpression, result => {
           if (result.success())
             this.getHttpResponder.success(result.result()[0], httpResponseSender);

@@ -2,6 +2,7 @@ import { assert, assertEx, match } from "../src/assert";
 
 import {
   IPostRequestParser, PostRequestParser, GetRequestParser, GetRequestType,
+  PatchRequestParser,
   IODataParser, ODataParser, IFilterVisitor,
 } from "../src/odata/parser";
 import queryTestCases = require("./helpers/querytestcases");
@@ -116,7 +117,33 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
   });
 });
 
-describe("PostRequestParser (generated tests)", () => {
+describe("OData.PatchRequestParser:", () => {
+  it ("should parse the URI /Content('Yiehaa')", () => {
+    const parser = initPatchRequestParser();
+    const parsed = parser.parse({ relativeUrl: "/Content('Yiehaa')", body: `{ "Title": "[Title]" }` });
+    assert.deepEqual(parsed, {
+      entitySetName: "Content",
+      id: { type: "Edm.String", value: "Yiehaa" },
+      entity: {
+        Title: { type: "Edm.String", value: "[Title]" },
+      },
+    });
+  });
+
+  it ("should parse the URI /Content(42)", () => {
+    const parser = initPatchRequestParser();
+    const parsed = parser.parse({ relativeUrl: "/Content(42)", body: `{ "Title": "[Title]" }` });
+    assert.deepEqual(parsed, {
+      entitySetName: "Content",
+      id: { type: "Edm.Int32", value: 42 },
+      entity: {
+        Title: { type: "Edm.String", value: "[Title]" },
+      },
+    });
+  });
+});
+
+describe("OData.PostRequestParser (generated tests)", () => {
   queryTestCases.odataParserTests.forEach(
     (args, i) => spec(`#${i}`, args)
   );
@@ -132,7 +159,7 @@ describe("PostRequestParser (generated tests)", () => {
   }
 });
 
-describe("PostRequestParser:", () => {
+describe("OData.PostRequestParser:", () => {
   it("should parse string properties as { type: 'Edm.String', value: ... }", () => {
     const parsed = initPostRequestParser().parse({
       relativeUrl: "/Entities", body: `{ "String": "Lorem ipsum" }`,
@@ -150,7 +177,7 @@ describe("PostRequestParser:", () => {
   });
 });
 
-describe("GetRequestParser:", () => {
+describe("OData.GetRequestParser:", () => {
   it("should also return the correct entity set name", () => {
     let parser = initGetRequestParser();
 
@@ -196,7 +223,21 @@ describe("GetRequestParser:", () => {
     if (parsed.type === GetRequestType.ById)
       assert.strictEqual(parsed.entitySetName, "Posts");
   });
+
+  it ("should parse the URI /Content(42)", () => {
+    const parser = initGetRequestParser();
+    const parsed = parser.parse({ relativeUrl: "/Content(42)", body: `` });
+    assert.deepEqual(parsed, {
+      entitySetName: "Content",
+      id: { type: "Edm.Int32", value: 42 },
+      type: GetRequestType.ById,
+    });
+  });
 });
+
+function initPatchRequestParser(): IPostRequestParser {
+  return new PatchRequestParser();
+}
 
 function initPostRequestParser(): IPostRequestParser {
   return new PostRequestParser();

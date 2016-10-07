@@ -19,14 +19,14 @@ import { IEqExpression, IPropertyValue, INumericLiteral } from "../src/odata/fil
 describe("OData.PatchHandler:", () => {
 
   it("should send 204 No Content", done => {
-    const parser = null as any as IPatchRequestParser;
+    const parser = new PatchRequestParser();
     stub(parser, "parse").returns({ entitySetName: "Content", id: { type: "Edm.String", value: "[ID]" },
     entity: {
       Title: { type: "Edm.String", value: "[Content]" },
     } });
 
-    const entityDiffInitializer = null as any as IEntityInitializer;
-    stub(entityDiffInitializer, "patchFromParsed").returns([{
+    const entityInitializer = new EntityInitializer();
+    stub(entityInitializer, "patchFromParsed").returns([{
       type: "patch",
       entityType: "Content",
       identifier: { type: "Edm.String", value: "[ID]" },
@@ -114,7 +114,7 @@ describe("OData.GetHandler", () => {
       return {
         type: GetRequestType.ById,
         entitySetName: "Content",
-        id: 1,
+        id: { type: "Edm.Int32", value: 1 },
       };
     };
 
@@ -315,6 +315,12 @@ class PostRequestParser implements IPostRequestParser {
 }
 
 class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
+  public parse(request: IHttpRequest): any {
+    //
+  }
+}
+
+class PatchRequestParser implements IPatchRequestParser {
   public parse(request: IHttpRequest): any {
     //
   }

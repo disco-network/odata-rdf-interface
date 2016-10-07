@@ -50,7 +50,7 @@ export interface IParsedGetCollectionRequest<TFilterVisitor> {
 export interface IParsedGetByIdRequest {
   type: GetRequestType.ById;
   entitySetName: string;
-  id: number;
+  id: EdmLiteral;
 }
 
 export interface IODataParser {
@@ -61,6 +61,24 @@ export enum GetRequestType {
   ById, Collection
 }
 
+export class PatchRequestParser implements IPatchRequestParser {
+
+  private odataParser = new ODataParser();
+  private literalParser = new LiteralParser();
+
+  public parse(request: IHttpRequest): IParsedPatchRequest {
+    const ast = this.odataParser.parse(request.relativeUrl);
+    if (ast.resourcePath.navigation.type !== "collection-navigation")
+      throw new Error("PATCH request requires a key predicate");
+    const id = this.literalParser.parse(ast.resourcePath.navigation.path.keyPredicate.simpleKey);
+    return {
+      entitySetName: ast.resourcePath.entitySetName,
+      id: id,
+      entity: new BodyParser().parse(request),
+    };
+  }
+}
+
 export class PostRequestParser implements IPostRequestParser {
 
   private odataParser = new ODataParser();
@@ -69,12 +87,14 @@ export class PostRequestParser implements IPostRequestParser {
     let ast = this.odataParser.parse(request.relativeUrl);
     return {
       entitySetName: ast.resourcePath.entitySetName,
-      entity: this.parseBody(request.body),
+      entity: new BodyParser().parse(request),
     };
   }
+}
 
-  private parseBody(body: string) {
-    const json = JSON.parse(body);
+export class BodyParser {
+  public parse(request: IHttpRequest): ParsedEntity {
+    const json = JSON.parse(request.body);
     const parsed: ParsedEntity = {};
     for (const key of Object.keys(json)) {
       const value = json[key];
@@ -110,6 +130,7 @@ export interface IFilterVisitor extends IStringLiteralVisitor, INumericLiteralVi
 export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
 
   private odataParser = new ODataParser();
+  private literalParser = new LiteralParser();
 
   public parse(request: IHttpRequest): IParsedGetRequest<IFilterVisitor> {
     const ast = this.odataParser.parse(request.relativeUrl);
@@ -132,15 +153,11 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
     }
     else if (ast.resourcePath.navigation.type === "collection-navigation") {
       const rawId = ast.resourcePath.navigation.path.keyPredicate.simpleKey;
-      let id: number;
-      switch (rawId.type) {
-        case "decimalValue": id = parseInt(rawId.value, 10); break;
-        default: throw new Error(`Literal type ${rawId.type} is not supported as key predicate`);
-      }
+
       return {
         type: GetRequestType.ById,
         entitySetName: entitySetName,
-        id: id,
+        id: this.literalParser.parse(rawId),
       };
     }
     else throw new Error("unknown collection navigation type");
@@ -190,6 +207,20 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
       default:
         throw new Error("Unsupported member expression");
     }
+  }
+}
+
+export class LiteralParser {
+  public parse(rawId): EdmLiteral {
+      switch (rawId.type) {
+        case "decimalValue":
+          /* @todo throw when NaN */
+          return { type: "Edm.Int32", value: parseInt(rawId.value, 10) };
+        case "string":
+          return { type: "Edm.String", value: rawId.value };
+        default:
+          throw new Error(`${rawId.type} is not a supported type for a key.`);
+      }
   }
 }
 
