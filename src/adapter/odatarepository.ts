@@ -69,46 +69,9 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
           });
           break;
         case "insert":
-          /* @todo @important what about inverse properties??? */
-          const keyValuePairs: { property: string, value: ISparqlLiteral }[] = [];
-          let errored = false;
-          for (const property of Object.keys(op.value)) {
-            const value = op.value[property];
-            switch (value.type) {
-              case "Edm.String":
-                if (value.value !== null)
-                  keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
-                break;
-              case "Edm.Int32":
-                if (value.value !== null)
-                  keyValuePairs.push({ property: property, value: new SparqlNumber(value.value.toString()) });
-                break;
-              case "Edm.Guid":
-                if (value.value !== null)
-                  keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
-                break;
-              case "null":
-                break;
-              case "ref":
-                const resultForValue = batchResults[value.resultIndex].result();
-                if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
-                  /* @todo do we need conversion logic here? */
-                  keyValuePairs.push({ property: property, value: new SparqlUri(resultForValue.uris[0]) });
-                }
-                else {
-                  batchResults.push(results.Result.error("referenced result is not single-valued"));
-                  errored = true;
-                  break;
-                }
-                break;
-              default:
-                getNever(value, `${value["type"]} is not a valid type for the property ${property}.`);
-            }
-          }
-
-          if (errored === true) return cb(null, batchResults);
-
-          this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
+          try {
+            const keyValuePairs = this.toSparqlAssignmentArray(op.value, batchResults);
+            this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
             keyValuePairs, () => {
               this.getEntityByUri(schema.getEntityType(op.entityType), op.identifier, (res, m) => {
                 batchResults.push(this.translateResponse(res, m, (result, model) => ({
@@ -117,7 +80,13 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
                 })));
                 cb(null, batchResults);
               });
-            });
+          });
+          }
+          catch (e) {
+            batchResults.push(results.Result.error(e));
+            cb(null, batchResults);
+            break;
+          }
         break;
       case "patch":
         throw new Error(`PATCH not implemented`);
@@ -127,17 +96,6 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     }, (err, batchResults) => {
       cbResults(results.Result.success(batchResults));
     });
-
-    function tryCatch<T extends Function>(fn: T, catchFn: (e) => void) {
-      return function () {
-        try {
-          return fn.apply(this, arguments);
-        }
-        catch (e) {
-          catchFn(e);
-        }
-      } as any as T;
-    }
   }
 
   public eqExpressionFromKeyValue = (pair: { key: string; value: EdmLiteral }): IEqExpression<IMinimalVisitor> => {
@@ -145,6 +103,47 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
       this.propertyExpressionFromName(pair.key),
       this.primitiveLiteralExpressionFromValue(pair.value)
     );
+  }
+
+  public toSparqlAssignmentArray(odata: base.BatchEntity, batchResults: results.AnyResult[]) {
+    const assignments: { property: string, value: ISparqlLiteral }[] = [];
+    for (const property of Object.keys(odata)) {
+      const value = odata[property];
+      const sparqlValue = this.edmOrRefToSparql(value, batchResults);
+      if (sparqlValue !== null)
+        assignments.push({ property: property, value: sparqlValue });
+    }
+    return assignments;
+  }
+
+  public edmOrRefToSparql(value: EdmLiteral | base.IBatchReference, batchResults: results.AnyResult[]) {
+    if (value.type !== "ref") {
+      return this.edmLiteralToSparqlLiteral(value);
+    }
+    else {
+      const resultForValue = batchResults[value.resultIndex].result();
+      if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
+        /* @todo do we need conversion logic here? */
+        return new SparqlUri(resultForValue.uris[0]);
+      }
+      else {
+        throw new Error(`Referenced result is not single-valued.`);
+      }
+    }
+  }
+
+  public edmLiteralToSparqlLiteral(value: EdmLiteral): ISparqlLiteral | null {
+    switch (value.type) {
+      case "Edm.String":
+      case "Edm.Guid":
+        return new SparqlString(value.value);
+      case "Edm.Int32":
+        return new SparqlNumber(value.value.toString());
+      case "null":
+        return null;
+      default:
+        return getNever(value, `Unsupported EDM type ${value!.type}`);
+    }
   }
 
   public primitiveLiteralExpressionFromValue(value: EdmLiteral):
@@ -179,14 +178,6 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
                      cb: (result: results.Result<any[], any>) => void) {
     this.runGet(entityType, expandTree, filterExpression,
       (res, model) => cb(this.translateResponse(res, model, this.translateResponseToOData)));
-  }
-
-  private isGetOp(op: base.IOperation): op is base.IGetOperation {
-    return op.type === "get";
-  }
-
-  private isInsertOp(op: base.IOperation): op is base.IInsertOperation {
-    return op.type === "insert";
   }
 
   private getEntityByUri(entityType: EntityType, uri: string,
