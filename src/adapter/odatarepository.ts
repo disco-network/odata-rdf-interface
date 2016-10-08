@@ -22,7 +22,6 @@ import {
   SparqlString, SparqlNumber, SparqlUri, SparqlNamespacedUri,
 } from "../sparql/querystringbuilder";
 
-import postQueries = require("../adapter/postquery");
 import translators = require("../adapter/filtertranslators");
 import { IEqualsUriExpression, IEqualsUriExpressionVisitor } from "../adapter/filtertranslators";
 import filterPatterns = require("../adapter/filterpatterns");
@@ -46,83 +45,99 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
-              private postQueryStringBuilder: postQueries.IQueryStringBuilder,
               private insertQueryStringBuilder: IInsertQueryStringBuilder) {}
 
   public batch(ops: ReadonlyArray<base.IOperation>, schema: Schema, cbResults: (results: results.AnyResult) => void) {
     async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
-      if (this.isGetOp(op)) {
-        const entityType = schema.getEntityType(op.entityType);
-        const conditions = Object.keys(op.pattern).map(compose(
-            (key: string) => ({ key: key, value: op.pattern[key] }),
-            this.eqExpressionFromKeyValue));
-        const firstCondition = conditions.slice(0, 1)[0];
-        const restConditions = conditions.slice(1);
-        const filterExpression = restConditions.reduce<IValue<IMinimalVisitor>>((reduced, condition) =>
-          new AndExpression(reduced, condition), firstCondition);
+      switch (op.type) {
+        case "get":
+          const entityType = schema.getEntityType(op.entityType);
+          const conditions = Object.keys(op.pattern).map(compose(
+              (key: string) => ({ key: key, value: op.pattern[key] }),
+              this.eqExpressionFromKeyValue));
+          const firstCondition = conditions.slice(0, 1)[0];
+          const restConditions = conditions.slice(1);
+          const filterExpression = restConditions.reduce<IValue<IMinimalVisitor>>((reduced, condition) =>
+            new AndExpression(reduced, condition), firstCondition);
 
-        this.runGet(entityType, {}, filterExpression, (res, m) => {
-          batchResults.push(this.translateResponse(res, m, (result, model) => ({
-            odata: this.translateResponseToOData(result, model),
-            uris: this.translateResonseToEntityUris(result, model),
-          })));
-          cb(null, batchResults);
-        });
-      }
-      else if (this.isInsertOp(op)) {
-        /* @todo @important what about inverse properties??? */
-        const keyValuePairs: { property: string, value: ISparqlLiteral }[] = [];
-        let errored = false;
-        for (const property of Object.keys(op.value)) {
-          const value = op.value[property];
-          switch (value.type) {
-            case "Edm.String":
-              if (value.value !== null)
-                keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
-              break;
-            case "Edm.Int32":
-              if (value.value !== null)
-                keyValuePairs.push({ property: property, value: new SparqlNumber(value.value.toString()) });
-              break;
-            case "Edm.Guid":
-              if (value.value !== null)
-                keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
-              break;
-            case "null":
-              break;
-            case "ref":
-              const resultForValue = batchResults[value.resultIndex].result();
-              if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
-                /* @todo do we need conversion logic here? */
-                keyValuePairs.push({ property: property, value: new SparqlUri(resultForValue.uris[0]) });
-              }
-              else {
-                batchResults.push(results.Result.error("referenced result is not single-valued"));
-                errored = true;
-                break;
-              }
-              break;
-            default:
-              getNever(value, `${value["type"]} is not a valid type for the property ${property}.`);
-          }
-        }
-
-        if (errored === true) return cb(null, batchResults);
-
-        this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
-          keyValuePairs, () => {
-            this.getEntityByUri(schema.getEntityType(op.entityType), op.identifier, (res, m) => {
-              batchResults.push(this.translateResponse(res, m, (result, model) => ({
-                odata: this.translateResponseToOData(result, model),
-                uris: this.translateResonseToEntityUris(result, model),
-              })));
-              cb(null, batchResults);
-            });
+          this.runGet(entityType, {}, filterExpression, (res, m) => {
+            batchResults.push(this.translateResponse(res, m, (result, model) => ({
+              odata: this.translateResponseToOData(result, model),
+              uris: this.translateResonseToEntityUris(result, model),
+            })));
+            cb(null, batchResults);
           });
+          break;
+        case "insert":
+          /* @todo @important what about inverse properties??? */
+          const keyValuePairs: { property: string, value: ISparqlLiteral }[] = [];
+          let errored = false;
+          for (const property of Object.keys(op.value)) {
+            const value = op.value[property];
+            switch (value.type) {
+              case "Edm.String":
+                if (value.value !== null)
+                  keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
+                break;
+              case "Edm.Int32":
+                if (value.value !== null)
+                  keyValuePairs.push({ property: property, value: new SparqlNumber(value.value.toString()) });
+                break;
+              case "Edm.Guid":
+                if (value.value !== null)
+                  keyValuePairs.push({ property: property, value: new SparqlString(value.value) });
+                break;
+              case "null":
+                break;
+              case "ref":
+                const resultForValue = batchResults[value.resultIndex].result();
+                if (resultForValue && resultForValue.uris && resultForValue.uris.length === 1) {
+                  /* @todo do we need conversion logic here? */
+                  keyValuePairs.push({ property: property, value: new SparqlUri(resultForValue.uris[0]) });
+                }
+                else {
+                  batchResults.push(results.Result.error("referenced result is not single-valued"));
+                  errored = true;
+                  break;
+                }
+                break;
+              default:
+                getNever(value, `${value["type"]} is not a valid type for the property ${property}.`);
+            }
+          }
+
+          if (errored === true) return cb(null, batchResults);
+
+          this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
+            keyValuePairs, () => {
+              this.getEntityByUri(schema.getEntityType(op.entityType), op.identifier, (res, m) => {
+                batchResults.push(this.translateResponse(res, m, (result, model) => ({
+                  odata: this.translateResponseToOData(result, model),
+                  uris: this.translateResonseToEntityUris(result, model),
+                })));
+                cb(null, batchResults);
+              });
+            });
+        break;
+      case "patch":
+        throw new Error(`PATCH not implemented`);
+      default:
+        getNever(op, `Unexpected operation type ${op!.type}`);
       }
     }, (err, batchResults) => {
       cbResults(results.Result.success(batchResults));
     });
+
+    function tryCatch<T extends Function>(fn: T, catchFn: (e) => void) {
+      return function () {
+        try {
+          return fn.apply(this, arguments);
+        }
+        catch (e) {
+          catchFn(e);
+        }
+      } as any as T;
+    }
   }
 
   public eqExpressionFromKeyValue = (pair: { key: string; value: EdmLiteral }): IEqExpression<IMinimalVisitor> => {
@@ -164,13 +179,6 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
                      cb: (result: results.Result<any[], any>) => void) {
     this.runGet(entityType, expandTree, filterExpression,
       (res, model) => cb(this.translateResponse(res, model, this.translateResponseToOData)));
-  }
-
-  /* @deprecated */
-  public insertEntity(entity: any, type: EntityType, cb: (result: results.AnyResult) => void) {
-    this.sparqlProvider.query(this.postQueryStringBuilder.build(entity, type), result => {
-      cb(result.process(res => "ok", err => ({ message: "sparql error", error: err })));
-    });
   }
 
   private isGetOp(op: base.IOperation): op is base.IGetOperation {

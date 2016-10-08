@@ -6,7 +6,6 @@ import results = require("../result");
 export interface IRepository<TVisitor> {
   getEntities(entityType: schema.EntityType, expandTree: any, filterTree: IValue<TVisitor> | undefined,
               cb: (result: results.Result<any[], any>) => void): void;
-  /* @deprecated */ insertEntity(entity: any, type: schema.EntityType, cb: (result: results.AnyResult) => void): void;
   batch(ops: ReadonlyArray<IOperation>, schema: schema.Schema, cb: (results: results.AnyResult) => void);
 }
 

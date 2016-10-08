@@ -1,20 +1,20 @@
 import { assert, assertEx, match } from "../src/assert";
 import results = require("../src/result");
 import schema = require("../src/odata/schema");
-import postQueries = require("../src/adapter/postquery");
 import {
   ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor,
 } from "../src/adapter/odatarepository";
+import {
+  LiteralValuedEntity, OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand, BatchEntity,
+} from "../src/odata/repository";
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
 import {
-  IInsertQueryStringBuilder, IPrefix, ISparqlLiteral, SparqlNamespacedUri } from "../src/sparql/querystringbuilder";
+  IInsertQueryStringBuilder, IPrefix, ISparqlLiteral, PropertyDescription } from "../src/sparql/querystringbuilder";
 
 describe("Adapter.ODataRepository:", () => {
   it("should insert an entity called 'post1' with Id = '1'", done => {
     const sparql = "INSERT {SOMETHING}";
     let queryModel: IQueryAdapterModel<{}>;
-
-    const myPostQueryStringBuilder = new PostQueryStringBuilder();
 
     const mySparqlProvider = new SparqlProvider();
     let sparqlQueryCount = 0;
@@ -48,7 +48,7 @@ describe("Adapter.ODataRepository:", () => {
       return "SELECT {SOMETHING}";
     };
 
-    const odataRepository = create(mySparqlProvider, getStringProducer, myPostQueryStringBuilder,
+    const odataRepository = create(mySparqlProvider, getStringProducer,
                                    insertQueryStringBuilder);
     odataRepository.batch([{
       type: "insert",
@@ -72,9 +72,7 @@ describe("Adapter.ODataRepository:", () => {
   xit("should insert an entity referencing to Post #1", done => {
     const sparql = "INSERT {SOMETHING}";
 
-    let myPostQueryStringBuilder = new PostQueryStringBuilder();
-
-    let mySparqlProvider = new SparqlProvider();
+    const mySparqlProvider = new SparqlProvider();
     let sparqlQueryCount = 0;
     mySparqlProvider.query = (query, cb) => {
       switch (sparqlQueryCount) {
@@ -95,7 +93,7 @@ describe("Adapter.ODataRepository:", () => {
       ++sparqlQueryCount;
     };
 
-    let insertQueryStringBuilder = new InsertQueryStringBuilder();
+    const insertQueryStringBuilder = new InsertQueryStringBuilder();
     insertQueryStringBuilder.insertAsSparql = (prefixes, uri, rdfType, properties) => {
       assert.strictEqual(uri, "post10");
       assertEx.deepEqual(properties, [
@@ -104,7 +102,7 @@ describe("Adapter.ODataRepository:", () => {
       return "INSERT {SOMETHING}";
     };
 
-    let odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(), myPostQueryStringBuilder,
+    const odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(),
                                  insertQueryStringBuilder);
     odataRepository.batch([{
       type: "insert",
@@ -120,13 +118,65 @@ describe("Adapter.ODataRepository:", () => {
       done();
     });
   });
+
+  it ("should execute a basic 'patch'", done => {
+    const sparql =
+    `DELETE { <x> disco:title ?x0 } INSERT { <x> disco:title 'new' } WHERE { <x> disco:id '1' . <x> disco:title ?x0 }`;
+
+    const sparqlProvider = new SparqlProvider();
+    let queryCount = 0;
+    sparqlProvider.query = (query, cb) => {
+      switch (queryCount) {
+        case 0:
+          assert.strictEqual(query, sparql);
+          cb(results.Result.success(undefined));
+          break;
+        default:
+          assert.strictEqual("queryCount", "valid");
+      }
+    };
+
+    const queryStringBuilder = new InsertQueryStringBuilder();
+    queryStringBuilder.updateAsSparql = (prefixes, uri, obsoleteProperties, newProperties, pattern) => {
+      assert.strictEqual(uri, "x");
+      assertEx.deepEqual(obsoleteProperties,
+        [{ rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "?x0") }]);
+      assertEx.deepEqual(newProperties,
+        [{ rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "'new'") }]);
+      assertEx.deepEqual(pattern,
+        [{ rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'1'") },
+          { rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "?x0") }]);
+      return sparql;
+    };
+
+    const repo = create(sparqlProvider, new GetQueryStringBuilder(), queryStringBuilder);
+
+    const pattern = { Id: { type: "Edm.Int32", value: 1 } } as
+      LiteralValuedEntity as LiteralValuedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+
+    const diff = { Title: { type: "Edm.String", value: "new" } } as
+      LiteralValuedEntity as LiteralValuedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+    try {
+      repo.batch([{
+        type: "patch",
+        entityType: "Content",
+        pattern: pattern,
+        diff: diff,
+      }], new schema.Schema(), () => {
+        assert.strictEqual(queryCount, 1);
+        done();
+      });
+    }
+    catch (e) {
+      done(e);
+    }
+  });
 });
 
 function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
                                            getQueryStringBuilder: IGetQueryStringBuilder<T>,
-                                           postQueryStringBuilder: postQueries.IQueryStringBuilder,
                                            insertQueryStringBuilder: IInsertQueryStringBuilder) {
-  return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder, postQueryStringBuilder,
+  return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder,
                                 insertQueryStringBuilder);
 }
 
@@ -144,7 +194,12 @@ class GetQueryStringBuilder<T> implements IGetQueryStringBuilder<T> {
 
 class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
   public insertAsSparql(prefixes: IPrefix[], uri: string, rdfType: ISparqlLiteral,
-                        properties: { rdfProperty: string, value: ISparqlLiteral }[]): any {
+                        properties: PropertyDescription[]): any {
+    //
+  }
+  public updateAsSparql(prefixes: IPrefix[], uri: string,
+                        obsoleteProperties: PropertyDescription[], newProperties: PropertyDescription[],
+                        pattern: PropertyDescription[]): any {
     //
   }
 }

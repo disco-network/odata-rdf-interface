@@ -4,7 +4,6 @@ import * as propertyTreeConfig from "./propertytree";
 import * as sparqlBuilderConfig from "../sparql/querystringbuilder";
 import { FilterExpressionFactory, IVisitor } from "./filters";
 
-import * as postQueries from "../../adapter/postquery";
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 import {
   InsertQueryStringBuilder as BaseInsertQueryStringBuilder,
@@ -13,7 +12,7 @@ import { PrefixBuilder } from "../sparql/querystringbuilder";
 
 export class ODataRepository extends base.ODataRepository<IVisitor> {
   constructor(sparqlProvider: ISparqlProvider, graphUri: string) {
-    super(sparqlProvider, new GetQueryStringBuilder(), new PostQueryStringBuilder(),
+    super(sparqlProvider, new GetQueryStringBuilder(),
           new InsertQueryStringBuilder(graphUri));
   }
 }
@@ -29,11 +28,5 @@ export class GetQueryStringBuilder extends base.GetQueryStringBuilder<IVisitor> 
 export class InsertQueryStringBuilder extends BaseInsertQueryStringBuilder {
   constructor(graphUri: string) {
     super(new PrefixBuilder(), graphUri);
-  }
-}
-
-export class PostQueryStringBuilder extends postQueries.QueryStringBuilder {
-  constructor() {
-    super();
   }
 }
