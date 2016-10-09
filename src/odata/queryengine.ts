@@ -1,5 +1,5 @@
 import {
-  IGetRequestParser, IPostRequestParser,
+  IGetRequestParser, IPostRequestParser, IPatchRequestParser,
   GetRequestType, EqExpression, PropertyValue, NumericLiteral,
 } from "../odata/parser";
 import { IEqExpressionVisitor, IPropertyValueVisitor, INumericLiteralVisitor } from "../odata/filters/expressions";
@@ -7,7 +7,7 @@ import entityInitializer = require("../odata/entityinitializer_base");
 import { BadBodyError } from "../odata/entityinitializer";
 import { IRepository }  from "../odata/repository";
 import { Schema } from "../odata/schema";
-import { EdmLiteral, EdmConverter } from "../odata/edm";
+import { EdmConverter } from "../odata/edm";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
 
 export interface IGetHandler extends IHttpRequestHandler {
@@ -102,8 +102,8 @@ export class PostHandler<T> implements IPostHandler {
 
   public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
     /* @todo verify AST */
-    let parsed = this.parser.parse(request);
-    let type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
+    const parsed = this.parser.parse(request);
+    const type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     try {
       const entity = this.entityInitializer.insertionFromParsed(parsed.entity, type);
       this.repository.batch(entity, this.schema, result => {
@@ -122,11 +122,37 @@ export class PostHandler<T> implements IPostHandler {
     }
     catch (e) {
       if (e instanceof BadBodyError) {
-        responseSender.sendStatusCode(400, "Unmet Property Constraint (Mandatory)");
+        responseSender.sendStatusCode(400, "Bad Request");
         responseSender.finishResponse();
       }
       else throw e;
     }
+  }
+}
+
+export class PatchHandler<T> implements IPatchHandler {
+
+  constructor(private parser: IPatchRequestParser, private schema: Schema,
+              private entityInitializer: entityInitializer.IEntityInitializer,
+              private repository: IRepository<T>) {}
+
+  public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
+    const parsed = this.parser.parse(request);
+    const type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
+
+    const batch = this.entityInitializer.patchFromParsed(parsed.entity, type, { Id: parsed.id });
+    this.repository.batch(batch, this.schema, answer => {
+      answer.process(
+        result => {
+          responseSender.sendStatusCode(201, "No Content");
+          responseSender.finishResponse();
+        },
+        err => {
+          responseSender.sendStatusCode(500, "Internal Server Error");
+          responseSender.finishResponse();
+        }
+      );
+    });
   }
 }
 

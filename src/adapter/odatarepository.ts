@@ -4,6 +4,7 @@ import { LambdaVariableScope } from "../odata/filters/filters";
 import {
   IValue, IEqExpression, IStringLiteral, INumericLiteral, IPropertyValue,
   IAndExpressionVisitor, IEqExpressionVisitor, IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor,
+  INullVisitor,
 } from "../odata/filters/expressions";
 import {
   EqExpression, AndExpression, StringLiteral, NumericLiteral, PropertyValue,
@@ -17,15 +18,17 @@ import * as async from "async";
 import sparqlProvider = require("../sparql/sparql_provider_base");
 import gpatterns = require("../sparql/graphpatterns");
 import {
-  ISelectQueryStringBuilder, IInsertQueryStringBuilder,
+  ISelectQueryStringBuilder, IInsertQueryStringBuilder, IPrefixBuilder, IGraphPatternStringBuilder,
   ISparqlLiteral,
-  SparqlString, SparqlNumber, SparqlUri, SparqlNamespacedUri,
+  SparqlString, SparqlNumber, SparqlUri, SparqlNamespacedUri, SparqlVariable,
 } from "../sparql/querystringbuilder";
 
 import translators = require("../adapter/filtertranslators");
 import { IEqualsUriExpression, IEqualsUriExpressionVisitor } from "../adapter/filtertranslators";
 import filterPatterns = require("../adapter/filterpatterns");
+import { FilterFromPatternProducer, IMatchPattern } from "../odata/filters/matchpattern";
 import expandTreePatterns = require("../adapter/expandtree");
+import { PropertySelectionTree } from "../odata/propertyselector";
 import mappings = require("../adapter/mappings");
 import { ForeignKeyPropertyResolver } from "../odata/foreignkeyproperties";
 
@@ -38,14 +41,15 @@ const prefixes = [
 ];
 
 export interface IMinimalVisitor extends IAndExpressionVisitor, IEqExpressionVisitor,
-  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor, IEqualsUriExpressionVisitor {}
+  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor, IEqualsUriExpressionVisitor, INullVisitor {}
 
 export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   implements base.IRepository<TExpressionVisitor> {
 
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
-              private insertQueryStringBuilder: IInsertQueryStringBuilder) {}
+              private insertQueryStringBuilder: IInsertQueryStringBuilder,
+              private patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory) {}
 
   public batch(ops: ReadonlyArray<base.IOperation>, schema: Schema, cbResults: (results: results.AnyResult) => void) {
     async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
@@ -85,11 +89,23 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
           catch (e) {
             batchResults.push(results.Result.error(e));
             cb(null, batchResults);
-            break;
           }
         break;
       case "patch":
-        throw new Error(`PATCH not implemented`);
+        try {
+          const diffAssignments = this.toSparqlAssignmentArray(op.diff, batchResults);
+          const patternAssignments = Object.keys(op.pattern).map(prop => ({ property: prop, value: op.pattern[prop] }));
+          this.runUpdate(schema.getEntityType(op.entityType), patternAssignments, diffAssignments, () => {
+            batchResults.push(results.Result.success(null));
+            cb(null, batchResults);
+          });
+          break;
+        }
+        catch (e) {
+          batchResults.push(results.Result.error(e));
+          cb(null, batchResults);
+        }
+        break;
       default:
         getNever(op, `Unexpected operation type ${op!.type}`);
       }
@@ -198,10 +214,21 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     });
   }
 
+  private runUpdate(entityType: EntityType, pattern: { property: string; value: EdmLiteral }[],
+                    updatedValues: { property: string; value: ISparqlLiteral }[],
+                    cb: (res: results.AnyResult) => void) {
+
+    const query = this.patchQueryStringBuilderFactory.create(updatedValues, pattern, entityType).produceSparql();
+
+    this.sparqlProvider.query(query, response => {
+      cb(response);
+    });
+  }
+
   private runInsert(entityType: EntityType, uri: string, keyValuePairs: { property: string; value: ISparqlLiteral }[],
                     cb: (res: results.AnyResult) => void) {
 
-    const sparqlEntity = keyValuePairs.map(rdfRepresentationFromKeyValuePair);
+    const sparqlEntity = keyValuePairs.map(this.rdfRepresentationFromKeyValuePair(entityType));
     const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri,
       new SparqlNamespacedUri(entityType.getNamespacedUri()), sparqlEntity);
 
@@ -211,8 +238,10 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         error => ({ success: false, error: error })
       ));
     });
+  }
 
-    function rdfRepresentationFromKeyValuePair(pair: { property: string; value: ISparqlLiteral }) {
+  private rdfRepresentationFromKeyValuePair(entityType: EntityType) {
+    return (pair: { property: string; value: ISparqlLiteral }) => {
       const property = entityType.getProperty(pair.property);
       if (property.hasDirectRdfRepresentation() === true) {
         return {
@@ -228,7 +257,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
           value: pair.value,
         };
       }
-    }
+    };
   }
 
   private translateResponse<T>(response: results.AnyResult,
@@ -478,6 +507,175 @@ export interface IGetQueryStringBuilder<TExpressionVisitor> {
   fromQueryAdapterModel(model: IQueryAdapterModel<TExpressionVisitor>);
 }
 
+export interface IUpdatedValue {
+  /** @assumption elementary property */
+  property: string;
+  value: ISparqlLiteral;
+}
+
+export interface IPatternValue {
+  property: string;
+  value: ISparqlLiteral;
+}
+
+export interface IPatchQueryStringBuilderFactory {
+  create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType): IPatchQueryStringBuilder;
+}
+
+export interface IPatchQueryStringBuilder {
+  produceSparql(): string;
+}
+
+export class PatchQueryStringBuilderFactory {
+
+  constructor(private prefixProducer: IPrefixBuilder,
+              private expandTreeGraphPatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
+              private graphPatternStringProducer: IGraphPatternStringBuilder,
+              private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>,
+              private filterFromPatternProducer: FilterFromPatternProducer) {}
+
+  public create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType) {
+    return new PatchQueryStringBuilder(updatedValues, pattern, entityType,
+                                       this.prefixProducer, this.expandTreeGraphPatternStrategy,
+                                       this.graphPatternStringProducer, this.filterExpressionFactory,
+                                       this.filterFromPatternProducer);
+  }
+}
+
+export class PatchQueryStringBuilder {
+
+  private mapping: mappings.StructuredSparqlVariableMapping;
+
+  constructor(private updatedValues: IUpdatedValue[], private pattern: IMatchPattern,
+              private entityType: EntityType,
+              private prefixProducer: IPrefixBuilder,
+              private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
+              private graphPatternStringProducer: IGraphPatternStringBuilder,
+              private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>,
+              private filterFromPatternProducer: FilterFromPatternProducer) {
+    const vargen = new mappings.SparqlVariableGenerator();
+    this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
+  }
+
+  public produceSparql() {
+    let query = "";
+
+    appendToQuery(this.producePrefixClause());
+    appendToQuery(this.produceDeleteClause());
+    appendToQuery(this.produceInsertClause());
+    appendToQuery(this.produceWhereClause());
+
+    return query;
+
+    function appendToQuery(str: string) {
+      if (str !== "" && query !== "") {
+        query += " ";
+      }
+      query += str;
+    }
+  }
+
+  public producePrefixClause() {
+    return this.prefixProducer.prefixesAsSparql(prefixes);
+  }
+
+  public produceDeleteClause() {
+    return `DELETE { ${ this.produceTriplesToDelete() } }`;
+  }
+
+  public produceInsertClause() {
+    return `INSERT { ${ this.produceTriplesToInsert() } }`;
+  }
+
+  public produceWhereClause() {
+    return `WHERE { ${ this.produceGraphPatternString() } }`;
+  }
+
+  private produceGraphPatternString() {
+    return this.graphPatternStringProducer
+      .buildGraphPatternStringAmendFilterExpression(this.produceGraphPattern(), this.produceSparqlFilterExpression());
+  }
+
+  private produceSparqlFilterExpression() {
+    const context: translators.IFilterContext = {
+      scope: {
+        entityType: this.entityType,
+        lambdaVariableScope: new LambdaVariableScope(),
+      },
+      mapping: {
+        scope: new mappings.ScopedMapping(
+          new mappings.Mapping(new mappings.PropertyMapping(this.entityType), this.mapping)),
+      },
+    };
+    const filterTranslator = this.filterFromPatternProducer.produceFromPattern(this.pattern, this.entityType);
+    return this.filterExpressionFactory.create(filterTranslator, context);
+  }
+
+  private produceGraphPattern() {
+    const selectionTree: PropertySelectionTree = {};
+
+    for (const updatedValue of this.updatedValues) {
+      selectionTree[updatedValue.property] = {};
+    }
+
+    return this.expandTreePatternStrategy.createFromSelectionTree(this.entityType, this.mapping, selectionTree);
+  }
+
+  private produceTriplesToDelete() {
+    return this.triplesAsSparql(new SparqlVariable(this.mapping.getVariableWithoutSyntax()),
+                                this.updatedValues.map(updatedValue => ({
+      rdfProperty: this.producePropertyLiteral(updatedValue),
+      inverse: this.isPropertyInverse(updatedValue),
+      value: this.produceOldValueVariable(updatedValue),
+    })));
+  }
+
+  private produceTriplesToInsert() {
+    return this.triplesAsSparql(new SparqlVariable(this.mapping.getVariableWithoutSyntax()),
+                                this.updatedValues.map(updatedValue => ({
+      rdfProperty: this.producePropertyLiteral(updatedValue),
+      inverse: this.isPropertyInverse(updatedValue),
+      value: this.produceNewValueLiteral(updatedValue),
+    })));
+  }
+
+  private producePropertyLiteral(updatedValue: IUpdatedValue) {
+    const property = this.retrievePropertySchema(updatedValue.property);
+    return new SparqlNamespacedUri(property.getNamespacedUri());
+  }
+
+  private isPropertyInverse(updatedValue: IUpdatedValue) {
+    const property = this.retrievePropertySchema(updatedValue.property);
+    return property.hasDirectRdfRepresentation() === false;
+  }
+
+  private produceOldValueVariable(updatedValue: IUpdatedValue) {
+    const property = this.retrievePropertySchema(updatedValue.property);
+    return new SparqlVariable(this.mapping.getElementaryPropertyVariableWithoutSyntax(property.getName()));
+  }
+
+  private produceNewValueLiteral(updatedValue: IUpdatedValue) {
+    return updatedValue.value;
+  }
+
+  private retrievePropertySchema(property: string) {
+    return this.entityType.getProperty(property);
+  }
+
+  /* @todo see querystringbuilder.ts:insertQueryStringBuilder */
+  private triplesAsSparql(subject: ISparqlLiteral, properties: { rdfProperty: ISparqlLiteral, inverse: boolean,
+                                                                 value: ISparqlLiteral }[]): string {
+    return properties.map(sparqlFromProperty).map(str => str + " .").join(" ");
+
+    function sparqlFromProperty(p: { rdfProperty: ISparqlLiteral, inverse: boolean, value: ISparqlLiteral }) {
+      const base = subject.representAsSparql();
+      const property = p.rdfProperty.representAsSparql();
+      const value = p.value.representAsSparql();
+      return p.inverse ? `${value} ${property} ${base}` : `${base} ${property} ${value}`;
+    }
+  }
+}
+
 export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStringBuilder<TExpressionVisitor> {
 
   constructor(private filterExpressionFactory: translators.IExpressionTranslatorFactory<TExpressionVisitor>,
@@ -487,12 +685,12 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
   }
 
   public fromQueryAdapterModel(model: IQueryAdapterModel<TExpressionVisitor>) {
-    let expandGraphPattern = this.createExpandGraphPattern(model);
+    const expandGraphPattern = this.createExpandGraphPattern(model);
 
-    let filterExpression = this.createFilterExpression(model);
-    let filterGraphPattern = filterExpression && this.createFilterGraphPattern(model, filterExpression);
+    const filterExpression = this.createFilterExpression(model);
+    const filterGraphPattern = filterExpression && this.createFilterGraphPattern(model, filterExpression);
 
-    let graphPattern = new gpatterns.TreeGraphPattern(model.getMapping().variables.getVariable());
+    const graphPattern = new gpatterns.TreeGraphPattern(model.getMapping().variables.getVariable());
     graphPattern.newConjunctivePattern(expandGraphPattern);
     if (filterGraphPattern) graphPattern.merge(filterGraphPattern);
 
@@ -506,7 +704,7 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
 
   private createFilterGraphPattern(model: IQueryAdapterModel<TExpressionVisitor>,
                                    filterExpression: translators.IExpressionTranslator): gpatterns.TreeGraphPattern {
-    let filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
+    const filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
       filterExpression.getPropertyTree());
     return filterGraphPattern;
   }

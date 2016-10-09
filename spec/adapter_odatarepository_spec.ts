@@ -2,14 +2,16 @@ import { assert, assertEx, match } from "../src/assert";
 import results = require("../src/result");
 import schema = require("../src/odata/schema");
 import {
-  ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor,
+  ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor, IPatchQueryStringBuilderFactory,
 } from "../src/adapter/odatarepository";
 import {
-  LiteralValuedEntity, OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand, BatchEntity,
+  LiteralValuedEntity, OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand,
 } from "../src/odata/repository";
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
 import {
-  IInsertQueryStringBuilder, IPrefix, ISparqlLiteral, PropertyDescription } from "../src/sparql/querystringbuilder";
+  IInsertQueryStringBuilder, IPrefix, ISparqlLiteral, PropertyDescription,
+} from "../src/sparql/querystringbuilder";
+import { tryCatch } from "../src/controlflow";
 
 describe("Adapter.ODataRepository:", () => {
   it("should insert an entity called 'post1' with Id = '1'", done => {
@@ -49,7 +51,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     const odataRepository = create(mySparqlProvider, getStringProducer,
-                                   insertQueryStringBuilder);
+                                   insertQueryStringBuilder, {} as IPatchQueryStringBuilderFactory);
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",
@@ -103,7 +105,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     const odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(),
-                                 insertQueryStringBuilder);
+                                 insertQueryStringBuilder, {} as IPatchQueryStringBuilderFactory);
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",
@@ -126,7 +128,7 @@ describe("Adapter.ODataRepository:", () => {
     const sparqlProvider = new SparqlProvider();
     let queryCount = 0;
     sparqlProvider.query = (query, cb) => {
-      switch (queryCount) {
+      switch (queryCount++) {
         case 0:
           assert.strictEqual(query, sparql);
           cb(results.Result.success(undefined));
@@ -136,7 +138,7 @@ describe("Adapter.ODataRepository:", () => {
       }
     };
 
-    const queryStringBuilder = new InsertQueryStringBuilder();
+    /* @construction const queryStringBuilder = new PatchQueryStringBuilderFactory();
     queryStringBuilder.updateAsSparql = (prefixes, uri, obsoleteProperties, newProperties, pattern) => {
       assert.strictEqual(uri, "x");
       assertEx.deepEqual(obsoleteProperties,
@@ -147,9 +149,21 @@ describe("Adapter.ODataRepository:", () => {
         [{ rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'1'") },
           { rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "?x0") }]);
       return sparql;
+    };*/
+
+    const patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory = {
+      create: (updatedValues, pattern, entityType) => ({
+        produceSparql: tryCatch(() => {
+          assertEx.deepEqual(updatedValues, [match.is(v => {
+            return v.value.representAsSparql() === "'new'";
+          })]);
+          return "[QUERY]";
+        }, e => { done(e); done = () => null; }),
+      }),
     };
 
-    const repo = create(sparqlProvider, new GetQueryStringBuilder(), queryStringBuilder);
+    const repo = create(sparqlProvider, new GetQueryStringBuilder(), new InsertQueryStringBuilder(),
+                        patchQueryStringBuilderFactory);
 
     const pattern = { Id: { type: "Edm.Int32", value: 1 } } as
       LiteralValuedEntity as LiteralValuedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
@@ -162,10 +176,10 @@ describe("Adapter.ODataRepository:", () => {
         entityType: "Content",
         pattern: pattern,
         diff: diff,
-      }], new schema.Schema(), () => {
+      }], new schema.Schema(), tryCatch(() => {
         assert.strictEqual(queryCount, 1);
         done();
-      });
+      }, done));
     }
     catch (e) {
       done(e);
@@ -175,9 +189,10 @@ describe("Adapter.ODataRepository:", () => {
 
 function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
                                            getQueryStringBuilder: IGetQueryStringBuilder<T>,
-                                           insertQueryStringBuilder: IInsertQueryStringBuilder) {
+                                           insertQueryStringBuilder: IInsertQueryStringBuilder,
+                                           patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory) {
   return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder,
-                                insertQueryStringBuilder);
+                                insertQueryStringBuilder, patchQueryStringBuilderFactory);
 }
 
 class PostQueryStringBuilder /*implements postQueries.IQueryStringBuilder*/ {

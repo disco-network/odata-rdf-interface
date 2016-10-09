@@ -3,7 +3,7 @@ import { stub, match } from "sinon";
 
 import {
   GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder,
-  IPatchHandler,
+  PatchHandler,
  } from "../src/odata/queryengine";
 import {
   IPostRequestParser, IGetRequestParser, IPatchRequestParser, IFilterVisitor, GetRequestType,
@@ -36,9 +36,11 @@ describe("OData.PatchHandler:", () => {
     }]);
 
     const repository = new Repository<IFilterVisitor>();
-    stub(repository, "batch").callsArgWith(2, Result.success([Result.success({ odata: ["ok"] })]));
+    repository.batch = (ops, schema, cb) => {
+      cb(Result.success([Result.success({ odata: ["ok"] })]));
+    };
 
-    const engine = null as any as IPatchHandler;
+    const engine = new PatchHandler(parser, new Schema(), entityInitializer, repository);
     engine.query({ relativeUrl: "/Content", body: `{ "Title": "[Content]" }` },
       httpSenderThatShouldReceiveStatusCode(204, done, "No Content"));
   });

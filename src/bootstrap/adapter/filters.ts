@@ -13,6 +13,7 @@ import {
 } from "../../adapter/filters/propertyexpression";
 import {
   IFilterContext, IExpressionTranslator, IEqualsUriExpressionVisitor, EqualsUriExpressionVisitor,
+  IExpressionTranslatorFactory,
 } from "../../adapter/filtertranslators";
 
 export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorFactory {
@@ -23,23 +24,23 @@ export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorF
   }
 }
 
-export interface IVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
+export interface IMinimalVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
                        IParenthesesVisitor, IPropertyVisitor, IEqualsUriExpressionVisitor {}
 
-export const Visitor: ITypeofVisitor<IVisitor> = AssembledVisitor<IVisitor>(VisitorBase, [
+export const Visitor: ITypeofVisitor<IMinimalVisitor> = AssembledVisitor<IMinimalVisitor>(VisitorBase, [
   LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor, EqualsUriExpressionVisitor,
   generatePropertyVisitor(new AnyExpressionTranslatorFactory()),
 ]);
 
-export class FilterExpressionFactory {
+export class FilterExpressionTranslatorFactory implements IExpressionTranslatorFactory<IMinimalVisitor> {
 
-  private visitor?: IVisitor;
+  private visitor?: IMinimalVisitor;
 
-  public create(expression: IValue<IVisitor>, context: IFilterContext) {
+  public create(expression: IValue<IMinimalVisitor>, context: IFilterContext) {
     return this.lazyLoadVisitor(context).create(expression, context);
   }
 
-  private lazyLoadVisitor(context: IFilterContext): IVisitor {
+  private lazyLoadVisitor(context: IFilterContext): IMinimalVisitor {
     return this.visitor = this.visitor || new Visitor({ filterContext: context });
   }
 }

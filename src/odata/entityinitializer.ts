@@ -136,7 +136,7 @@ export class EntityInitializer implements base.IEntityInitializer {
   private assignParsedPropertiesCheckPropertyExistence(entity: Entity<EdmLiteral>, entityType: EntityType) {
     const ret: PropertyAssignments = {};
 
-    /* @construction create class to store entityType -> no redundant arguments */
+    /* @todo create class to store entityType -> no redundant arguments */
     this.forEachProperty(this.onlyExistingPropertiesOrThrow(entity, entityType), entityType, (property, value) => {
       const setter = this.resolver.resolveSetter(property, value);
       const setterValue = setter.value;

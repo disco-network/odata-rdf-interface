@@ -46,19 +46,25 @@ export class DirectPropertiesTreeStrategy {
  */
 export class ExpandTreeGraphPatternStrategy {
 
-  private directPropertiesStrategy: DirectPropertiesTreeStrategy;
   private propertySelector: IPropertySelector = new PropertySelector();
 
   constructor(private branchFactory: IBranchFactory<IBranchingArgs>,
               private argsFactory: PropertyBranchingArgsFactory) {
-    this.directPropertiesStrategy = new DirectPropertiesTreeStrategy(this.branchFactory, this.argsFactory);
   }
 
   public create(entityType: schema.EntityType, expandTree,
                 variableMapping: mappings.IStructuredSparqlVariableMapping) {
-    let tree = this.createTree(entityType, expandTree);
-    let result = new gpatterns.TreeGraphPattern(variableMapping.getVariable());
-    let mapping = new mappings.Mapping(
+    return this.createFromSelectionTree(entityType, variableMapping,
+                                        this.propertySelector.selectPropertiesForQuery(entityType, expandTree));
+  }
+
+  public createFromSelectionTree(entityType: schema.EntityType,
+                                 variableMapping: mappings.IStructuredSparqlVariableMapping,
+                                 selectionTree: PropertySelectionTree) {
+
+    const tree = this.createTreeFromSelectionTree(entityType, selectionTree);
+    const result = new gpatterns.TreeGraphPattern(variableMapping.getVariable());
+    const mapping = new mappings.Mapping(
       new mappings.PropertyMapping(entityType),
       variableMapping
     );

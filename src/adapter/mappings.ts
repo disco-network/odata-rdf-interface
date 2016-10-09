@@ -1,5 +1,6 @@
 import schema = require("../odata/schema");
 import { UniqueScopeIdentifier } from "../odata/filters/filters";
+import { VariableWithSyntax, VariableNameOnly } from "../sparql/querystringbuilder";
 
 declare class Map<Key, Value> {
   public set(key: Key, value: Value);
@@ -152,15 +153,29 @@ export class StructuredSparqlVariableMapping implements IStructuredSparqlVariabl
     return new StructuredSparqlVariableMapping(this.vargen.next(), this.vargen);
   }
 
-  public getVariable(): string {
-    return this.variableName;
+  /* @smell migrate to getVariableWithoutSyntax - no SPARQL abstraction leak */
+  public getVariable(): string & VariableWithSyntax {
+    return this.variableName as string & VariableWithSyntax;
+  }
+
+  public getVariableWithoutSyntax(): string & VariableNameOnly {
+    const withSyntax = this.getVariable();
+    return withSyntax.substr(1) as string & VariableNameOnly;
   }
 
   /**
    * Registers an elementary property in this mapping if it does not exist yet
    * and returns the SPARQL variable name.
    */
-  public getElementaryPropertyVariable(name: string): string {
+  public getElementaryPropertyVariable(name: string): string & VariableWithSyntax {
+    return this.elementaryProperties.getPropertyVariable(name);
+  }
+
+  /**
+   * Registers an elementary property in this mapping if it does not exist yet
+   * and returns the SPARQL variable name.
+   */
+  public getElementaryPropertyVariableWithoutSyntax(name: string): string & VariableNameOnly {
     return this.elementaryProperties.getPropertyVariable(name);
   }
 

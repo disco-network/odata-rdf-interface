@@ -236,9 +236,19 @@ export class SparqlNamespacedUri implements ISparqlLiteral {
 }
 
 export class SparqlVariable implements ISparqlLiteral {
-  constructor(private name: string) {}
+  constructor(private name: string & VariableNameOnly) {}
 
   public representAsSparql() {
     return `?${this.name}`;
   }
+
+  public getNameOnly() {
+    return this.name;
+  }
 }
+
+/** "?var" instead of "var" */
+export enum VariableWithSyntax {}
+
+/** "var" instead of "?var" */
+export enum VariableNameOnly {}
