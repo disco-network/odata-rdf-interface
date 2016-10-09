@@ -1,7 +1,7 @@
 import { LambdaVariableScope, ILambdaVariable } from "../../odata/filters/filters";
 import { ScopedPropertyTree } from "../../odata/filters/propertytree";
 import filterTranslators = require("../filtertranslators");
-import qsBuilder = require("../../bootstrap/sparql/querystringbuilder"); /* @smell, @todo */
+import qsBuilder = require("../../bootstrap/sparql/querystringproducer"); /* @smell, @todo */
 import filterPatterns = require("../filterpatterns");
 import schema = require("../../odata/schema");
 import { ForeignKeyPropertyResolver } from "../../odata/foreignkeyproperties";
@@ -68,7 +68,7 @@ export class AnyExpressionTranslator implements filterTranslators.IExpressionTra
   private buildFilterPatternString(innerFilterExpression: filterTranslators.IExpressionTranslator) {
     let filterPattern = this.filterPatternStrategy.createAnyExpressionPattern(this.filterContext,
       innerFilterExpression.getPropertyTree(), this.lambdaVariable, this.propertyPath);
-    let queryStringBuilder = new qsBuilder.GraphPatternStringBuilder();
+    let queryStringBuilder = new qsBuilder.GraphPatternStringProducer();
     return queryStringBuilder.buildGraphPatternStringAmendFilterExpression(filterPattern, innerFilterExpression);
   }
 

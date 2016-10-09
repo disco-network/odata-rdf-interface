@@ -37,6 +37,14 @@ describe("OData.PatchHandler:", () => {
 
     const repository = new Repository<IFilterVisitor>();
     repository.batch = (ops, schema, cb) => {
+      assert.deepEqual(ops, [{
+        diff: {
+          Title: { type: "Edm.String", value: "[Content]" },
+        },
+        entityType: "Content",
+        identifier: { type: "Edm.String", value: "[ID]" },
+        type: "patch",
+      }]);
       cb(Result.success([Result.success({ odata: ["ok"] })]));
     };
 

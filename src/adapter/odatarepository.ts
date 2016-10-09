@@ -18,16 +18,16 @@ import * as async from "async";
 import sparqlProvider = require("../sparql/sparql_provider_base");
 import gpatterns = require("../sparql/graphpatterns");
 import {
-  ISelectQueryStringBuilder, IInsertQueryStringBuilder, IPrefixBuilder, IGraphPatternStringBuilder,
+  ISelectQueryStringProducer, IInsertQueryStringProducer, IPrefixProducer, IGraphPatternStringProducer,
   ISparqlLiteral,
   SparqlString, SparqlNumber, SparqlUri, SparqlNamespacedUri, SparqlVariable,
-} from "../sparql/querystringbuilder";
+} from "../sparql/querystringproducer";
 
 import translators = require("../adapter/filtertranslators");
 import { IEqualsUriExpression, IEqualsUriExpressionVisitor } from "../adapter/filtertranslators";
 import filterPatterns = require("../adapter/filterpatterns");
 import { FilterFromPatternProducer, IMatchPattern } from "../odata/filters/matchpattern";
-import expandTreePatterns = require("../adapter/expandtree");
+import { IExpandTreeGraphPatternStrategy } from "../adapter/expandtree";
 import { PropertySelectionTree } from "../odata/propertyselector";
 import mappings = require("../adapter/mappings");
 import { ForeignKeyPropertyResolver } from "../odata/foreignkeyproperties";
@@ -48,7 +48,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
-              private insertQueryStringBuilder: IInsertQueryStringBuilder,
+              private insertQueryStringBuilder: IInsertQueryStringProducer,
               private patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory) {}
 
   public batch(ops: ReadonlyArray<base.IOperation>, schema: Schema, cbResults: (results: results.AnyResult) => void) {
@@ -528,9 +528,9 @@ export interface IPatchQueryStringBuilder {
 
 export class PatchQueryStringBuilderFactory {
 
-  constructor(private prefixProducer: IPrefixBuilder,
-              private expandTreeGraphPatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
-              private graphPatternStringProducer: IGraphPatternStringBuilder,
+  constructor(private prefixProducer: IPrefixProducer,
+              private expandTreeGraphPatternStrategy: IExpandTreeGraphPatternStrategy,
+              private graphPatternStringProducer: IGraphPatternStringProducer,
               private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>,
               private filterFromPatternProducer: FilterFromPatternProducer) {}
 
@@ -546,11 +546,12 @@ export class PatchQueryStringBuilder {
 
   private mapping: mappings.StructuredSparqlVariableMapping;
 
+  /* @smell */
   constructor(private updatedValues: IUpdatedValue[], private pattern: IMatchPattern,
               private entityType: EntityType,
-              private prefixProducer: IPrefixBuilder,
-              private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
-              private graphPatternStringProducer: IGraphPatternStringBuilder,
+              private prefixProducer: IPrefixProducer,
+              private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
+              private graphPatternStringProducer: IGraphPatternStringProducer,
               private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>,
               private filterFromPatternProducer: FilterFromPatternProducer) {
     const vargen = new mappings.SparqlVariableGenerator();
@@ -680,8 +681,8 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
 
   constructor(private filterExpressionFactory: translators.IExpressionTranslatorFactory<TExpressionVisitor>,
               private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
-              private expandTreePatternStrategy: expandTreePatterns.ExpandTreeGraphPatternStrategy,
-              private sparqlSelectBuilder: ISelectQueryStringBuilder) {
+              private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
+              private sparqlSelectBuilder: ISelectQueryStringProducer) {
   }
 
   public fromQueryAdapterModel(model: IQueryAdapterModel<TExpressionVisitor>) {

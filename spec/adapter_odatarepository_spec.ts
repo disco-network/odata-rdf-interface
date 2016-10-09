@@ -1,6 +1,6 @@
 import { assert, assertEx, match } from "../src/assert";
 import results = require("../src/result");
-import schema = require("../src/odata/schema");
+import { Schema, EntityType } from "../src/odata/schema";
 import {
   ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor, IPatchQueryStringBuilderFactory,
 } from "../src/adapter/odatarepository";
@@ -9,8 +9,8 @@ import {
 } from "../src/odata/repository";
 import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
 import {
-  IInsertQueryStringBuilder, IPrefix, ISparqlLiteral, PropertyDescription,
-} from "../src/sparql/querystringbuilder";
+  IInsertQueryStringProducer, IPrefix, ISparqlLiteral, PropertyDescription,
+} from "../src/sparql/querystringproducer";
 import { tryCatch } from "../src/controlflow";
 
 describe("Adapter.ODataRepository:", () => {
@@ -59,7 +59,7 @@ describe("Adapter.ODataRepository:", () => {
       value: {
         Id: { type: "Edm.String", value: "10" },
       },
-    }], new schema.Schema(), results => {
+    }], new Schema(), results => {
       assert.strictEqual(results.success(), true);
       assert.deepEqual(results.result()[0].result().odata, [{
         Id: "new",
@@ -113,7 +113,7 @@ describe("Adapter.ODataRepository:", () => {
       value: {
         Id: { type: "Edm.String", value: "10" },
       },
-    }], new schema.Schema(), results => {
+    }], new Schema(), results => {
       assert.strictEqual(results.success(), true);
       assert.strictEqual(results.result(), "@todo dunno");
       assert.strictEqual(sparqlQueryCount, 1);
@@ -176,7 +176,7 @@ describe("Adapter.ODataRepository:", () => {
         entityType: "Content",
         pattern: pattern,
         diff: diff,
-      }], new schema.Schema(), tryCatch(() => {
+      }], new Schema(), tryCatch(() => {
         assert.strictEqual(queryCount, 1);
         done();
       }, done));
@@ -189,14 +189,14 @@ describe("Adapter.ODataRepository:", () => {
 
 function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
                                            getQueryStringBuilder: IGetQueryStringBuilder<T>,
-                                           insertQueryStringBuilder: IInsertQueryStringBuilder,
+                                           insertQueryStringBuilder: IInsertQueryStringProducer,
                                            patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory) {
   return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder,
                                 insertQueryStringBuilder, patchQueryStringBuilderFactory);
 }
 
 class PostQueryStringBuilder /*implements postQueries.IQueryStringBuilder*/ {
-  public build(entity, type: schema.EntityType): any {
+  public build(entity, type: EntityType): any {
     //
   }
 }
@@ -207,7 +207,7 @@ class GetQueryStringBuilder<T> implements IGetQueryStringBuilder<T> {
   }
 }
 
-class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
+class InsertQueryStringBuilder implements IInsertQueryStringProducer {
   public insertAsSparql(prefixes: IPrefix[], uri: string, rdfType: ISparqlLiteral,
                         properties: PropertyDescription[]): any {
     //

@@ -1,11 +1,11 @@
 import gpatterns = require("./graphpatterns");
 
-export interface ISelectQueryStringBuilder {
+export interface ISelectQueryStringProducer {
   fromGraphPatternAndFilterExpression(prefixes: ReadonlyArray<IPrefix>, graphPattern: gpatterns.TreeGraphPattern,
                                       filter?: IFilterExpression): string;
 }
 
-export interface IInsertQueryStringBuilder {
+export interface IInsertQueryStringProducer {
   insertAsSparql(prefixes: ReadonlyArray<IPrefix>, uri: string, rdfType: ISparqlLiteral,
                  properties: PropertyDescription[]): string;
   updateAsSparql(prefixes: ReadonlyArray<IPrefix>, uri: string,
@@ -23,16 +23,16 @@ export interface ISparqlLiteral {
   representAsSparql(): string;
 }
 
-export interface IPrefixBuilder {
+export interface IPrefixProducer {
   prefixesAsSparql(prefixes: ReadonlyArray<IPrefix>): string;
 }
 
-export interface IGraphPatternStringBuilder {
+export interface IGraphPatternStringProducer {
   buildGraphPatternString(pattern: gpatterns.TreeGraphPattern): string;
   buildGraphPatternStringAmendFilterExpression(pattern: gpatterns.TreeGraphPattern, filter?: IFilterExpression): string;
 }
 
-export interface ISelectSkeletonBuilder {
+export interface ISelectSkeletonProducer {
   buildSkeleton(prefixes: string, graphPattern: string): string;
 }
 
@@ -45,11 +45,11 @@ export interface IPrefix {
   uri: string;
 }
 
-export class SelectQueryStringBuilder implements ISelectQueryStringBuilder {
+export class SelectQueryStringProducer implements ISelectQueryStringProducer {
 
-  constructor(private prefixBuilder: IPrefixBuilder,
-              private selectSkeletonBuilder: ISelectSkeletonBuilder,
-              private patternBuilder: IGraphPatternStringBuilder) {}
+  constructor(private prefixBuilder: IPrefixProducer,
+              private selectSkeletonBuilder: ISelectSkeletonProducer,
+              private patternBuilder: IGraphPatternStringProducer) {}
 
   public fromGraphPatternAndFilterExpression(prefixes: ReadonlyArray<IPrefix>, graphPattern: gpatterns.TreeGraphPattern,
                                              filter?: IFilterExpression) {
@@ -59,9 +59,9 @@ export class SelectQueryStringBuilder implements ISelectQueryStringBuilder {
   }
 }
 
-export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
+export class InsertQueryStringProducer implements IInsertQueryStringProducer {
 
-  constructor(private prefixBuilder: IPrefixBuilder, private graph: string) {}
+  constructor(private prefixBuilder: IPrefixProducer, private graph: string) {}
 
   public insertAsSparql(prefixes: ReadonlyArray<IPrefix>, uri: string, rdfType: ISparqlLiteral,
                         properties: PropertyDescription[]): string {
@@ -110,20 +110,20 @@ export class InsertQueryStringBuilder implements IInsertQueryStringBuilder {
   }
 }
 
-export class PrefixBuilder implements IPrefixBuilder {
+export class PrefixProducer implements IPrefixProducer {
   public prefixesAsSparql(prefixes) {
     return prefixes.map(p => `PREFIX ${p.prefix}: <${p.uri}>`).join(" ");
   }
 }
 
-export class SelectSkeletonBuilder implements ISelectSkeletonBuilder {
+export class SelectSkeletonProducer implements ISelectSkeletonProducer {
   public buildSkeleton(prefixes: string, graphPattern: string): string {
     if (prefixes && prefixes.length > 0) prefixes += " ";
     return `${prefixes}SELECT * WHERE ${graphPattern}`;
   }
 }
 
-export class GraphPatternStringBuilder implements IGraphPatternStringBuilder {
+export class GraphPatternStringProducer implements IGraphPatternStringProducer {
   public buildGraphPatternString(pattern: gpatterns.TreeGraphPattern): string {
     return "{ " + this.buildPatternContent(pattern) + " }";
   }

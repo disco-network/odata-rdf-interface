@@ -1,15 +1,15 @@
 import { assert } from "chai";
 
 import gpatterns = require("../src/sparql/graphpatterns");
-import qbuilder = require("../src/sparql/querystringbuilder");
+import base = require("../src/sparql/querystringproducer");
 
-describe("the graph pattern string builder", function() {
+describe("GraphPatternStringBuilder: ", function() {
   it("should build queries without UNION and OPTIONAL", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.branch("disco:id", new gpatterns.ValueLeaf("1"));
     pattern.branch("disco:refersTo", "?ref").branch("disco:referree", new gpatterns.ValueLeaf("2"));
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
@@ -22,7 +22,7 @@ describe("the graph pattern string builder", function() {
     pattern.newUnionPattern().branch("disco:parent", "?parent");
     pattern.newUnionPattern().inverseBranch("disco:parent", "?child");
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
@@ -34,7 +34,7 @@ describe("the graph pattern string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.newUnionPattern().newUnionPattern().branch("disco:id", new gpatterns.ValueLeaf("1"));
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
@@ -45,7 +45,7 @@ describe("the graph pattern string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.branch("disco:content", "?cnt").newUnionPattern().branch("disco:id", "?id");
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
@@ -56,7 +56,7 @@ describe("the graph pattern string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?root");
     pattern.optionalBranch("disco:parent", "?par").branch("disco:id", "?id");
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
@@ -67,7 +67,7 @@ describe("the graph pattern string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("?rootA");
     pattern.newConjunctivePattern(new gpatterns.TreeGraphPattern("?rootB")).branch("disco:id", "?id");
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let queryString = builder.buildGraphPatternString(pattern);
 
     assert.strictEqual(queryString,
@@ -78,7 +78,7 @@ describe("the graph pattern string builder", function() {
   it("should amend FILTER expressions after empty patterns", () => {
     let pattern = new gpatterns.TreeGraphPattern("?root");
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let query = builder.buildGraphPatternStringAmendFilterExpression
       (pattern, { toSparqlFilterClause: () => "{filter}" });
 
@@ -89,7 +89,7 @@ describe("the graph pattern string builder", function() {
     let pattern = new gpatterns.TreeGraphPattern("{subject}");
     pattern.branch("{predicate}", "{object}");
 
-    let builder = new qbuilder.GraphPatternStringBuilder();
+    let builder = new base.GraphPatternStringProducer();
     let query = builder.buildGraphPatternStringAmendFilterExpression
       (pattern, { toSparqlFilterClause: () => "{filter}" });
 
@@ -99,7 +99,7 @@ describe("the graph pattern string builder", function() {
 
 describe("SelectSkeletonBuilder:", () => {
   it("build a query skeleton without prefixes", () => {
-    let builder = new qbuilder.SelectSkeletonBuilder();
+    let builder = new base.SelectSkeletonProducer();
 
     let query = builder.buildSkeleton("", "{graphPattern}");
 
@@ -107,7 +107,7 @@ describe("SelectSkeletonBuilder:", () => {
   });
 
   it("build a query skeleton with prefixes", () => {
-    let builder = new qbuilder.SelectSkeletonBuilder();
+    let builder = new base.SelectSkeletonProducer();
 
     let query = builder.buildSkeleton("{prefixes}", "{graphPattern}");
 
@@ -135,7 +135,7 @@ describe("SelectQueryStringBuilder:", () => {
   });
 
   function spec(name: string, args: {
-    prefixes: qbuilder.IPrefix[]; pattern: gpatterns.TreeGraphPattern; filter?: qbuilder.IFilterExpression;
+    prefixes: base.IPrefix[]; pattern: gpatterns.TreeGraphPattern; filter?: base.IFilterExpression;
     patternString: string; prefixString: string; queryString: string
   }) {
     it(name, () => {
@@ -155,7 +155,7 @@ describe("SelectQueryStringBuilder:", () => {
       prefixBuilder.prefixesAsSparql = prefixes => {
         return args.prefixString;
       };
-      let builder = new qbuilder.SelectQueryStringBuilder(prefixBuilder, skeletonBuilder, patternBuilder);
+      let builder = new base.SelectQueryStringProducer(prefixBuilder, skeletonBuilder, patternBuilder);
 
       let query = builder.fromGraphPatternAndFilterExpression(args.prefixes, args.pattern, args.filter);
 
@@ -174,7 +174,7 @@ describe("InsertQueryStringBuilder:", () => {
       assert.deepEqual(p, prefixes);
       return "[PREFIXES]";
     };
-    const producer = new qbuilder.InsertQueryStringBuilder(prefixProducer, "[GRAPH]");
+    const producer = new base.InsertQueryStringProducer(prefixProducer, "[GRAPH]");
 
     const sparql = producer.insertAsSparql(prefixes, "test", { representAsSparql: () => "ns:Entity" }, properties);
     assert.strictEqual(sparql,
@@ -182,25 +182,25 @@ describe("InsertQueryStringBuilder:", () => {
   });
 });
 
-class SelectSkeletonBuilder implements qbuilder.ISelectSkeletonBuilder {
+class SelectSkeletonBuilder implements base.ISelectSkeletonProducer {
   public buildSkeleton(prefixes: string, graphPattern: string): any {
     //
   }
 }
 
-class GraphPatternStringBuilder implements qbuilder.IGraphPatternStringBuilder {
+class GraphPatternStringBuilder implements base.IGraphPatternStringProducer {
   public buildGraphPatternString(pattern: gpatterns.TreeGraphPattern): any {
     return this.buildGraphPatternStringAmendFilterExpression(pattern);
   }
 
   public buildGraphPatternStringAmendFilterExpression(pattern: gpatterns.TreeGraphPattern,
-                                                      filter?: qbuilder.IFilterExpression): any {
+                                                      filter?: base.IFilterExpression): any {
     //
   }
 }
 
-class PrefixBuilder implements qbuilder.IPrefixBuilder {
-  public prefixesAsSparql(prefixes: qbuilder.IPrefix[]): any {
+class PrefixBuilder implements base.IPrefixProducer {
+  public prefixesAsSparql(prefixes: base.IPrefix[]): any {
     //
   }
 }

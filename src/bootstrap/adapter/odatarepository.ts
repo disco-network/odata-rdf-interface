@@ -1,14 +1,13 @@
 import * as base from "../../adapter/odatarepository";
 
 import * as propertyTreeConfig from "./propertytree";
-import * as sparqlBuilderConfig from "../sparql/querystringbuilder";
 import { FilterExpressionTranslatorFactory, IMinimalVisitor } from "./filters";
 
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 import {
-  InsertQueryStringBuilder as BaseInsertQueryStringBuilder,
-} from "../../sparql/querystringbuilder";
-import { PrefixBuilder, GraphPatternStringBuilder } from "../sparql/querystringbuilder";
+  InsertQueryStringProducer as BaseInsertQueryStringBuilder,
+} from "../../sparql/querystringproducer";
+import { PrefixProducer, GraphPatternStringProducer, SelectQueryStringBuilder } from "../sparql/querystringproducer";
 import { FilterFromPatternProducer } from "../../odata/filters/matchpattern";
 
 export class ODataRepository extends base.ODataRepository<IMinimalVisitor> {
@@ -20,7 +19,8 @@ export class ODataRepository extends base.ODataRepository<IMinimalVisitor> {
 
 export class PatchQueryStringBuilderFactory extends base.PatchQueryStringBuilderFactory {
   constructor() {
-    super(new PrefixBuilder(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(), new GraphPatternStringBuilder(),
+    super(new PrefixProducer(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(),
+          new GraphPatternStringProducer(),
           new FilterExpressionTranslatorFactory(), new FilterFromPatternProducer());
   }
 }
@@ -29,12 +29,12 @@ export class GetQueryStringBuilder extends base.GetQueryStringBuilder<IMinimalVi
   constructor() {
     super(new FilterExpressionTranslatorFactory(),
       propertyTreeConfig.getFilterGraphPatternStrategy(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(),
-      new sparqlBuilderConfig.SelectQueryStringBuilder());
+      new SelectQueryStringBuilder());
   }
 }
 
 export class InsertQueryStringBuilder extends BaseInsertQueryStringBuilder {
   constructor(graphUri: string) {
-    super(new PrefixBuilder(), graphUri);
+    super(new PrefixProducer(), graphUri);
   }
 }

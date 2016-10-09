@@ -1,6 +1,6 @@
 import schema = require("../odata/schema");
 import { UniqueScopeIdentifier } from "../odata/filters/filters";
-import { VariableWithSyntax, VariableNameOnly } from "../sparql/querystringbuilder";
+import { VariableWithSyntax, VariableNameOnly } from "../sparql/querystringproducer";
 
 declare class Map<Key, Value> {
   public set(key: Key, value: Value);
