@@ -80,10 +80,9 @@ export const schemaWithInverseProperty = new Schema({
     Integer: {
       properties: {
         Id: { type: "Edm.Int32", rdfName: "value" },
-        NextInteger: { type: "Integer", rdfName: "next", optional: true, cardinality: "one-to-one" },
+        NextInteger: { type: "Integer", rdfName: "next", optional: true },
         PrevInteger: {
-          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true,
-          cardinality: "one-to-one" },
+          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true },
         Prev: { type: "Edm.Int32", foreignProperty: "PrevInteger" },
         Next: { type: "Edm.Int32", foreignProperty: "NextInteger" },
       },

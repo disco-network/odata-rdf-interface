@@ -464,7 +464,7 @@ export class EntityFactory {
   public static fromPropertyWithContext(property: Property, context: IQueryContext): IEntityValue {
     let kind = property.getEntityKind();
     let subContext = context.getSubContext(property.getName());
-    if (property.isCardinalityOne()) {
+    if (property.isMultiplicityOne()) {
       return EntityFactory.fromEntityKind(kind, subContext);
     }
     else {

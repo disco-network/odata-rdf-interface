@@ -82,7 +82,7 @@ export class PropertyBranchingArgs implements IPropertyBranchingArgs {
   }
 
   public singleValued() {
-    return this.property.isCardinalityOne() === true;
+    return this.property.isMultiplicityOne() === true;
   }
 }
 
