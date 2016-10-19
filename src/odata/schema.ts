@@ -1,4 +1,36 @@
-let raw = {
+export interface IRawSchema {
+  entityTypes: {
+    [name: string]: {
+      properties: {
+        [name: string]: {
+          type: string;
+          rdfName?: string;
+          /** default: false */
+          optional?: boolean;
+          /** default: "one-to-one" */
+          cardinality?: "one-to-many" | "many-to-one" | "one-to-one";
+          generated?: "auto-increment" | "uuid";
+          autoIncrement_nextValue?: number;
+          /** complex (navigation) property belonging to the foreign-key property */
+          foreignProperty?: string;
+          inverseProperty?: string;
+        }
+      },
+      rdfName: string;
+    };
+  };
+
+  entitySets: {
+    [name: string]: { type: string; }
+  };
+
+  defaultNamespace: {
+    prefix: "disco";
+    uri: "http://disco-network.org/resource/";
+  };
+}
+
+const raw: IRawSchema = {
   entityTypes: {
     Post: {
       properties: {
@@ -6,9 +38,9 @@ let raw = {
         ContentId: { type: "Edm.Int32", foreignProperty: "Content" },
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
         Parent: { type: "Post", optional: true, cardinality: "one-to-many",
-          foreignSet: "Posts", inverseProperty: "Children",
+          inverseProperty: "Children",
           rdfName: "parent" },
-        Children: { type: "Post", cardinality: "many-to-one", foreignSet: "Posts", inverseProperty: "Parent" },
+        Children: { type: "Post", cardinality: "many-to-one", inverseProperty: "Parent" },
         Content: { type: "Content", cardinality: "one-to-many", rdfName: "content", optional: false },
       },
       rdfName: "Post",
@@ -45,7 +77,7 @@ let raw = {
 export class Schema {
   public raw: any;
 
-  constructor(rawSchema: any = raw) {
+  constructor(rawSchema: IRawSchema = raw) {
     this.raw = rawSchema;
   }
 

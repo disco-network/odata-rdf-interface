@@ -6,10 +6,15 @@ export const uuidKeySchema = new Schema({
       properties: {
         Id: { type: "Edm.Guid", rdfName: "id", generated: "uuid" },
       },
+      rdfName: "entity",
     },
   },
   entitySets: {
     Entities: { type: "Entity" },
+  },
+  defaultNamespace: {
+    prefix: "disco",
+    uri: "http://disco-network.org/resource/",
   },
 });
 
@@ -19,10 +24,15 @@ export const autoIncrementSchema = new Schema({
       properties: {
         Id: { type: "Edm.Int32", rdfName: "id", generated: "auto-increment", autoIncrement_nextValue: 1 },
       },
+      rdfName: "entity",
     },
   },
   entitySets: {
     Entities: { type: "Entity" },
+  },
+  defaultNamespace: {
+    prefix: "disco",
+    uri: "http://disco-network.org/resource/",
   },
 });
 
@@ -34,10 +44,15 @@ export const diverselyTypedSchema = new Schema({
         Int32: { type: "Edm.Int32", optional: true },
         Uuid: { type: "Edm.Uuid", optional: true },
       },
+      rdfName: "entity",
     },
   },
   entitySets: {
     Entities: { type: "Entity" },
+  },
+  defaultNamespace: {
+    prefix: "disco",
+    uri: "http://disco-network.org/resource/",
   },
 });
 
