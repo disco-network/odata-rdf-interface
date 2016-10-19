@@ -49,7 +49,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
               private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
               private insertQueryStringBuilder: IInsertQueryStringProducer,
-              private patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory) {}
+              private patchQueryStringProducerFactory: IPatchQueryStringProducerFactory) {}
 
   public batch(ops: ReadonlyArray<base.IOperation>, schema: Schema, cbResults: (results: results.AnyResult) => void) {
     async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
@@ -218,7 +218,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
                     updatedValues: { property: string; value: ISparqlLiteral }[],
                     cb: (res: results.AnyResult) => void) {
 
-    const query = this.patchQueryStringBuilderFactory.create(updatedValues, pattern, entityType).produceSparql();
+    const query = this.patchQueryStringProducerFactory.create(updatedValues, pattern, entityType).produceSparql();
 
     this.sparqlProvider.query(query, response => {
       cb(response);
@@ -518,31 +518,28 @@ export interface IPatternValue {
   value: ISparqlLiteral;
 }
 
-export interface IPatchQueryStringBuilderFactory {
-  create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType): IPatchQueryStringBuilder;
+export interface IPatchQueryStringProducerFactory {
+  create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType): IPatchQueryStringProducer;
 }
 
-export interface IPatchQueryStringBuilder {
+export interface IPatchQueryStringProducer {
   produceSparql(): string;
 }
 
-export class PatchQueryStringBuilderFactory {
+export class PatchQueryStringProducerFactory implements IPatchQueryStringProducerFactory {
 
   constructor(private prefixProducer: IPrefixProducer,
-              private expandTreeGraphPatternStrategy: IExpandTreeGraphPatternStrategy,
-              private graphPatternStringProducer: IGraphPatternStringProducer,
-              private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>,
+              private whereClauseProducer: IWhereClauseProducer,
               private filterFromPatternProducer: FilterFromPatternProducer) {}
 
   public create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType) {
-    return new PatchQueryStringBuilder(updatedValues, pattern, entityType,
-                                       this.prefixProducer, this.expandTreeGraphPatternStrategy,
-                                       this.graphPatternStringProducer, this.filterExpressionFactory,
+    return new PatchQueryStringProducer(updatedValues, pattern, entityType,
+                                       this.prefixProducer, this.whereClauseProducer,
                                        this.filterFromPatternProducer);
   }
 }
 
-export class PatchQueryStringBuilder {
+export class PatchQueryStringProducer implements IPatchQueryStringProducer {
 
   private mapping: mappings.StructuredSparqlVariableMapping;
 
@@ -550,9 +547,7 @@ export class PatchQueryStringBuilder {
   constructor(private updatedValues: IUpdatedValue[], private pattern: IMatchPattern,
               private entityType: EntityType,
               private prefixProducer: IPrefixProducer,
-              private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
-              private graphPatternStringProducer: IGraphPatternStringProducer,
-              private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>,
+              private whereClauseProducer: IWhereClauseProducer,
               private filterFromPatternProducer: FilterFromPatternProducer) {
     const vargen = new mappings.SparqlVariableGenerator();
     this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
@@ -589,37 +584,22 @@ export class PatchQueryStringBuilder {
   }
 
   public produceWhereClause() {
-    return `WHERE { ${ this.produceGraphPatternString() } }`;
+    return this.whereClauseProducer.produce(this.selectProperties(), this.produceFilterTranslator(), this.entityType,
+                                            this.mapping);
   }
 
-  private produceGraphPatternString() {
-    return this.graphPatternStringProducer
-      .buildGraphPatternStringAmendFilterExpression(this.produceGraphPattern(), this.produceSparqlFilterExpression());
-  }
-
-  private produceSparqlFilterExpression() {
-    const context: translators.IFilterContext = {
-      scope: {
-        entityType: this.entityType,
-        lambdaVariableScope: new LambdaVariableScope(),
-      },
-      mapping: {
-        scope: new mappings.ScopedMapping(
-          new mappings.Mapping(new mappings.PropertyMapping(this.entityType), this.mapping)),
-      },
-    };
-    const filterTranslator = this.filterFromPatternProducer.produceFromPattern(this.pattern, this.entityType);
-    return this.filterExpressionFactory.create(filterTranslator, context);
-  }
-
-  private produceGraphPattern() {
+  private selectProperties() {
     const selectionTree: PropertySelectionTree = {};
 
     for (const updatedValue of this.updatedValues) {
       selectionTree[updatedValue.property] = {};
     }
 
-    return this.expandTreePatternStrategy.createFromSelectionTree(this.entityType, this.mapping, selectionTree);
+    return selectionTree;
+  }
+
+  private produceFilterTranslator() {
+    return this.filterFromPatternProducer.produceFromPattern(this.pattern, this.entityType);
   }
 
   private produceTriplesToDelete() {
@@ -718,6 +698,40 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
     }
   }
 }
+
+export interface IWhereClauseProducer {
+  produce(selectedProperties: PropertySelectionTree, filter: IValue<IMinimalVisitor> | undefined,
+          entityType: EntityType, mapping: mappings.StructuredSparqlVariableMapping): string & WhereClause;
+}
+
+export class WhereClauseProducer implements IWhereClauseProducer {
+
+  constructor(private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
+              private graphPatternStringProducer: IGraphPatternStringProducer,
+              private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>) {}
+
+  public produce(selectedProperties: PropertySelectionTree, filter: IValue<IMinimalVisitor> | undefined,
+                 entityType: EntityType, mapping: mappings.StructuredSparqlVariableMapping) {
+    const filterContext: translators.IFilterContext = {
+      scope: {
+        entityType: entityType,
+        lambdaVariableScope: new LambdaVariableScope(),
+      },
+      mapping: {
+        scope: new mappings.ScopedMapping(
+          new mappings.Mapping(new mappings.PropertyMapping(entityType), mapping)),
+      },
+    };
+
+    const tree = this.expandTreePatternStrategy.createFromSelectionTree(entityType, mapping, selectedProperties);
+    const filterTranslator = filter && this.filterExpressionFactory.create(filter, filterContext);
+    const pattern = this.graphPatternStringProducer
+      .buildGraphPatternStringAmendFilterExpression(tree, filterTranslator);
+    return `WHERE ${pattern}` as string & WhereClause;
+  }
+}
+
+export enum WhereClause {}
 
 export interface IQueryAdapterModel<TVisitor> {
   getFilterContext(): translators.IFilterContext;

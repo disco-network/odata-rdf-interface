@@ -40,9 +40,9 @@ export const diverselyTypedSchema = new Schema({
   entityTypes: {
     Entity: {
       properties: {
-        String: { type: "Edm.String", optional: true },
-        Int32: { type: "Edm.Int32", optional: true },
-        Uuid: { type: "Edm.Uuid", optional: true },
+        String: { type: "Edm.String", optional: true, rdfName: "string" },
+        Int32: { type: "Edm.Int32", optional: true, rdfName: "int32" },
+        Uuid: { type: "Edm.Uuid", optional: true, rdfName: "uuid" },
       },
       rdfName: "entity",
     },

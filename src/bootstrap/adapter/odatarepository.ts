@@ -12,24 +12,29 @@ import { FilterFromPatternProducer } from "../../odata/filters/matchpattern";
 
 export class ODataRepository extends base.ODataRepository<IMinimalVisitor> {
   constructor(sparqlProvider: ISparqlProvider, graphUri: string) {
-    super(sparqlProvider, new GetQueryStringBuilder(),
-          new InsertQueryStringBuilder(graphUri), new PatchQueryStringBuilderFactory());
+    super(sparqlProvider, new GetQueryStringProducer(),
+          new InsertQueryStringBuilder(graphUri), new PatchQueryStringProducerFactory());
   }
 }
 
-export class PatchQueryStringBuilderFactory extends base.PatchQueryStringBuilderFactory {
+export class PatchQueryStringProducerFactory extends base.PatchQueryStringProducerFactory {
   constructor() {
-    super(new PrefixProducer(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(),
-          new GraphPatternStringProducer(),
-          new FilterExpressionTranslatorFactory(), new FilterFromPatternProducer());
+    super(new PrefixProducer(), new WhereClauseProducer(), new FilterFromPatternProducer());
   }
 }
 
-export class GetQueryStringBuilder extends base.GetQueryStringBuilder<IMinimalVisitor> {
+export class GetQueryStringProducer extends base.GetQueryStringBuilder<IMinimalVisitor> {
   constructor() {
     super(new FilterExpressionTranslatorFactory(),
       propertyTreeConfig.getFilterGraphPatternStrategy(), propertyTreeConfig.getExpandTreeGraphPatternStrategy(),
       new SelectQueryStringBuilder());
+  }
+}
+
+export class WhereClauseProducer extends base.WhereClauseProducer {
+  constructor() {
+    super(propertyTreeConfig.getExpandTreeGraphPatternStrategy(), new GraphPatternStringProducer(),
+          new FilterExpressionTranslatorFactory());
   }
 }
 

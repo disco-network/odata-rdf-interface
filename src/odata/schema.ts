@@ -4,18 +4,26 @@ export interface IRawSchema {
       properties: {
         [name: string]: {
           type: string;
-          rdfName?: string;
+          rdfName: string;
           /** default: false */
           optional?: boolean;
           /** default: "one-to-one" */
-          cardinality?: "one-to-many" | "many-to-one" | "one-to-one";
+          cardinality?: "one-to-many" | "many-to-one" | "one-to-one" | "many-to-many";
           generated?: "auto-increment" | "uuid";
           autoIncrement_nextValue?: number;
+          inverseProperty?: undefined;
+        } | {
+          type: string;
           /** complex (navigation) property belonging to the foreign-key property */
-          foreignProperty?: string;
-          inverseProperty?: string;
+          foreignProperty: string;
+        } | {
+          type: string;
+          inverseProperty: string;
+          foreignSet: string;
+          optional?: boolean;
+          cardinality?: "one-to-many" | "many-to-one" | "one-to-one" | "many-to-many";
         }
-      },
+      };
       rdfName: string;
     };
   };
@@ -38,9 +46,8 @@ const raw: IRawSchema = {
         ContentId: { type: "Edm.Int32", foreignProperty: "Content" },
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
         Parent: { type: "Post", optional: true, cardinality: "one-to-many",
-          inverseProperty: "Children",
           rdfName: "parent" },
-        Children: { type: "Post", cardinality: "many-to-one", inverseProperty: "Parent" },
+        Children: { type: "Post", cardinality: "many-to-one", inverseProperty: "Parent", foreignSet: "Posts" },
         Content: { type: "Content", cardinality: "one-to-many", rdfName: "content", optional: false },
       },
       rdfName: "Post",
