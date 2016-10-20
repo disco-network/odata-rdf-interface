@@ -89,6 +89,14 @@ gulp.task("copy-license", function () {
   ]).pipe(gulp.dest("build/lib"));
 });
 
+// TODO: depricated - will be removed soon!
+gulp.task("clean-all-old", function () {
+  return del(["./maps", "./lib"]);
+});
+gulp.task("clean-all", ["clean-all-old"], function () {
+  return del(["./build"]);
+});
+
 gulp.task("build", function (cb) {
   return runSequence(
     "clean-all",
@@ -113,18 +121,17 @@ gulp.task("build-all", ["build"], function (cb) {
   );
 });
 
-gulp.task("tests", ["build-all"], function () {
+gulp.task("run-tests", function () {
   return gulp.src("build/spec/*.js")
     .pipe(mocha());
 });
 
+gulp.task("tests", ["build-all"], function (cb) {
+  return runSequence(
+    "run-tests",
+    cb
+  );
+});
+
 //alternative name for the "tests" task
 gulp.task("specs", ["tests"]);
-
-// TODO: depricated - will be removed soon!
-gulp.task("clean-all-old", function () {
-  return del(["./maps", "./lib"]);
-});
-gulp.task("clean-all", ["clean-all-old"], function () {
-  return del(["./build"]);
-});

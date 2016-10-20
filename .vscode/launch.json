@@ -8,7 +8,7 @@
             "program": "${workspaceRoot}/node_modules/.bin/gulp",
             "stopOnEntry": false,
             "args": [
-                "specs"
+                "run-tests"
             ],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
