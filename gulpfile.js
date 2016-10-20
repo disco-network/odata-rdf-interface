@@ -36,10 +36,10 @@ function build(sourcePath, base, targetPath) {
 
   return merge([
     tsResult.dts
-      .pipe(gulp.dest("build/typings/" + targetPath)),
+      .pipe(gulp.dest("build/")),
     tsResult.js
-      .pipe(sourcemaps.write((/* HACK! Better place all files side by side? */(targetPath === "") ? "" : "../") + "maps/" + targetPath, sourceMapsConfig))
-      .pipe(gulp.dest("build/" + targetPath))
+      .pipe(sourcemaps.write(".", sourceMapsConfig))
+      .pipe(gulp.dest("build/"))
   ]);
 }
 
