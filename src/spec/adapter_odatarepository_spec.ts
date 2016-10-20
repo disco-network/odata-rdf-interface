@@ -2,7 +2,7 @@ import { assert, assertEx, match } from "../src/assert";
 import results = require("../src/result");
 import { Schema, EntityType } from "../src/odata/schema";
 import {
-  ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor, IPatchQueryStringBuilderFactory,
+  ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor, IPatchQueryStringProducerFactory,
 } from "../src/adapter/odatarepository";
 import {
   LiteralValuedEntity, OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand,
@@ -51,7 +51,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     const odataRepository = create(mySparqlProvider, getStringProducer,
-                                   insertQueryStringBuilder, {} as IPatchQueryStringBuilderFactory);
+                                   insertQueryStringBuilder, {} as IPatchQueryStringProducerFactory);
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",
@@ -105,7 +105,7 @@ describe("Adapter.ODataRepository:", () => {
     };
 
     const odataRepository = create(mySparqlProvider, new GetQueryStringBuilder(),
-                                 insertQueryStringBuilder, {} as IPatchQueryStringBuilderFactory);
+                                 insertQueryStringBuilder, {} as IPatchQueryStringProducerFactory);
     odataRepository.batch([{
       type: "insert",
       entityType: "Post",
@@ -151,7 +151,7 @@ describe("Adapter.ODataRepository:", () => {
       return sparql;
     };*/
 
-    const patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory = {
+    const patchQueryStringBuilderFactory: IPatchQueryStringProducerFactory = {
       create: (updatedValues, pattern, entityType) => ({
         produceSparql: tryCatch(() => {
           assertEx.deepEqual(updatedValues, [match.is(v => {
@@ -190,7 +190,7 @@ describe("Adapter.ODataRepository:", () => {
 function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.ISparqlProvider,
                                            getQueryStringBuilder: IGetQueryStringBuilder<T>,
                                            insertQueryStringBuilder: IInsertQueryStringProducer,
-                                           patchQueryStringBuilderFactory: IPatchQueryStringBuilderFactory) {
+                                           patchQueryStringBuilderFactory: IPatchQueryStringProducerFactory) {
   return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder,
                                 insertQueryStringBuilder, patchQueryStringBuilderFactory);
 }

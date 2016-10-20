@@ -262,7 +262,7 @@ export class EntityInitializer implements base.IEntityInitializer {
   }
 
   private shouldPropertyHaveValueOrNull(property: Property) {
-    return property.isCardinalityOne() === true && property.foreignProperty() === undefined;
+    return property.isMultiplicityOne() === true && property.foreignProperty() === undefined;
   }
 
   /// entity logic

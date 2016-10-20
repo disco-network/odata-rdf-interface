@@ -40,9 +40,9 @@ export const diverselyTypedSchema = new Schema({
   entityTypes: {
     Entity: {
       properties: {
-        String: { type: "Edm.String", optional: true },
-        Int32: { type: "Edm.Int32", optional: true },
-        Uuid: { type: "Edm.Uuid", optional: true },
+        String: { type: "Edm.String", optional: true, rdfName: "string" },
+        Int32: { type: "Edm.Int32", optional: true, rdfName: "int32" },
+        Uuid: { type: "Edm.Uuid", optional: true, rdfName: "uuid" },
       },
       rdfName: "entity",
     },
@@ -80,10 +80,9 @@ export const schemaWithInverseProperty = new Schema({
     Integer: {
       properties: {
         Id: { type: "Edm.Int32", rdfName: "value" },
-        NextInteger: { type: "Integer", rdfName: "next", optional: true, cardinality: "one-to-one" },
+        NextInteger: { type: "Integer", rdfName: "next", optional: true },
         PrevInteger: {
-          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true,
-          cardinality: "one-to-one" },
+          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true },
         Prev: { type: "Edm.Int32", foreignProperty: "PrevInteger" },
         Next: { type: "Edm.Int32", foreignProperty: "NextInteger" },
       },

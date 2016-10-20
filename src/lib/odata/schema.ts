@@ -1,23 +1,6 @@
 export interface IRawSchema {
   entityTypes: {
-    [name: string]: {
-      properties: {
-        [name: string]: {
-          type: string;
-          rdfName?: string;
-          /** default: false */
-          optional?: boolean;
-          /** default: "one-to-one" */
-          cardinality?: "one-to-many" | "many-to-one" | "one-to-one";
-          generated?: "auto-increment" | "uuid";
-          autoIncrement_nextValue?: number;
-          /** complex (navigation) property belonging to the foreign-key property */
-          foreignProperty?: string;
-          inverseProperty?: string;
-        }
-      },
-      rdfName: string;
-    };
+    [name: string]: IRawEntityType;
   };
 
   entitySets: {
@@ -30,6 +13,48 @@ export interface IRawSchema {
   };
 }
 
+export interface IRawEntityType {
+  properties: {
+    [name: string]: IRawProperty;
+  };
+  rdfName: string;
+}
+
+export type IRawProperty = {
+  type: string;
+  rdfName: string;
+  /** default: false */
+  optional?: boolean;
+  /** default: false */
+  isArray?: boolean;
+  generated?: "auto-increment" | "uuid";
+  autoIncrement_nextValue?: number;
+  inverseProperty?: undefined;
+  foreignSet?: undefined;
+  foreignProperty?: undefined;
+} |
+{
+  type: string;
+  /** complex (navigation) property belonging to the foreign-key property */
+  foreignProperty: string;
+  isArray?: false;
+  optional?: undefined;
+  generated?: undefined | false;
+  autoIncrement_nextValue?: undefined;
+  inverseProperty?: undefined;
+  foreignSet?: undefined;
+} |
+{
+  type: string;
+  inverseProperty: string;
+  foreignSet: string;
+  optional?: boolean;
+  isArray?: boolean;
+  generated?: undefined | false;
+  autoIncrement_nextValue?: undefined;
+  foreignProperty?: undefined;
+}
+
 const raw: IRawSchema = {
   entityTypes: {
     Post: {
@@ -37,11 +62,10 @@ const raw: IRawSchema = {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
         ContentId: { type: "Edm.Int32", foreignProperty: "Content" },
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
-        Parent: { type: "Post", optional: true, cardinality: "one-to-many",
-          inverseProperty: "Children",
+        Parent: { type: "Post", optional: true,
           rdfName: "parent" },
-        Children: { type: "Post", cardinality: "many-to-one", inverseProperty: "Parent" },
-        Content: { type: "Content", cardinality: "one-to-many", rdfName: "content", optional: false },
+        Children: { type: "Post", isArray: true, inverseProperty: "Parent", foreignSet: "Posts" },
+        Content: { type: "Content", rdfName: "content", optional: false },
       },
       rdfName: "Post",
     },
@@ -49,7 +73,7 @@ const raw: IRawSchema = {
       properties: {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
         Title: { type: "Edm.String", rdfName: "title", optional: true },
-        Culture: { type: "Culture", cardinality: "one-to-many", rdfName: "culture", optional: true },
+        Culture: { type: "Culture", rdfName: "culture", optional: true },
       },
       rdfName: "Content",
     },
@@ -75,7 +99,7 @@ const raw: IRawSchema = {
 };
 
 export class Schema {
-  public raw: any;
+  public raw: IRawSchema;
 
   constructor(rawSchema: IRawSchema = raw) {
     this.raw = rawSchema;
@@ -105,10 +129,10 @@ export class EntitySet {
   }
 }
 
-export class RdfBasedSchemaResource {
-  private rdfName: string;
+export class RdfBasedSchemaResource<T extends { rdfName?: string }> {
+  private rdfName: string | undefined;
 
-  constructor(protected completeSchema: Schema, private rawSchemaBranch, private name: string) {
+  constructor(protected completeSchema: Schema, private rawSchemaBranch: T, private name: string) {
     this.rdfName = rawSchemaBranch && rawSchemaBranch.rdfName;
   }
 
@@ -130,7 +154,7 @@ export class RdfBasedSchemaResource {
   }
 }
 
-export class EntityType extends RdfBasedSchemaResource {
+export class EntityType extends RdfBasedSchemaResource<IRawEntityType> {
   constructor(completeSchema: Schema, name: string) {
     super(completeSchema, completeSchema.raw.entityTypes[name], name);
   }
@@ -155,7 +179,7 @@ export class EntityType extends RdfBasedSchemaResource {
   }
 }
 
-export class Property extends RdfBasedSchemaResource {
+export class Property extends RdfBasedSchemaResource<IRawProperty> {
   constructor(completeSchema: Schema, private parentType: EntityType, name: string) {
     super(completeSchema, parentType.getRaw().properties[name], name);
   }
@@ -168,8 +192,8 @@ export class Property extends RdfBasedSchemaResource {
     return this.getEntityType().isElementary() === false;
   }
 
-  public isCardinalityOne(): boolean {
-    return !this.isNavigationProperty() || this.getRaw().cardinality.substr(0, 4) === "one-";
+  public isMultiplicityOne(): boolean {
+    return !this.isNavigationProperty() || this.getRaw().isArray !== true;
   }
 
   public getEntityKind(): EntityKind {
@@ -212,12 +236,16 @@ export class Property extends RdfBasedSchemaResource {
   public getInverseProperty(): Property {
     let setName = this.getRaw().foreignSet;
     let propName = this.getRaw().inverseProperty;
-    return this.completeSchema.getEntitySet(setName).getEntityType().getProperty(propName);
+    if (setName !== undefined && propName !== undefined)
+      return this.completeSchema.getEntitySet(setName).getEntityType().getProperty(propName);
+    else
+      throw new Error(`Could not find inverse property of ${this.getName()}`);
   }
 
   public foreignProperty(): Property | undefined {
     let name = this.getRaw().foreignProperty;
-    return name && new Property(this.completeSchema, this.parentType, this.getRaw().foreignProperty);
+    if (name !== undefined) return new Property(this.completeSchema, this.parentType, name);
+    else return undefined;
   }
 }
 

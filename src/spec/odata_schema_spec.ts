@@ -9,6 +9,6 @@ describe("schema", function() {
   });
 
   it('should assign "Post.Content" the quantity one', function() {
-    assert.strictEqual(schema.getEntityType("Post").getProperty("Content").isCardinalityOne(), true);
+    assert.strictEqual(schema.getEntityType("Post").getProperty("Content").isMultiplicityOne(), true);
   });
 });
