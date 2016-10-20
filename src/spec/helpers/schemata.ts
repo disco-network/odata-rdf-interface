@@ -1,4 +1,4 @@
-import { Schema } from "../../src/odata/schema";
+import { Schema } from "../../lib/odata/schema";
 
 export const uuidKeySchema = new Schema({
   entityTypes: {

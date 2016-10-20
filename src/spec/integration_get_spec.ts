@@ -1,11 +1,11 @@
 import { assert } from "chai";
 
-import { GetHandler } from "../src/odata/queryengine";
-import { ODataRepository } from "../src/bootstrap/adapter/odatarepository";
-import { GetRequestParser } from "../src/bootstrap/odata/parser";
-import { Schema } from "../src/odata/schema";
-import { Result } from "../src/result";
-import sparqlProviderModule = require("../src/sparql/sparql_provider");
+import { GetHandler } from "../lib/odata/queryengine";
+import { ODataRepository } from "../lib/bootstrap/adapter/odatarepository";
+import { GetRequestParser } from "../lib/bootstrap/odata/parser";
+import { Schema } from "../lib/odata/schema";
+import { Result } from "../lib/result";
+import sparqlProviderModule = require("../lib/sparql/sparql_provider");
 import rdfstore = require("rdfstore");
 
 describe("The GetHandler should evaluate", () => {

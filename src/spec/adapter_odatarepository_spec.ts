@@ -1,17 +1,17 @@
-import { assert, assertEx, match } from "../src/assert";
-import results = require("../src/result");
-import { Schema, EntityType } from "../src/odata/schema";
+import { assert, assertEx, match } from "../lib/assert";
+import results = require("../lib/result");
+import { Schema, EntityType } from "../lib/odata/schema";
 import {
   ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor, IPatchQueryStringProducerFactory,
-} from "../src/adapter/odatarepository";
+} from "../lib/adapter/odatarepository";
 import {
   LiteralValuedEntity, OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand,
-} from "../src/odata/repository";
-import sparqlProviderBase = require("../src/sparql/sparql_provider_base");
+} from "../lib/odata/repository";
+import sparqlProviderBase = require("../lib/sparql/sparql_provider_base");
 import {
   IInsertQueryStringProducer, IPrefix, ISparqlLiteral, PropertyDescription,
-} from "../src/sparql/querystringproducer";
-import { tryCatch } from "../src/controlflow";
+} from "../lib/sparql/querystringproducer";
+import { tryCatch } from "../lib/controlflow";
 
 describe("Adapter.ODataRepository:", () => {
   it("should insert an entity called 'post1' with Id = '1'", done => {

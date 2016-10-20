@@ -1,7 +1,7 @@
 import { assert } from "chai";
 
-import gpatterns = require("../src/sparql/graphpatterns");
-import base = require("../src/sparql/querystringproducer");
+import gpatterns = require("../lib/sparql/graphpatterns");
+import base = require("../lib/sparql/querystringproducer");
 
 describe("GraphPatternStringBuilder: ", function() {
   it("should build queries without UNION and OPTIONAL", function() {

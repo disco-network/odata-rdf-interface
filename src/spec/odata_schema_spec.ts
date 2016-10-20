@@ -1,6 +1,6 @@
 import { assert } from "chai";
 
-import SchemaModule = require("../src/odata/schema");
+import SchemaModule = require("../lib/odata/schema");
 let schema = new SchemaModule.Schema();
 
 describe("schema", function() {

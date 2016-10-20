@@ -1,6 +1,6 @@
-import { assert } from "../src/assert";
-import { PropertySelector } from "../src/odata/propertyselector";
-import { Schema } from "../src/odata/schema";
+import { assert } from "../lib/assert";
+import { PropertySelector } from "../lib/odata/propertyselector";
+import { Schema } from "../lib/odata/schema";
 
 describe("PropertySelector:", () => {
   it ("should select direct complex properties included in the expand tree", () => {

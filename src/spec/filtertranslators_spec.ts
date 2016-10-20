@@ -3,23 +3,23 @@ import { assert } from "chai";
 import {
   IStringLiteral, INumericLiteral,
   IEqExpression, IAndExpression, IOrExpression, IAnyExpression,
-} from "../src/odata/filters/expressions";
+} from "../lib/odata/filters/expressions";
 import {
   IVisitorState, IVisitor, VisitorBase, AssembledVisitor,
   PropertyPath,
   LiteralVisitor, ILiteralVisitor, BinaryExprVisitor, IBinaryExprVisitor, generatePropertyVisitor, IPropertyVisitor,
-  IExpressionTranslator } from "../src/adapter/filtertranslators";
-import { IAnyExpressionTranslatorFactory, AnyExpressionTranslator } from "../src/adapter/filters/propertyexpression";
-import { FilterGraphPatternStrategy } from "../src/adapter/filterpatterns";
-import propertyTree = require("../src/adapter/propertytree/propertytree");
-import propertyTreeImpl = require("../src/adapter/propertytree/propertytree_impl");
+  IExpressionTranslator } from "../lib/adapter/filtertranslators";
+import { IAnyExpressionTranslatorFactory, AnyExpressionTranslator } from "../lib/adapter/filters/propertyexpression";
+import { FilterGraphPatternStrategy } from "../lib/adapter/filterpatterns";
+import propertyTree = require("../lib/adapter/propertytree/propertytree");
+import propertyTreeImpl = require("../lib/adapter/propertytree/propertytree_impl");
 import {
   SparqlVariableGenerator, StructuredSparqlVariableMapping,
   Mapping, PropertyMapping, ScopedMapping,
-} from "../src/adapter/mappings";
-import { FlatPropertyTree, ScopedPropertyTree } from "../src/odata/filters/propertytree";
-import { ILambdaVariable, LambdaVariableScope, UniqueScopeIdentifier } from "../src/odata/filters/filters";
-import { Schema } from "../src/odata/schema";
+} from "../lib/adapter/mappings";
+import { FlatPropertyTree, ScopedPropertyTree } from "../lib/odata/filters/propertytree";
+import { ILambdaVariable, LambdaVariableScope, UniqueScopeIdentifier } from "../lib/odata/filters/filters";
+import { Schema } from "../lib/odata/schema";
 const schema = new Schema();
 
 interface MyLiteralVisitor extends IVisitor, ILiteralVisitor {}

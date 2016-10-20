@@ -1,9 +1,9 @@
 import { assert } from "chai";
 
-import SchemaModule = require("../src/odata/schema");
+import SchemaModule = require("../lib/odata/schema");
 let schema = new SchemaModule.Schema();
 import mhelper = require("./helpers/sparql_mappings");
-import propertyTreeConfiguration = require("../src/bootstrap/adapter/propertytree");
+import propertyTreeConfiguration = require("../lib/bootstrap/adapter/propertytree");
 
 describe('OData properties with quantity "many"', function() {
   it("should be integrated with UNION", function() {

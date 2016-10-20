@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import openArgs = require("../src/adapter/openargs");
+import openArgs = require("../lib/adapter/openargs");
 
 describe("OpenArgs:", () => {
   it("set Contracts and create children", () => {

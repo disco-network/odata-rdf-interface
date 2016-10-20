@@ -1,9 +1,9 @@
-import { assert, assertEx, match } from "../src/assert";
+import { assert, assertEx, match } from "../lib/assert";
 import { uuidKeySchema, autoIncrementSchema, diverselyTypedSchema,
   schemaWithMandatoryProperty } from "./helpers/schemata";
-import { EdmConverter } from "../src/odata/edm";
+import { EdmConverter } from "../lib/odata/edm";
 
-import base = require("../src/odata/entityinitializer");
+import base = require("../lib/odata/entityinitializer");
 import queryTestCases = require("./helpers/querytestcases");
 
 describe("OData.EntityInitializer:", () => {

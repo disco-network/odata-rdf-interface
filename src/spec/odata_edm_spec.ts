@@ -1,5 +1,5 @@
-import { assert } from "../src/assert";
-import { EdmConverter, IEdmConverter } from "../src/odata/edm";
+import { assert } from "../lib/assert";
+import { EdmConverter, IEdmConverter } from "../lib/odata/edm";
 
 describe("EdmConverter:", () => {
   it("should convert Edm.String to Edm.Int32", () => {

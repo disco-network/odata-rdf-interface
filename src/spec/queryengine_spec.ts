@@ -1,20 +1,20 @@
-import { assert, assertEx, match as eqMatch } from "../src/assert";
+import { assert, assertEx, match as eqMatch } from "../lib/assert";
 import { stub, match } from "sinon";
 
 import {
   GetHandler, PostHandler, IGetHttpResponder, GetHttpResponder,
   PatchHandler,
- } from "../src/odata/queryengine";
+ } from "../lib/odata/queryengine";
 import {
   IPostRequestParser, IGetRequestParser, IPatchRequestParser, IFilterVisitor, GetRequestType,
-} from "../src/odata/parser";
-import { IEntityInitializer } from "../src/odata/entityinitializer_base";
-import { IRepository, IOperation } from "../src/odata/repository";
-import { IValue } from "../src/odata/filters/expressions";
-import { Result, AnyResult } from "../src/result";
-import { Schema, EntityType } from "../src/odata/schema";
-import { IHttpRequest, IHttpResponseSender } from "../src/odata/http";
-import { IEqExpression, IPropertyValue, INumericLiteral } from "../src/odata/filters/expressions";
+} from "../lib/odata/parser";
+import { IEntityInitializer } from "../lib/odata/entityinitializer_base";
+import { IRepository, IOperation } from "../lib/odata/repository";
+import { IValue } from "../lib/odata/filters/expressions";
+import { Result, AnyResult } from "../lib/result";
+import { Schema, EntityType } from "../lib/odata/schema";
+import { IHttpRequest, IHttpResponseSender } from "../lib/odata/http";
+import { IEqExpression, IPropertyValue, INumericLiteral } from "../lib/odata/filters/expressions";
 
 describe("OData.PatchHandler:", () => {
 

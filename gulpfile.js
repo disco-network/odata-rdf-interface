@@ -30,21 +30,21 @@ var sourceMapsConfig = {
 var tsProject = tsc.createProject("tsconfig.json");
 
 function build(sourcePath, base, targetPath) {
-  var tsResult = gulp.src(sourcePath)
+  var tsResult = gulp.src(sourcePath, { base: base })
     .pipe(sourcemaps.init())
     .pipe(tsProject(tsc.reporter.longReporter()));
 
   return merge([
     tsResult.dts
-      .pipe(gulp.dest("build/typings")),
+      .pipe(gulp.dest("build/typings/" + targetPath)),
     tsResult.js
-      .pipe(sourcemaps.write("../maps", sourceMapsConfig))
+      .pipe(sourcemaps.write((/* HACK! Better place all files side by side? */(targetPath === "") ? "" : "../") + "maps/" + targetPath, sourceMapsConfig))
       .pipe(gulp.dest("build/" + targetPath))
   ]);
 }
 
 gulp.task("build-spec", function () {
-  return build(["src/**/*.ts", "typings/**.d.ts", "!./node_modules/**"], "./src", "spec");
+  return build(["src/**/*.ts", "typings/**.d.ts", "!./node_modules/**"], "./src", "");
 });
 gulp.task("build-lib", function () {
   return build(["src/lib/**/*.ts", "typings/**.d.ts", "!./node_modules/**"], "./src", "lib");
@@ -58,8 +58,8 @@ gulp.task("build-package.json", function () {
     "version": appPackageJson.version,
     "author": appPackageJson.author,
     "repository": appPackageJson.repository,
-    "main": "lib/index.js",      // TODO: generate this from app package.json
-    "typings": "lib/index.d.ts", // TODO: generate this from app package.json
+    "main": "index.js",      // TODO: generate this from app package.json
+    "typings": "index.d.ts", // TODO: generate this from app package.json
     "dependencies": appPackageJson.dependencies,
     "keywords": appPackageJson.keywords,
     "license": appPackageJson.license,
@@ -97,6 +97,30 @@ gulp.task("build", function (cb) {
   );
 });
 
+/*gulp.task("build-tests", function (cb) {
+  return runSequence(
+    "build-spec", 
+    ["copy-static-spec"],
+    cb
+  );
+});*/
+
+gulp.task("build-all", ["build"], function (cb) {
+  return runSequence(
+    "build-spec",
+    ["copy-static-spec"],
+    cb
+  );
+});
+
+gulp.task("tests", ["build-all"], function () {
+  return gulp.src("build/spec/*.js")
+    .pipe(mocha());
+});
+
+//alternative name for the "tests" task
+gulp.task("specs", ["tests"]);
+
 // TODO: depricated - will be removed soon!
 gulp.task("clean-all-old", function () {
   return del(["./maps", "./lib"]);
@@ -104,16 +128,3 @@ gulp.task("clean-all-old", function () {
 gulp.task("clean-all", ["clean-all-old"], function () {
   return del(["./build"]);
 });
-
-gulp.task("tests", ["build", "build-spec", "copy-static-spec"], function () {
-  return gulp.src("build/spec/*.js")
-    .pipe(mocha());
-});
-
-gulp.task("tests-no-build", function () {
-  return gulp.src("./build/spec/*.js")
-    .pipe(mocha());
-})
-
-//alternative name for the "tests" task
-gulp.task("specs", ["tests"]);

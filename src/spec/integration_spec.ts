@@ -1,10 +1,10 @@
-import { assert, assertEx, match } from "../src/assert";
+import { assert, assertEx, match } from "../lib/assert";
 
 import * as rdfstore from "rdfstore";
-import { SparqlProvider } from "../src/sparql/sparql_provider";
-import { GetHandler, PostHandler } from "../src/bootstrap/adapter/queryengine";
-import { IHttpResponseSender } from "../src/odata/http";
-import { Schema } from "../src/odata/schema";
+import { SparqlProvider } from "../lib/sparql/sparql_provider";
+import { GetHandler, PostHandler } from "../lib/bootstrap/adapter/queryengine";
+import { IHttpResponseSender } from "../lib/odata/http";
+import { Schema } from "../lib/odata/schema";
 import { schemaWithMandatoryProperty, schemaWithInverseProperty } from "./helpers/schemata";
 
 const graph = "http://test.disco-network.org/";

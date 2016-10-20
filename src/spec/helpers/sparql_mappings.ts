@@ -1,5 +1,5 @@
-import mappings = require("../../src/adapter/mappings");
-import schema = require("../../src/odata/schema");
+import mappings = require("../../lib/adapter/mappings");
+import schema = require("../../lib/odata/schema");
 
 export function createUnstructuredMapping() {
   let mapping = new mappings.SparqlVariableMapping(new mappings.SparqlVariableGenerator());

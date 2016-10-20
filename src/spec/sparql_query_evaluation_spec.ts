@@ -1,9 +1,9 @@
 import { assert } from "chai";
-import { JsonResultBuilder } from "../src/adapter/odatarepository";
+import { JsonResultBuilder } from "../lib/adapter/odatarepository";
 
-import { Schema } from "../src/odata/schema";
+import { Schema } from "../lib/odata/schema";
 let schema = new Schema();
-import queryAdapter = require("../src/adapter/odatarepository");
+import queryAdapter = require("../lib/adapter/odatarepository");
 import mhelper = require("./helpers/sparql_mappings");
 
 describe("Adapter.SparqlQueryContext", function() {

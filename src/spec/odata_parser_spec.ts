@@ -1,10 +1,10 @@
-import { assert, assertEx, match } from "../src/assert";
+import { assert, assertEx, match } from "../lib/assert";
 
 import {
   IPostRequestParser, PostRequestParser, GetRequestParser, GetRequestType,
   PatchRequestParser,
   IODataParser, ODataParser, IFilterVisitor,
-} from "../src/odata/parser";
+} from "../lib/odata/parser";
 import queryTestCases = require("./helpers/querytestcases");
 
 describe("ODataParser @todo inject this dependency @todo create abstraction", function() {

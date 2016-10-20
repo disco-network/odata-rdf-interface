@@ -1,5 +1,5 @@
-import schema = require("../../src/odata/schema");
-import { match } from "../../src/assert";
+import schema = require("../../lib/odata/schema");
+import { match } from "../../lib/assert";
 
 let queries = [
   "/Posts",
