@@ -19,9 +19,39 @@
     ],
     "tasks": [
         {
+            "taskName": "build",
+            "args": [],
+            "isBuildCommand": true,
+            "isWatching": false,
+            "showOutput": "always",
+            "problemMatcher": [
+                "$tsc",
+                "$jshint"
+            ]
+        },
+        {
             "taskName": "specs",
             "args": [],
-            "isTestCommand": true
+            "isTestCommand": true,
+            "showOutput": "always",
+            "problemMatcher": {
+                "owner": "gulp-mocha",
+                "pattern": [
+                    {
+                        "regexp": "^not\\sok\\s\\d+\\s(.*)$"
+                    },
+                    {
+                        "regexp": "\\s+(.*)$",
+                        "message": 1
+                    },
+                    {
+                        "regexp": "\\s+at\\s(.*):(\\d+):(\\d+)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3
+                    }
+                ]
+            }
         }
     ]
 }

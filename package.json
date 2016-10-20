@@ -28,7 +28,7 @@
   },
   "description": "This project is supposed to become a Node.js-based OData endpoint working on top of an RDF store.",
   "main": "build/lib/index.js",
-  "typings": "build/lib/index.d.ts",
+  "typings": "build/typings/index.d.ts",
   "scripts": {
     "test": "gulp specs",
     "postinstall": "gulp build"

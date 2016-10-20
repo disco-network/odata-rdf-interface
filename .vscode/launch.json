@@ -7,7 +7,9 @@
             "request": "launch",
             "program": "${workspaceRoot}/node_modules/.bin/gulp",
             "stopOnEntry": false,
-            "args": ["specs"],
+            "args": [
+                "specs"
+            ],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,
@@ -17,9 +19,14 @@
             "env": {
                 "NODE_ENV": "development"
             },
-            "externalConsole": false,
+            "console": "internalConsole",
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/build/tests"
+            "outFiles": [
+                "${workspaceRoot}/build/**/*.js",
+                "!${workspaceRoot}/build/lib/**/*.js",
+                "${workspaceRoot}/node_modules/abnfjs/**/*.js",
+                "${workspaceRoot}/node_modules/rdfstore/dist/**/*.js"
+            ]
         },
         {
             "name": "Debug Tests Without Build",
@@ -27,7 +34,9 @@
             "request": "launch",
             "program": "${workspaceRoot}/node_modules/.bin/gulp",
             "stopOnEntry": false,
-            "args": ["tests-no-build"],
+            "args": [
+                "tests-no-build"
+            ],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,
@@ -47,7 +56,10 @@
             "request": "launch",
             "program": "${workspaceRoot}/node_modules/.bin/stryker",
             "stopOnEntry": false,
-            "args": ["-c", "stryker.conf.js"],
+            "args": [
+                "-c",
+                "stryker.conf.js"
+            ],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,

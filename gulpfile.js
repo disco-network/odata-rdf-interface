@@ -12,10 +12,9 @@ var gulp = require("gulp"),
 
 gulp.task("lint", function () {
   return gulp.src([
-    "src/**/**.ts",
-    "spec/**.ts",
-    "typings/**.d.ts",
-    "!build/**"
+    "**",
+    "!**/*.d.ts",
+    "!**/typings/**"
   ])
     .pipe(tslint({}))
     .pipe(tslint.report("verbose"));
@@ -23,29 +22,32 @@ gulp.task("lint", function () {
 
 var sourceMapsConfig = {
   includeContent: false,
-  sourceRoot: function (file) {
-    // needed to fix relative path in sourceMaps
-    // HACK: this solution is coupled with the current folder structure!!
-    var path = "../".repeat((file.relative.match(/\//g) || []).length);
-    return path;
+  mapSources: function (sourcePath) {
+    return '../' + sourcePath;
   }
 };
 
 var tsProject = tsc.createProject("tsconfig.json");
 
 function build(sourcePath, base, targetPath) {
-  return gulp.src(sourcePath, { base: base })
+  var tsResult = gulp.src(sourcePath)
     .pipe(sourcemaps.init())
-    .pipe(tsProject(tsc.reporter.defaultReporter()))
-    .pipe(sourcemaps.write("../../maps", sourceMapsConfig))
-    .pipe(gulp.dest("build/" + targetPath));
+    .pipe(tsProject(tsc.reporter.longReporter()));
+
+  return merge([
+    tsResult.dts
+      .pipe(gulp.dest("build/typings")),
+    tsResult.js
+      .pipe(sourcemaps.write("../maps", sourceMapsConfig))
+      .pipe(gulp.dest("build/" + targetPath))
+  ]);
 }
 
 gulp.task("build-spec", function () {
-  return build(["spec/**/*.ts", "src/**/*.ts", "typings/*.d.ts"], ".", "tests");
+  return build(["src/**/*.ts", "typings/**.d.ts", "!./node_modules/**"], "./src", "spec");
 });
 gulp.task("build-lib", function () {
-  return build(["src/**/*.ts", "typings/*.d.ts"], "./src", "lib");
+  return build(["src/lib/**/*.ts", "typings/**.d.ts", "!./node_modules/**"], "./src", "lib");
 });
 
 gulp.task("build-package.json", function () {
@@ -64,33 +66,33 @@ gulp.task("build-package.json", function () {
     "bugs": appPackageJson.bugs
   }
   // Is this necessary in any case? fs.mkdirSync(path.join(__dirname, "build"));
-  fs.writeFileSync(path.join(__dirname, "build", "package.json"), JSON.stringify(npmPackageJson, null, 2));
+  fs.mkdirSync(path.join(__dirname, "build"));
+  fs.mkdirSync(path.join(__dirname, "build", "lib"));
+  fs.writeFileSync(path.join(__dirname, "build", "lib", "package.json"), JSON.stringify(npmPackageJson, null, 2));
 });
 
 function copyStaticSrc() {
   return gulp.src([
-    "./src/**/**/odata4-mod.abnf"
-  ], { base: "./src" });
+    "./src/lib/**/odata4-mod.abnf"
+  ]);
 }
 gulp.task("copy-static-lib", ["copy-license"], function () {
   return copyStaticSrc().pipe(gulp.dest("build/lib"));
 });
 gulp.task("copy-static-spec", function () {
-  return copyStaticSrc().pipe(gulp.dest("build/tests/src"));
+  return copyStaticSrc().pipe(gulp.dest("build/spec"));
 });
 gulp.task("copy-license", function () {
   return gulp.src([
     "README.md",
     "LICENSE"
-  ]).pipe(gulp.dest("build"));
+  ]).pipe(gulp.dest("build/lib"));
 });
 
 gulp.task("build", function (cb) {
   return runSequence(
     "clean-all",
-    "build-lib",
-    "copy-static-lib",
-    "build-package.json",
+    ["build-lib", "copy-static-lib", "build-package.json"],
     cb
   );
 });
@@ -103,22 +105,13 @@ gulp.task("clean-all", ["clean-all-old"], function () {
   return del(["./build"]);
 });
 
-gulp.task("build-tests", function (cb) {
-  return runSequence(
-    "clean-all",
-    "build-spec",
-    "copy-static-spec",
-    cb
-  );
-});
-
-gulp.task("tests", ["build-tests"], function () {
-  return gulp.src("./build/tests/spec/*.js")
+gulp.task("tests", ["build", "build-spec", "copy-static-spec"], function () {
+  return gulp.src("build/spec/*.js")
     .pipe(mocha());
 });
 
 gulp.task("tests-no-build", function () {
-  return gulp.src("./build/tests/spec/*.js")
+  return gulp.src("./build/spec/*.js")
     .pipe(mocha());
 })
 
