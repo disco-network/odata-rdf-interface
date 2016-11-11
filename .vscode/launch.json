@@ -23,7 +23,7 @@
             "sourceMaps": true,
             "outFiles": [
                 "${workspaceRoot}/build/**/*.js",
-                "!${workspaceRoot}/build/lib/**/*.js",
+                "${workspaceRoot}/build/lib/**/*.js",
                 "${workspaceRoot}/node_modules/abnfjs/**/*.js",
                 "${workspaceRoot}/node_modules/rdfstore/dist/**/*.js"
             ]

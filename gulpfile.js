@@ -23,7 +23,19 @@ gulp.task("lint", function () {
 var sourceMapsConfig = {
   includeContent: false,
   mapSources: function (sourcePath) {
-    return '../' + sourcePath;
+    // HACK: The sourcemaps do not reference source files correctly!
+    // The recieved sourcePath always starts with '../../source/lib/',
+    // resulting from the current folder structure!
+    // This indeed is not feasable for files nested on different levels.
+    // Therefor we need to count the folder depth of the current file.
+    // This is done by counting the overall slashes within the path.
+    // To get the additional ones, we need to subtract the initial path count.
+    // For this project setting it is the magic number of 4. Please adjust 
+    // this to your project needs. 
+    const initialPathCount = 4;
+    let depthCount = (sourcePath.match(/\//g) || []).length;
+    let pathUps = "../".repeat(Math.max(depthCount, initialPathCount) - initialPathCount);
+    return pathUps + sourcePath;
   }
 };
 
