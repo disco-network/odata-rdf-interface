@@ -16,7 +16,11 @@ import { shouldNotBeReached } from "../../controlflow";
 
 import { EntityType } from "../schema";
 
-export class FilterFromPatternProducer {
+export interface IFilterFromPatternProducer {
+  produceFromPattern(pattern: IMatchPattern, entityType: EntityType): IAllowedExpression;
+}
+
+export class FilterFromPatternProducer implements IFilterFromPatternProducer {
 
   public produceFromPattern(pattern: IMatchPattern, entityType: EntityType) {
 

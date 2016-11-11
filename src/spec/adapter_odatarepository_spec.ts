@@ -3,6 +3,7 @@ import results = require("../lib/result");
 import { Schema, EntityType } from "../lib/odata/schema";
 import {
   ODataRepository, IGetQueryStringBuilder, IQueryAdapterModel, IMinimalVisitor, IPatchQueryStringProducerFactory,
+  PatchQueryStringProducerFactory, IWhereClauseProducer, WhereClause,
 } from "../lib/adapter/odatarepository";
 import {
   LiteralValuedEntity, OnlyExistingPropertiesBrand, CorrectPropertyTypesBrand,
@@ -12,6 +13,7 @@ import {
   IInsertQueryStringProducer, IPrefix, ISparqlLiteral, PropertyDescription,
 } from "../lib/sparql/querystringproducer";
 import { tryCatch } from "../lib/controlflow";
+import { IFilterFromPatternProducer } from "../lib/odata/filters/matchpattern";
 
 describe("Adapter.ODataRepository:", () => {
   it("should insert an entity called 'post1' with Id = '1'", done => {
@@ -123,11 +125,11 @@ describe("Adapter.ODataRepository:", () => {
 
   it ("should execute a basic 'patch'", done => {
     const sparql =
-    `DELETE { <x> disco:title ?x0 } INSERT { <x> disco:title 'new' } WHERE { <x> disco:id '1' . <x> disco:title ?x0 }`;
+    `DELETE { <x> disco:title ?x0 } INSERT { <x> disco:title 'new' } WHERE { ?x1 disco:id '1' . ?x1 disco:title ?x0 }`;
 
     const sparqlProvider = new SparqlProvider();
     let queryCount = 0;
-    sparqlProvider.query = (query, cb) => {
+    sparqlProvider.query = tryCatch((query, cb) => {
       switch (queryCount++) {
         case 0:
           assert.strictEqual(query, sparql);
@@ -136,20 +138,7 @@ describe("Adapter.ODataRepository:", () => {
         default:
           assert.strictEqual("queryCount", "valid");
       }
-    };
-
-    /* @construction const queryStringBuilder = new PatchQueryStringBuilderFactory();
-    queryStringBuilder.updateAsSparql = (prefixes, uri, obsoleteProperties, newProperties, pattern) => {
-      assert.strictEqual(uri, "x");
-      assertEx.deepEqual(obsoleteProperties,
-        [{ rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "?x0") }]);
-      assertEx.deepEqual(newProperties,
-        [{ rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "'new'") }]);
-      assertEx.deepEqual(pattern,
-        [{ rdfProperty: "disco:id", value: match.is(val => val.representAsSparql() === "'1'") },
-          { rdfProperty: "disco:title", value: match.is(val => val.representAsSparql() === "?x0") }]);
-      return sparql;
-    };*/
+    }, e => { done(e); done = () => null; });
 
     const patchQueryStringBuilderFactory: IPatchQueryStringProducerFactory = {
       create: (updatedValues, pattern, entityType) => ({
@@ -157,7 +146,7 @@ describe("Adapter.ODataRepository:", () => {
           assertEx.deepEqual(updatedValues, [match.is(v => {
             return v.value.representAsSparql() === "'new'";
           })]);
-          return "[QUERY]";
+          return sparql;
         }, e => { done(e); done = () => null; }),
       }),
     };
@@ -185,6 +174,85 @@ describe("Adapter.ODataRepository:", () => {
       done(e);
     }
   });
+  it ("should execute 'patch' with foreign-key properties", done => {
+    const sparql =
+    `DELETE { ?x2 disco:content ?x1 } INSERT { ?x2 disco:content ?x0 } WHERE { ?x2 disco:id '1' . ?x2 disco:content ?x1 . ?x0 rdf:type disco:Content . ?x0 disco:id '1' }`;
+
+    const sparqlProvider = new SparqlProvider();
+    let queryCount = 0;
+    sparqlProvider.query = tryCatch((query, cb) => {
+      switch (queryCount++) {
+        case 0:
+          assert.strictEqual(query, sparql);
+          cb(results.Result.success(undefined));
+          break;
+        default:
+          assert.strictEqual("queryCount", "valid");
+      }
+    }, e => { done(e); done = () => null; });
+
+    const patchQueryStringBuilderFactory: IPatchQueryStringProducerFactory = {
+      create: (updatedValues, pattern, entityType) => ({
+        produceSparql: tryCatch(() => {
+          assertEx.deepEqual(updatedValues, [match.is(v => {
+            return v.value.representAsSparql() === "'1'";
+          })]);
+          return sparql;
+        }, e => { done(e); done = () => null; }),
+      }),
+    };
+
+    const repo = create(sparqlProvider, new GetQueryStringBuilder(), new InsertQueryStringBuilder(),
+                        patchQueryStringBuilderFactory);
+
+    const pattern = { Id: { type: "Edm.Int32", value: 1 } } as
+      LiteralValuedEntity as LiteralValuedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+
+    const diff = { ContentId: { type: "Edm.Int32", value: 1 } } as
+      LiteralValuedEntity as LiteralValuedEntity & OnlyExistingPropertiesBrand & CorrectPropertyTypesBrand;
+    try {
+      repo.batch([{
+        type: "patch",
+        entityType: "Content",
+        pattern: pattern,
+        diff: diff,
+      }], new Schema(), tryCatch(() => {
+        assert.strictEqual(queryCount, 1);
+        done();
+      }, done));
+    }
+    catch (e) {
+      done(e);
+    }
+  });
+});
+
+describe ("PatchQueryStringProducer:", () => {
+  it ("should", () => {
+    const whereClauseProducer: IWhereClauseProducer = {
+      produce: (properties, filter, type, mapping) => {
+        return "[WHERE]" as string & WhereClause;
+      },
+    };
+
+    const filterFromPatternProducer: IFilterFromPatternProducer = {
+      produceFromPattern: (pattern, entityType) => {
+        return null as any;
+      },
+    };
+
+    const factory = new PatchQueryStringProducerFactory({
+      prefixesAsSparql: prefixes => "[PREFIXES]",
+    }, whereClauseProducer, filterFromPatternProducer);
+
+    const producer = factory.create(
+      [],
+      [{ property: "Id", value: { type: "Edm.String", value: "1" } }],
+      new Schema().getEntityType("Post"));
+
+    assert.strictEqual(producer.produceSparql(), "[PREFIXES] DELETE {  } INSERT {  } [WHERE]");
+  });
+
 });
 
 function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.ISparqlProvider,

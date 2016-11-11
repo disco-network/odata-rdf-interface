@@ -26,7 +26,7 @@ import {
 import translators = require("../adapter/filtertranslators");
 import { IEqualsUriExpression, IEqualsUriExpressionVisitor } from "../adapter/filtertranslators";
 import filterPatterns = require("../adapter/filterpatterns");
-import { FilterFromPatternProducer, IMatchPattern } from "../odata/filters/matchpattern";
+import { IFilterFromPatternProducer, IMatchPattern } from "../odata/filters/matchpattern";
 import { IExpandTreeGraphPatternStrategy } from "../adapter/expandtree";
 import { PropertySelectionTree } from "../odata/propertyselector";
 import mappings = require("../adapter/mappings");
@@ -530,7 +530,7 @@ export class PatchQueryStringProducerFactory implements IPatchQueryStringProduce
 
   constructor(private prefixProducer: IPrefixProducer,
               private whereClauseProducer: IWhereClauseProducer,
-              private filterFromPatternProducer: FilterFromPatternProducer) {}
+              private filterFromPatternProducer: IFilterFromPatternProducer) {}
 
   public create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType) {
     return new PatchQueryStringProducer(updatedValues, pattern, entityType,
@@ -548,7 +548,7 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
               private entityType: EntityType,
               private prefixProducer: IPrefixProducer,
               private whereClauseProducer: IWhereClauseProducer,
-              private filterFromPatternProducer: FilterFromPatternProducer) {
+              private filterFromPatternProducer: IFilterFromPatternProducer) {
     const vargen = new mappings.SparqlVariableGenerator();
     this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
   }
@@ -584,6 +584,7 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
   }
 
   public produceWhereClause() {
+    /* @construction include literals from filter pattern as triple, ex: ?x0 disco:id '1' */
     return this.whereClauseProducer.produce(this.selectProperties(), this.produceFilterTranslator(), this.entityType,
                                             this.mapping);
   }
