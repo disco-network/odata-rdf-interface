@@ -38,7 +38,8 @@ export interface IGetRequestParser<TFilterVisitor> {
   parse(request: IHttpRequest): IParsedGetRequest<TFilterVisitor>;
 }
 
-export type IParsedGetRequest<TFilterVisitor> = IParsedGetCollectionRequest<TFilterVisitor> | IParsedGetByIdRequest;
+export type IParsedGetRequest<TFilterVisitor>
+= IParsedGetCollectionRequest<TFilterVisitor> | IParsedGetByIdRequest | IParsedPropertyOfSingleRequest;
 
 export interface IParsedGetCollectionRequest<TFilterVisitor> {
   type: GetRequestType.Collection;
@@ -53,12 +54,19 @@ export interface IParsedGetByIdRequest {
   id: EdmLiteral;
 }
 
+export interface IParsedPropertyOfSingleRequest {
+  type: GetRequestType.PropertyOfSingle;
+  entitySetName: string;
+  id: EdmLiteral;
+  propertyName: string;
+}
+
 export interface IODataParser {
   parse(query: string): any;
 }
 
 export enum GetRequestType {
-  ById, Collection
+  ById, PropertyOfSingle, Collection
 }
 
 export class PatchRequestParser implements IPatchRequestParser {
@@ -153,8 +161,16 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
     }
     else if (ast.resourcePath.navigation.type === "collection-navigation") {
       const rawId = ast.resourcePath.navigation.path.keyPredicate.simpleKey;
+      const singleNavigation = ast.resourcePath.navigation.path.singleNavigation;
 
-      return {
+      if (singleNavigation !== undefined) return {
+        type: GetRequestType.PropertyOfSingle,
+        entitySetName: entitySetName,
+        id: this.literalParser.parse(rawId),
+        propertyName: singleNavigation.propertyPath.propertyName,
+      };
+
+      else return {
         type: GetRequestType.ById,
         entitySetName: entitySetName,
         id: this.literalParser.parse(rawId),

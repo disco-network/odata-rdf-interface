@@ -170,7 +170,9 @@ export class EntityType extends RdfBasedSchemaResource<IRawEntityType> {
   }
 
   public getProperty(name: string): Property {
-    return new Property(this.completeSchema, this, name);
+    if (Object.prototype.hasOwnProperty.call(this.getRaw().properties, name))
+      return new Property(this.completeSchema, this, name);
+    else throw new Error(`Property ${name} does not exist on type ${this.getName()}!`);
   }
 
   public getPropertyNames(): string[] {
