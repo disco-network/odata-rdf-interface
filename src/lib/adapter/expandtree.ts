@@ -11,7 +11,7 @@ export interface IExpandTreeGraphPatternStrategy {
 
   create(entityType: EntityType, expandTree, variableMapping: IStructuredSparqlVariableMapping): TreeGraphPattern;
   createFromSelectionTree(entityType: EntityType, variableMapping: IStructuredSparqlVariableMapping,
-                          selectionTree: PropertySelectionTree): TreeGraphPattern;
+    selectionTree: PropertySelectionTree): TreeGraphPattern;
 }
 
 /**
@@ -24,18 +24,18 @@ export class ExpandTreeGraphPatternStrategy {
   private propertySelector: IPropertySelector = new PropertySelector();
 
   constructor(private branchFactory: IBranchFactory<IBranchingArgs>,
-              private argsFactory: PropertyBranchingArgsFactory) {
+    private argsFactory: PropertyBranchingArgsFactory) {
   }
 
   public create(entityType: EntityType, expandTree,
-                variableMapping: IStructuredSparqlVariableMapping) {
+    variableMapping: IStructuredSparqlVariableMapping) {
     return this.createFromSelectionTree(entityType, variableMapping,
-                                        this.propertySelector.selectPropertiesForQuery(entityType, expandTree));
+      this.propertySelector.selectPropertiesForQuery(entityType, expandTree));
   }
 
   public createFromSelectionTree(entityType: EntityType,
-                                 variableMapping: IStructuredSparqlVariableMapping,
-                                 selectionTree: PropertySelectionTree) {
+    variableMapping: IStructuredSparqlVariableMapping,
+    selectionTree: PropertySelectionTree) {
 
     const tree = this.createTreeFromSelectionTree(entityType, selectionTree);
     const result = new TreeGraphPattern(variableMapping.getVariable());
@@ -43,12 +43,19 @@ export class ExpandTreeGraphPatternStrategy {
       new PropertyMapping(entityType),
       variableMapping
     );
-    tree.traverse(new TraversingArgs({
-      patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelector(result),
-      mapping: mapping,
-      scopedMapping: new ScopedMapping(mapping),
-    }));
-    return result;
+
+    try {
+
+      tree.traverse(new TraversingArgs({
+        patternSelector: /* @smell */ new propertyTreeImpl.GraphPatternSelector(result),
+        mapping: mapping,
+        scopedMapping: new ScopedMapping(mapping),
+      }));
+      return result;
+
+    } catch (error) {
+      throw new Error("Failed to traverse entity [" + entityType.getName() + "] after " + error.stack + "\n\n");
+    }
   }
 
   public createTree(entityType: EntityType, expandTree) {

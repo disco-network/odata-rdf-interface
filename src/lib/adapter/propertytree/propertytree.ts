@@ -19,15 +19,22 @@ export class NullNode {
 export class Tree {
   private branches: { [id: string]: Tree } = {};
 
-  constructor(private node: INode = new NullNode()) {}
+  constructor(private node: INode = new NullNode()) { }
 
   public traverse(args: TraversingArgs): void {
     let subArgs = this.node.apply(args);
+
     for (let key of Object.keys(this.branches)) {
       let branch = this.branches[key];
-      if (subArgs)
-        branch.traverse(subArgs);
-      else throw new Error("Leaf nodes can't have branches");
+      if (subArgs) {
+        try {
+          branch.traverse(subArgs);
+        } catch (error) {
+          let keyData = JSON.parse(key);
+          let propertyName = (keyData) ? keyData.name : undefined;
+          throw new Error("Failed to traverse property [" + propertyName + "]");
+        }
+      } else throw new Error("Leaf nodes can't have branches");
     }
   }
 
