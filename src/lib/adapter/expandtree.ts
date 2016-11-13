@@ -23,17 +23,20 @@ export class ExpandTreeGraphPatternStrategy {
 
   private propertySelector: IPropertySelector = new PropertySelector();
 
-  constructor(private branchFactory: IBranchFactory<IBranchingArgs>,
+  constructor(
+    private branchFactory: IBranchFactory<IBranchingArgs>,
     private argsFactory: PropertyBranchingArgsFactory) {
   }
 
-  public create(entityType: EntityType, expandTree,
+  public create(
+    entityType: EntityType, expandTree,
     variableMapping: IStructuredSparqlVariableMapping) {
     return this.createFromSelectionTree(entityType, variableMapping,
       this.propertySelector.selectPropertiesForQuery(entityType, expandTree));
   }
 
-  public createFromSelectionTree(entityType: EntityType,
+  public createFromSelectionTree(
+    entityType: EntityType,
     variableMapping: IStructuredSparqlVariableMapping,
     selectionTree: PropertySelectionTree) {
 

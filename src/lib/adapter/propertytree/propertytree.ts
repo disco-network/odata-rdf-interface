@@ -32,7 +32,7 @@ export class Tree {
         } catch (error) {
           let keyData = JSON.parse(key);
           let propertyName = (keyData) ? keyData.name : undefined;
-          throw new Error("Failed to traverse property [" + propertyName + "]");
+          throw new Error("Failed to traverse property [" + propertyName + "] after " + error.stack + "\n\n");
         }
       } else throw new Error("Leaf nodes can't have branches");
     }
