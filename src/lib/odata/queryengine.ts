@@ -5,7 +5,7 @@ import {
 import { IEqExpressionVisitor, IPropertyValueVisitor, INumericLiteralVisitor } from "../odata/filters/expressions";
 import entityInitializer = require("../odata/entityinitializer_base");
 import { BadBodyError } from "../odata/entityinitializer";
-import { IRepository }  from "../odata/repository";
+import { IRepository } from "../odata/repository";
 import { Schema } from "../odata/schema";
 import { EdmConverter, EdmLiteral } from "../odata/edm";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
@@ -30,14 +30,15 @@ export interface IPostRequestResult {
   success: boolean;
 }
 
-export interface IMinimalVisitor extends INumericLiteralVisitor, IEqExpressionVisitor, IPropertyValueVisitor {}
+export interface IMinimalVisitor extends INumericLiteralVisitor, IEqExpressionVisitor, IPropertyValueVisitor { }
 export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
   private edmConverter = new EdmConverter(); /* @todo move */
 
-  constructor(private schema: Schema,
-              private parser: IGetRequestParser<T>,
-              private repository: IRepository<T>,
-              private getHttpResponder: IGetHttpResponder) {}
+  constructor(
+    private schema: Schema,
+    private parser: IGetRequestParser<T>,
+    private repository: IRepository<T>,
+    private getHttpResponder: IGetHttpResponder) { }
 
   public query(request: IHttpRequest, httpResponseSender: IHttpResponseSender) {
     let parsed = this.parser.parse(request);
@@ -45,7 +46,13 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
     switch (parsed.type) {
       case GetRequestType.Collection:
         this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
-          this.getHttpResponder.success(result.result(), httpResponseSender);
+          if (result.success()) {
+            this.getHttpResponder.success(result.result(), httpResponseSender);
+          } else {
+            httpResponseSender.sendBody(result.error().stack);
+            httpResponseSender.sendStatusCode(500);
+            httpResponseSender.finishResponse();
+          }
         });
         break;
       case GetRequestType.ById:
@@ -62,10 +69,10 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
         this.repository.getEntities(type, { [req.propertyName]: {} },
           this.filterExpressionFromEntityId(baseEntityId), result => {
 
-          if (result.success()) {
-            this.getHttpResponder.success(result.result()[0][req.propertyName], httpResponseSender);
-          }
-        });
+            if (result.success()) {
+              this.getHttpResponder.success(result.result()[0][req.propertyName], httpResponseSender);
+            }
+          });
         break;
       default:
         throw new Error("This GetRequestType is not supported.");
@@ -73,7 +80,7 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
   }
 
   private filterExpressionFromEntityId(id: EdmLiteral) {
-    const propertyExpr = new PropertyValue([ "Id" ]);
+    const propertyExpr = new PropertyValue(["Id"]);
     let literal: NumericLiteral;
     switch (id.type) {
       case "Edm.Int32":
@@ -109,10 +116,11 @@ export class GetHttpResponder implements IGetHttpResponder {
 
 export class PostHandler<T> implements IPostHandler {
 
-  constructor(private parser: IPostRequestParser,
-              private entityInitializer: entityInitializer.IEntityInitializer,
-              private repository: IRepository<T>,
-              private schema: Schema) {
+  constructor(
+    private parser: IPostRequestParser,
+    private entityInitializer: entityInitializer.IEntityInitializer,
+    private repository: IRepository<T>,
+    private schema: Schema) {
   }
 
   public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
@@ -147,9 +155,10 @@ export class PostHandler<T> implements IPostHandler {
 
 export class PatchHandler<T> implements IPatchHandler {
 
-  constructor(private parser: IPatchRequestParser, private schema: Schema,
-              private entityInitializer: entityInitializer.IEntityInitializer,
-              private repository: IRepository<T>) {}
+  constructor(
+    private parser: IPatchRequestParser, private schema: Schema,
+    private entityInitializer: entityInitializer.IEntityInitializer,
+    private repository: IRepository<T>) { }
 
   public query(request: IHttpRequest, responseSender: IHttpResponseSender) {
     const parsed = this.parser.parse(request);

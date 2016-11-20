@@ -41,15 +41,16 @@ const prefixes = [
 ];
 
 export interface IMinimalVisitor extends IAndExpressionVisitor, IEqExpressionVisitor,
-  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor, IEqualsUriExpressionVisitor, INullVisitor {}
+  IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor, IEqualsUriExpressionVisitor, INullVisitor { }
 
 export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   implements base.IRepository<TExpressionVisitor> {
 
-  constructor(private sparqlProvider: sparqlProvider.ISparqlProvider,
-              private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
-              private insertQueryStringBuilder: IInsertQueryStringProducer,
-              private patchQueryStringProducerFactory: IPatchQueryStringProducerFactory) {}
+  constructor(
+    private sparqlProvider: sparqlProvider.ISparqlProvider,
+    private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
+    private insertQueryStringBuilder: IInsertQueryStringProducer,
+    private patchQueryStringProducerFactory: IPatchQueryStringProducerFactory) { }
 
   public batch(ops: ReadonlyArray<base.IOperation>, schema: Schema, cbResults: (results: results.AnyResult) => void) {
     async.reduce(ops, [] as results.AnyResult[], (batchResults, op, cb) => {
@@ -57,8 +58,8 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
         case "get":
           const entityType = schema.getEntityType(op.entityType);
           const conditions = Object.keys(op.pattern).map(compose(
-              (key: string) => ({ key: key, value: op.pattern[key] }),
-              this.eqExpressionFromKeyValue));
+            (key: string) => ({ key: key, value: op.pattern[key] }),
+            this.eqExpressionFromKeyValue));
           const firstCondition = conditions.slice(0, 1)[0];
           const restConditions = conditions.slice(1);
           const filterExpression = restConditions.reduce<IValue<IMinimalVisitor>>((reduced, condition) =>
@@ -76,38 +77,39 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
           try {
             const keyValuePairs = this.toSparqlAssignmentArray(op.value, batchResults);
             this.runInsert(schema.getEntityType(op.entityType), /* @todo make uri */ op.identifier,
-            keyValuePairs, () => {
-              this.getEntityByUri(schema.getEntityType(op.entityType), op.identifier, (res, m) => {
-                batchResults.push(this.translateResponse(res, m, (result, model) => ({
-                  odata: this.translateResponseToOData(result, model),
-                  uris: this.translateResonseToEntityUris(result, model),
-                })));
-                cb(null, batchResults);
+              keyValuePairs, () => {
+                this.getEntityByUri(schema.getEntityType(op.entityType), op.identifier, (res, m) => {
+                  batchResults.push(this.translateResponse(res, m, (result, model) => ({
+                    odata: this.translateResponseToOData(result, model),
+                    uris: this.translateResonseToEntityUris(result, model),
+                  })));
+                  cb(null, batchResults);
+                });
               });
-          });
           }
           catch (e) {
             batchResults.push(results.Result.error(e));
             cb(null, batchResults);
           }
-        break;
-      case "patch":
-        try {
-          const diffAssignments = this.toSparqlAssignmentArray(op.diff, batchResults);
-          const patternAssignments = Object.keys(op.pattern).map(prop => ({ property: prop, value: op.pattern[prop] }));
-          this.runUpdate(schema.getEntityType(op.entityType), patternAssignments, diffAssignments, () => {
-            batchResults.push(results.Result.success(null));
-            cb(null, batchResults);
-          });
           break;
-        }
-        catch (e) {
-          batchResults.push(results.Result.error(e));
-          cb(null, batchResults);
-        }
-        break;
-      default:
-        getNever(op, `Unexpected operation type ${op!.type}`);
+        case "patch":
+          try {
+            const diffAssignments = this.toSparqlAssignmentArray(op.diff, batchResults);
+            const patternAssignments =
+              Object.keys(op.pattern).map(prop => ({ property: prop, value: op.pattern[prop] }));
+            this.runUpdate(schema.getEntityType(op.entityType), patternAssignments, diffAssignments, () => {
+              batchResults.push(results.Result.success(null));
+              cb(null, batchResults);
+            });
+            break;
+          }
+          catch (e) {
+            batchResults.push(results.Result.error(e));
+            cb(null, batchResults);
+          }
+          break;
+        default:
+          getNever(op, `Unexpected operation type ${op!.type}`);
       }
     }, (err, batchResults) => {
       cbResults(results.Result.success(batchResults));
@@ -187,22 +189,36 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   }
 
   public propertyExpressionFromName(name: string): IPropertyValue<IMinimalVisitor> {
-    return new PropertyValue([ name ]);
+    return new PropertyValue([name]);
   }
 
-  public getEntities(entityType: EntityType, expandTree: any, filterExpression: IValue<TExpressionVisitor>,
-                     cb: (result: results.Result<any[], any>) => void) {
+  public getEntities(
+    entityType: EntityType,
+    expandTree: any,
+    filterExpression: IValue<TExpressionVisitor>,
+    cb: (result: results.Result<any[], any>) => void) {
+
     this.runGet(entityType, expandTree, filterExpression,
-      (res, model) => cb(this.translateResponse(res, model, this.translateResponseToOData)));
+      (res, model) => {
+        try {
+          cb(this.translateResponse(res, model, this.translateResponseToOData));
+        } catch (error) {
+          cb(new results.FailedResult<any, Error>(error));
+        }
+      });
   }
 
-  private getEntityByUri(entityType: EntityType, uri: string,
-                         cb: (r: results.AnyResult, model: IQueryAdapterModel<TExpressionVisitor>) => void) {
+  private getEntityByUri(
+    entityType: EntityType, uri: string,
+    cb: (r: results.AnyResult, model: IQueryAdapterModel<TExpressionVisitor>) => void) {
+
     this.runGet(entityType, {}, new EqualsUriExpression<TExpressionVisitor>(uri), cb);
   }
 
-  private runGet<T>(entityType: EntityType, expandTree: any, filterExpression: IValue<TExpressionVisitor>,
-                    cb: (result: results.Result<any, any>, model: IQueryAdapterModel<TExpressionVisitor>) => void) {
+  private runGet<T>(
+    entityType: EntityType, expandTree: any, filterExpression: IValue<TExpressionVisitor>,
+    cb: (result: results.Result<any, any>, model: IQueryAdapterModel<TExpressionVisitor>) => void) {
+
     const model: IQueryAdapterModel<TExpressionVisitor> = new QueryAdapterModel({
       entitySetType: entityType,
       filterOption: filterExpression,
@@ -214,9 +230,10 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     });
   }
 
-  private runUpdate(entityType: EntityType, pattern: { property: string; value: EdmLiteral }[],
-                    updatedValues: { property: string; value: ISparqlLiteral }[],
-                    cb: (res: results.AnyResult) => void) {
+  private runUpdate(
+    entityType: EntityType, pattern: { property: string; value: EdmLiteral }[],
+    updatedValues: { property: string; value: ISparqlLiteral }[],
+    cb: (res: results.AnyResult) => void) {
 
     const query = this.patchQueryStringProducerFactory.create(updatedValues, pattern, entityType).produceSparql();
 
@@ -225,8 +242,9 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     });
   }
 
-  private runInsert(entityType: EntityType, uri: string, keyValuePairs: { property: string; value: ISparqlLiteral }[],
-                    cb: (res: results.AnyResult) => void) {
+  private runInsert(
+    entityType: EntityType, uri: string, keyValuePairs: { property: string; value: ISparqlLiteral }[],
+    cb: (res: results.AnyResult) => void) {
 
     const sparqlEntity = keyValuePairs.map(this.rdfRepresentationFromKeyValuePair(entityType));
     const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri,
@@ -260,17 +278,21 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     };
   }
 
-  private translateResponse<T>(response: results.AnyResult,
-                               model: IQueryAdapterModel<TExpressionVisitor>,
-                               translateResult: (result, model: IQueryAdapterModel<TExpressionVisitor>) => T) {
+  private translateResponse<T>(
+    response: results.AnyResult,
+    model: IQueryAdapterModel<TExpressionVisitor>,
+    translateResult: (result, model: IQueryAdapterModel<TExpressionVisitor>) => T) {
+
     return response.process(
       result => translateResult(result, model),
       error => error
     );
   }
 
-  private translateResonseToEntityUris(results: ReadonlyArray<any>,
-                                       model: IQueryAdapterModel<TExpressionVisitor>) {
+  private translateResonseToEntityUris(
+    results: ReadonlyArray<any>,
+    model: IQueryAdapterModel<TExpressionVisitor>) {
+
     /* @todo check token === "uri" */
     const uriMap = {};
     results.forEach(res => uriMap[res[model.getMapping().variables.getVariable().substr(1)].value] = true);
@@ -278,7 +300,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   }
 
   private translateResponseToOData = (results,
-                                      model: IQueryAdapterModel<TExpressionVisitor>) => {
+    model: IQueryAdapterModel<TExpressionVisitor>) => {
     return this.translateSuccessfulResponseToOData(results, model);
   }
 
@@ -309,7 +331,7 @@ class EqualsUriExpression<T extends IEqualsUriExpressionVisitor> implements IEqu
 }
 
 function compose<T, U, V>(y: (arg: V) => U, x: (arg: U) => T): (arg: V) => T {
-  return function(arg: V) { return x(y(arg)); };
+  return function (arg: V) { return x(y(arg)); };
 }
 
 export class JsonResultBuilder {
@@ -528,14 +550,15 @@ export interface IPatchQueryStringProducer {
 
 export class PatchQueryStringProducerFactory implements IPatchQueryStringProducerFactory {
 
-  constructor(private prefixProducer: IPrefixProducer,
-              private whereClauseProducer: IWhereClauseProducer,
-              private filterFromPatternProducer: IFilterFromPatternProducer) {}
+  constructor(
+    private prefixProducer: IPrefixProducer,
+    private whereClauseProducer: IWhereClauseProducer,
+    private filterFromPatternProducer: IFilterFromPatternProducer) { }
 
   public create(updatedValues: IUpdatedValue[], pattern: IMatchPattern, entityType: EntityType) {
     return new PatchQueryStringProducer(updatedValues, pattern, entityType,
-                                       this.prefixProducer, this.whereClauseProducer,
-                                       this.filterFromPatternProducer);
+      this.prefixProducer, this.whereClauseProducer,
+      this.filterFromPatternProducer);
   }
 }
 
@@ -544,11 +567,12 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
   private mapping: mappings.StructuredSparqlVariableMapping;
 
   /* @smell */
-  constructor(private updatedValues: IUpdatedValue[], private pattern: IMatchPattern,
-              private entityType: EntityType,
-              private prefixProducer: IPrefixProducer,
-              private whereClauseProducer: IWhereClauseProducer,
-              private filterFromPatternProducer: IFilterFromPatternProducer) {
+  constructor(
+    private updatedValues: IUpdatedValue[], private pattern: IMatchPattern,
+    private entityType: EntityType,
+    private prefixProducer: IPrefixProducer,
+    private whereClauseProducer: IWhereClauseProducer,
+    private filterFromPatternProducer: IFilterFromPatternProducer) {
     const vargen = new mappings.SparqlVariableGenerator();
     this.mapping = new mappings.StructuredSparqlVariableMapping(vargen.next(), vargen);
   }
@@ -576,17 +600,17 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
   }
 
   public produceDeleteClause() {
-    return `DELETE { ${ this.produceTriplesToDelete() } }`;
+    return `DELETE { ${this.produceTriplesToDelete()} }`;
   }
 
   public produceInsertClause() {
-    return `INSERT { ${ this.produceTriplesToInsert() } }`;
+    return `INSERT { ${this.produceTriplesToInsert()} }`;
   }
 
   public produceWhereClause() {
     /* @construction include literals from filter pattern as triple, ex: ?x0 disco:id '1' */
     return this.whereClauseProducer.produce(this.selectProperties(), this.produceFilterTranslator(), this.entityType,
-                                            this.mapping);
+      this.mapping);
   }
 
   private selectProperties() {
@@ -605,20 +629,20 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
 
   private produceTriplesToDelete() {
     return this.triplesAsSparql(new SparqlVariable(this.mapping.getVariableWithoutSyntax()),
-                                this.updatedValues.map(updatedValue => ({
-      rdfProperty: this.producePropertyLiteral(updatedValue),
-      inverse: this.isPropertyInverse(updatedValue),
-      value: this.produceOldValueVariable(updatedValue),
-    })));
+      this.updatedValues.map(updatedValue => ({
+        rdfProperty: this.producePropertyLiteral(updatedValue),
+        inverse: this.isPropertyInverse(updatedValue),
+        value: this.produceOldValueVariable(updatedValue),
+      })));
   }
 
   private produceTriplesToInsert() {
     return this.triplesAsSparql(new SparqlVariable(this.mapping.getVariableWithoutSyntax()),
-                                this.updatedValues.map(updatedValue => ({
-      rdfProperty: this.producePropertyLiteral(updatedValue),
-      inverse: this.isPropertyInverse(updatedValue),
-      value: this.produceNewValueLiteral(updatedValue),
-    })));
+      this.updatedValues.map(updatedValue => ({
+        rdfProperty: this.producePropertyLiteral(updatedValue),
+        inverse: this.isPropertyInverse(updatedValue),
+        value: this.produceNewValueLiteral(updatedValue),
+      })));
   }
 
   private producePropertyLiteral(updatedValue: IUpdatedValue) {
@@ -645,8 +669,11 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
   }
 
   /* @todo see querystringbuilder.ts:insertQueryStringBuilder */
-  private triplesAsSparql(subject: ISparqlLiteral, properties: { rdfProperty: ISparqlLiteral, inverse: boolean,
-                                                                 value: ISparqlLiteral }[]): string {
+  private triplesAsSparql(
+    subject: ISparqlLiteral, properties: {
+      rdfProperty: ISparqlLiteral, inverse: boolean,
+      value: ISparqlLiteral
+    }[]): string {
     return properties.map(sparqlFromProperty).map(str => str + " .").join(" ");
 
     function sparqlFromProperty(p: { rdfProperty: ISparqlLiteral, inverse: boolean, value: ISparqlLiteral }) {
@@ -660,10 +687,11 @@ export class PatchQueryStringProducer implements IPatchQueryStringProducer {
 
 export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStringBuilder<TExpressionVisitor> {
 
-  constructor(private filterExpressionFactory: translators.IExpressionTranslatorFactory<TExpressionVisitor>,
-              private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
-              private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
-              private sparqlSelectBuilder: ISelectQueryStringProducer) {
+  constructor(
+    private filterExpressionFactory: translators.IExpressionTranslatorFactory<TExpressionVisitor>,
+    private filterPatternStrategy: filterPatterns.FilterGraphPatternStrategy,
+    private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
+    private sparqlSelectBuilder: ISelectQueryStringProducer) {
   }
 
   public fromQueryAdapterModel(model: IQueryAdapterModel<TExpressionVisitor>) {
@@ -684,8 +712,9 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
       model.getExpandTree(), model.getMapping().variables);
   }
 
-  private createFilterGraphPattern(model: IQueryAdapterModel<TExpressionVisitor>,
-                                   filterExpression: translators.IExpressionTranslator): gpatterns.TreeGraphPattern {
+  private createFilterGraphPattern(
+    model: IQueryAdapterModel<TExpressionVisitor>,
+    filterExpression: translators.IExpressionTranslator): gpatterns.TreeGraphPattern {
     const filterGraphPattern = this.filterPatternStrategy.createPattern(model.getFilterContext(),
       filterExpression.getPropertyTree());
     return filterGraphPattern;
@@ -702,17 +731,20 @@ export class GetQueryStringBuilder<TExpressionVisitor> implements IGetQueryStrin
 
 export interface IWhereClauseProducer {
   produce(selectedProperties: PropertySelectionTree, filter: IValue<IMinimalVisitor> | undefined,
-          entityType: EntityType, mapping: mappings.StructuredSparqlVariableMapping): string & WhereClause;
+    entityType: EntityType, mapping: mappings.StructuredSparqlVariableMapping): string & WhereClause;
 }
 
 export class WhereClauseProducer implements IWhereClauseProducer {
 
-  constructor(private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
-              private graphPatternStringProducer: IGraphPatternStringProducer,
-              private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>) {}
+  constructor(
+    private expandTreePatternStrategy: IExpandTreeGraphPatternStrategy,
+    private graphPatternStringProducer: IGraphPatternStringProducer,
+    private filterExpressionFactory: translators.IExpressionTranslatorFactory<IMinimalVisitor>) { }
 
-  public produce(selectedProperties: PropertySelectionTree, filter: IValue<IMinimalVisitor> | undefined,
-                 entityType: EntityType, mapping: mappings.StructuredSparqlVariableMapping) {
+  public produce(
+    selectedProperties: PropertySelectionTree, filter: IValue<IMinimalVisitor> | undefined,
+    entityType: EntityType, mapping: mappings.StructuredSparqlVariableMapping) {
+
     const filterContext: translators.IFilterContext = {
       scope: {
         entityType: entityType,
@@ -732,7 +764,7 @@ export class WhereClauseProducer implements IWhereClauseProducer {
   }
 }
 
-export enum WhereClause {}
+export enum WhereClause { }
 
 export interface IQueryAdapterModel<TVisitor> {
   getFilterContext(): translators.IFilterContext;
@@ -747,7 +779,7 @@ export class QueryAdapterModel<TExpressionVisitor> implements IQueryAdapterModel
   private mapping: mappings.Mapping;
   private filterContext: translators.IFilterContext;
 
-  constructor(private odata: IODataQueryModel<TExpressionVisitor>) {}
+  constructor(private odata: IODataQueryModel<TExpressionVisitor>) { }
 
   public getFilterContext(): translators.IFilterContext {
     if (this.filterContext === undefined) {
@@ -794,9 +826,10 @@ export class QueryAdapterModel<TExpressionVisitor> implements IQueryAdapterModel
 export class QueryContext implements IQueryContext {
   private resolver = new ForeignKeyPropertyResolver();
 
-  constructor(private mapping: mappings.IStructuredSparqlVariableMapping,
-              private rootTypeSchema: EntityType,
-              private remainingExpandBranch) {
+  constructor(
+    private mapping: mappings.IStructuredSparqlVariableMapping,
+    private rootTypeSchema: EntityType,
+    private remainingExpandBranch) {
   }
 
   public hasResultUniqueId(result): result is { __hasId; } {
@@ -813,13 +846,13 @@ export class QueryContext implements IQueryContext {
   }
 
   public forEachPropertyOfResult(result, fn: (value, property: Property,
-          hasValue: boolean) => void): void {
+    hasValue: boolean) => void): void {
     this.forEachElementaryPropertyOfResult(result, fn);
     this.forEachComplexPropertyOfResult(result, fn);
   }
 
   public forEachElementaryPropertyOfResult(result, fn: (value, variable: Property,
-          hasValue: boolean) => void): void {
+    hasValue: boolean) => void): void {
     this.rootTypeSchema.getPropertyNames().forEach(propertyName => {
       const property = this.rootTypeSchema.getProperty(propertyName);
       if (property.isNavigationProperty()) return;
@@ -845,7 +878,7 @@ export class QueryContext implements IQueryContext {
   }
 
   public forEachComplexPropertyOfResult(result, fn: (subResult, property: Property,
-          hasValue: boolean) => void): void {
+    hasValue: boolean) => void): void {
     for (const propertyName of Object.keys(this.remainingExpandBranch)) {
       let propertyIdVar = this.mapping.getComplexProperty(propertyName).getElementaryPropertyVariable("Id");
       let hasValue = result[propertyIdVar.substr(1)] !== undefined;
