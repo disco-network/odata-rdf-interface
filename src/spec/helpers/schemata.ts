@@ -82,7 +82,8 @@ export const schemaWithInverseProperty = new Schema({
         Id: { type: "Edm.Int32", rdfName: "value" },
         NextInteger: { type: "Integer", rdfName: "next", optional: true },
         PrevInteger: {
-          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true },
+          type: "Integer", foreignSet: "Integers", inverseProperty: "NextInteger", optional: true
+        },
         Prev: { type: "Edm.Int32", foreignProperty: "PrevInteger" },
         Next: { type: "Edm.Int32", foreignProperty: "NextInteger" },
       },
@@ -91,6 +92,33 @@ export const schemaWithInverseProperty = new Schema({
   },
   entitySets: {
     Integers: { type: "Integer" },
+  },
+  defaultNamespace: {
+    prefix: "disco",
+    uri: "http://disco-network.org/resource/",
+  },
+});
+
+export const nestedSchema = new Schema({
+  entityTypes: {
+    Human: {
+      properties: {
+        Id: { type: "Edm.Int32", rdfName: "id" },
+        Head: { type: "Head", rdfName: "head" },
+      },
+      rdfName: "Human",
+    },
+    Head: {
+      properties: {
+        Id: { type: "Edm.Int32", rdfName: "id" },
+        EyeColor: { type: "Edm.String", rdfName: "eyeColor" },
+      },
+      rdfName: "Head",
+    },
+  },
+  entitySets: {
+    Humans: { type: "Human" },
+    Heads: { type: "Head" },
   },
   defaultNamespace: {
     prefix: "disco",

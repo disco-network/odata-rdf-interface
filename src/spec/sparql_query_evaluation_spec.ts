@@ -2,6 +2,7 @@ import { assert } from "chai";
 import { JsonResultBuilder } from "../lib/adapter/odatarepository";
 
 import { Schema } from "../lib/odata/schema";
+import { nestedSchema } from "./helpers/schemata";
 let schema = new Schema();
 import queryAdapter = require("../lib/adapter/odatarepository");
 import mhelper = require("./helpers/sparql_mappings");
@@ -105,6 +106,31 @@ describe("match evaluator", function() {
     let results = evaluator.run(responses, queryContext);
 
     assert.strictEqual(results.length, 1);
+  });
+  it("should expand properties of types different from the root type", () => {
+    const mapping = mhelper.createStructuredMapping("?post");
+    const queryContext = new queryAdapter.QueryContext(mapping, nestedSchema.getEntityType("Human"),
+      { Head: {} });
+    const evaluator = new JsonResultBuilder();
+
+    const idVar = mapping.getElementaryPropertyVariable("Id");
+    const hIdVar = mapping.getComplexProperty("Head").getElementaryPropertyVariable("Id");
+    const hEyeVar = mapping.getComplexProperty("Head").getElementaryPropertyVariable("EyeColor");
+
+    const responses = [{}];
+    const [response1] = responses;
+    response1[idVar.substr(1)] = makeLiteral("1");
+    response1[hIdVar.substr(1)] = makeLiteral("2");
+    response1[hEyeVar.substr(1)] = makeLiteral("green");
+    const results = evaluator.run(responses, queryContext);
+
+    assert.deepEqual(results, [{
+      Id: "1",
+      Head: {
+        Id: "2",
+        EyeColor: "green",
+      },
+    }]);
   });
   it("should set unbound elementary properties to null", function() {
     /* @todo should this only apply to optional props? */
