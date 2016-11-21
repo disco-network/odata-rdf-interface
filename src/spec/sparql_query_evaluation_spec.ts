@@ -7,37 +7,37 @@ let schema = new Schema();
 import queryAdapter = require("../lib/adapter/odatarepository");
 import mhelper = require("./helpers/sparql_mappings");
 
-describe("Adapter.SparqlQueryContext", function() {
-  it("should recognize and enumerate over elementary properties", function() {
+describe("Adapter.SparqlQueryContext", function () {
+  it("should recognize and enumerate over elementary properties", function () {
     let mapping = mhelper.createStructuredMapping("?post");
-    let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), { });
+    let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), {});
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
-    let answer = { };
+    let answer = {};
     answer[idVar.substr(1)] = { token: "literal", value: "5" };
 
     let ok = false;
-    queryContext.forEachElementaryPropertyOfResult(answer, function() { ok = true; });
+    queryContext.forEachElementaryPropertyOfResult(answer, function () { ok = true; });
 
     assert.strictEqual(ok, true);
   });
-  it("should return me a subcontext and recognize its elementary properties", function() {
+  it("should return me a subcontext and recognize its elementary properties", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), { Parent: {} });
 
     let idVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
-    let answer = { };
+    let answer = {};
     answer[idVar.substr(1)] = { token: "literal", value: "5" };
 
     let ok = false;
-    queryContext.getSubContext("Parent").forEachElementaryPropertyOfResult(answer, function() { ok = true; });
+    queryContext.getSubContext("Parent").forEachElementaryPropertyOfResult(answer, function () { ok = true; });
 
     assert.strictEqual(ok, true);
   });
 });
 
-describe("match evaluator", function() {
-  it("should evaluate elem. and complex properties", function() {
+describe("match evaluator", function () {
+  it("should evaluate elem. and complex properties", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), { Parent: {} });
     let evaluator = new JsonResultBuilder();
@@ -54,7 +54,7 @@ describe("match evaluator", function() {
     assert.strictEqual(results[0].Id, "1");
     assert.strictEqual(results[0].Parent.Id, "5");
   });
-  it("should only include complex properties which are in the expand tree", function() {
+  it("should only include complex properties which are in the expand tree", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), {});
     let resultBuilder = new JsonResultBuilder();
@@ -69,7 +69,7 @@ describe("match evaluator", function() {
 
     assert.isUndefined(results[0].Parent);
   });
-  it("should include complex properties of quantity one", function() {
+  it("should include complex properties of quantity one", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), { Content: {} });
     let evaluator = new JsonResultBuilder();
@@ -87,7 +87,7 @@ describe("match evaluator", function() {
     assert.strictEqual(results[0].Id, "1");
     assert.strictEqual(results[0].Content.Id, "2");
   });
-  it("should support expand trees of depth two", function() {
+  it("should support expand trees of depth two", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"),
       { Content: { Culture: {} } });
@@ -99,7 +99,7 @@ describe("match evaluator", function() {
       .getElementaryPropertyVariable("Id");
 
     let responses = [{}, {}];
-    let [ response1, response2 ] = responses;
+    let [response1, response2] = responses;
     response1[idVar.substr(1)] = response2[idVar.substr(1)] = makeLiteral("1");
     response1[cidVar.substr(1)] = response2[cidVar.substr(1)] = makeLiteral("2");
     response2[ccidVar.substr(1)] = makeLiteral("3");
@@ -132,7 +132,7 @@ describe("match evaluator", function() {
       },
     }]);
   });
-  it("should set unbound elementary properties to null", function() {
+  it("should set unbound elementary properties to null", function () {
     /* @todo should this only apply to optional props? */
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), {});
