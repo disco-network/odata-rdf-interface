@@ -9,6 +9,9 @@ import { IRepository } from "../odata/repository";
 import { Schema } from "../odata/schema";
 import { EdmConverter, EdmLiteral } from "../odata/edm";
 import { IHttpRequest, IHttpRequestHandler, IHttpResponseSender } from "../odata/http";
+import { ILogger } from "../logger";
+
+declare var process;
 
 export interface IGetHandler extends IHttpRequestHandler {
 }
@@ -38,14 +41,22 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
     private schema: Schema,
     private parser: IGetRequestParser<T>,
     private repository: IRepository<T>,
-    private getHttpResponder: IGetHttpResponder) { }
+    private getHttpResponder: IGetHttpResponder,
+    private logger?: ILogger) { }
 
   public query(request: IHttpRequest, httpResponseSender: IHttpResponseSender) {
     let parsed = this.parser.parse(request);
     const type = this.schema.getEntitySet(parsed.entitySetName).getEntityType();
     switch (parsed.type) {
       case GetRequestType.Collection:
+        const timeBeforeQuery = process.hrtime();
+        if (this.logger !== undefined) {
+          this.logger.debug(`Let's do a collection query!`);
+        }
         this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
+          if (this.logger !== undefined) {
+            this.logger.debug(`Query finished after ${process.hrtime(timeBeforeQuery)[1] / 1000000000} seconds.`);
+          }
           if (result.success()) {
             this.getHttpResponder.success(result.result(), httpResponseSender);
           } else {
