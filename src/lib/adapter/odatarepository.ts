@@ -1,5 +1,5 @@
 import base = require("../odata/repository");
-import { EntityType, Property, EntityKind, Schema } from "../odata/schema";
+import { EntitySet, EntityType, Property, EntityKind, Schema } from "../odata/schema";
 import { LambdaVariableScope } from "../odata/filters/filters";
 import {
   IValue, IEqExpression, IStringLiteral, INumericLiteral, IPropertyValue,
@@ -413,14 +413,29 @@ export class ComplexEntity implements IEntityValue {
     else {
       let serialized = {};
 
-      let serializeProperty = property => {
+      let serializeProperty = (property: Property) => {
         let propertyName = property.getName();
         let entity = this.getPropertyEntity(property, data);
         let entityExists = this.hasPropertyEntity(property, data);
+        const foreignKeyProperty = property.foreignProperty();
+
         serialized[propertyName] = entityExists ? entity.serializeToODataJson() : null;
+
+        if (property.getName() === "Id") {
+
+          const entitySet = this.context.getEntitySet();
+          serialized["odata.id"]
+            = `http://disco-node.local/api/odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
+        }
+        if (foreignKeyProperty !== undefined) {
+
+          const entitySet = foreignKeyProperty.getEntityType().getEntitySet();
+          serialized[`${foreignKeyProperty.getName()}@odata.navigationLinkUrl`]
+            = `http://disco-node.local/api/odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
+        }
       };
 
-      this.context.forEachPropertySchema(serializeProperty);
+      this.context.forEachExpandedPropertySchema(serializeProperty);
 
       return serialized;
     }
@@ -515,14 +530,16 @@ export interface IQueryContext {
   forEachPropertyOfResult(result, fn: (value, property: Property, hasValue: boolean) => void): void;
   getDirectElementaryPropertyOfResult(propertyName: string, result): { value; hasValue: boolean };
 
-  forEachPropertySchema(fn: (property: Property) => void): void;
+  forEachExpandedPropertySchema(fn: (property: Property) => void): void;
   forEachElementaryPropertySchema(fn: (property: Property) => void): void;
-  forEachComplexPropertySchema(fn: (property: Property) => void): void;
+  forEachComplexExpandedPropertySchema(fn: (property: Property) => void): void;
 
   hasResultUniqueId(result): result is { __hasId; };
   getUniqueIdOfResult(result: { __hasId; }): string;
   getUniqueIdOfResult(result): string | undefined;
   getSubContext(property: string): IQueryContext;
+
+  getEntitySet(): EntitySet;
 }
 
 export interface IGetQueryStringBuilder<TExpressionVisitor> {
@@ -886,9 +903,9 @@ export class QueryContext implements IQueryContext {
     }
   }
 
-  public forEachPropertySchema(fn: (property: Property) => void): void {
+  public forEachExpandedPropertySchema(fn: (property: Property) => void): void {
     this.forEachElementaryPropertySchema(fn);
-    this.forEachComplexPropertySchema(fn);
+    this.forEachComplexExpandedPropertySchema(fn);
   }
 
   public forEachElementaryPropertySchema(fn: (property) => void): void {
@@ -898,7 +915,7 @@ export class QueryContext implements IQueryContext {
     });
   }
 
-  public forEachComplexPropertySchema(fn: (property) => void): void {
+  public forEachComplexExpandedPropertySchema(fn: (property) => void): void {
     for (let propertyName of Object.keys(this.remainingExpandBranch)) {
       fn(this.rootTypeSchema.getProperty(propertyName));
     }
@@ -911,5 +928,9 @@ export class QueryContext implements IQueryContext {
       this.mapping.getComplexProperty(propertyName),
       this.rootTypeSchema.getProperty(propertyName).getEntityType(),
       this.remainingExpandBranch[propertyName] || {});
+  }
+
+  public getEntitySet() {
+    return this.rootTypeSchema.getEntitySet();
   }
 }

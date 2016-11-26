@@ -109,6 +109,15 @@ export class Schema {
     return new EntitySet(this, name);
   }
 
+  public getEntitySetOfType(type: EntityType): EntitySet {
+    const names = Object.keys(this.raw.entitySets);
+    for (const name of names) {
+      if (this.raw.entitySets[name].type === type.getName())
+        return this.getEntitySet(name);
+    }
+    throw new Error(`No EntitySet found for type ${type.getName()}`);
+  }
+
   public getEntityType(name: string): EntityType {
     return new EntityType(this, name);
   }
@@ -118,6 +127,10 @@ export class EntitySet {
   constructor(private completeSchema: Schema, private name: string) {
     this.completeSchema = completeSchema;
     this.name = name;
+  }
+
+  public getName(): string {
+    return this.name;
   }
 
   public getEntityType(): EntityType {
@@ -178,6 +191,10 @@ export class EntityType extends RdfBasedSchemaResource<IRawEntityType> {
   public getPropertyNames(): string[] {
     if (this.isElementary()) throw new Error("elementary types don\'t have properties [" + this.getName() + "]");
     return Object.keys(this.getRaw().properties);
+  }
+
+  public getEntitySet(): EntitySet {
+    return this.completeSchema.getEntitySetOfType(this);
   }
 }
 
