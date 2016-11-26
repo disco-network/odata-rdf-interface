@@ -11,7 +11,8 @@ export class SparqlProvider implements base.ISparqlProvider {
   public query(queryString: string, cb: (result: result.AnyResult) => void): void {
     const timeBeforeExecution = process.hrtime();
     this.store.executeWithEnvironment(queryString, [this.graphName], [], (err, results) => {
-      this.logDebug(`SPARQL query took ${process.hrtime(timeBeforeExecution)[1] / 1000000000} seconds.`);
+      const finishedAfterTime = process.hrtime(timeBeforeExecution);
+      this.logDebug(`SPARQL query took ${finishedAfterTime[0] + finishedAfterTime[1] / 1000000000} seconds.`);
       if (!err) {
         cb(result.Result.success(results));
       }

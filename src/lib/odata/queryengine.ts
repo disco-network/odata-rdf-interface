@@ -55,7 +55,9 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
         }
         this.repository.getEntities(type, parsed.expandTree, parsed.filterExpression, result => {
           if (this.logger !== undefined) {
-            this.logger.debug(`Query finished after ${process.hrtime(timeBeforeQuery)[1] / 1000000000} seconds.`);
+            const finishedAfterTime = process.hrtime(timeBeforeQuery);
+            this.logger.debug(
+              `Query finished after ${finishedAfterTime[0] + finishedAfterTime[1] / 1000000000} seconds.`);
           }
           if (result.success()) {
             this.getHttpResponder.success(result.result(), httpResponseSender);
