@@ -250,7 +250,7 @@ queryOptions = queryOption:option *( "&" queryOption:options )
     return ret;
   }
 
-queryOption  = systemQueryOption:systemOption = { return this.getNthItem(0).evaluate() }
+queryOption  = systemQueryOption:option / customQueryOption:option = { return this.getSubordinateDescriptors().option.evaluate() }
              ; TODO: aliasAndValue
              ; TODO: customQueryOption
 
@@ -387,7 +387,7 @@ aliasAndValue = parameterAlias EQ parameterValue
 parameterValue = arrayOrObject
                / commonExpr
 
-customQueryOption = customName [ EQ customValue ]
+customQueryOption = customName [ EQ customValue ] = { return { type: "custom" } }
 customName        = qchar-no-AMP-EQ-AT-DOLLAR *( qchar-no-AMP-EQ ) 
 customValue       = *( qchar-no-AMP )
 
