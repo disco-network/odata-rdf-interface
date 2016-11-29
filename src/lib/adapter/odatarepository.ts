@@ -464,7 +464,15 @@ export class ComplexEntity implements IEntityValue {
         EntityFactory.fromPropertyWithContext(property, this.context), data);
     }
 
-    if (hasValueInResult) data.value[property.getName()].applyResult(result);
+    let propertyName: string = property.getName();
+    if (hasValueInResult) {
+      try {
+        data.value[propertyName].applyResult(result);
+      } catch (error) {
+        let message: string = "Could not apply result: Property [" + propertyName + "], Result [" + result + "] ";
+        throw new Error(message + error.stack);
+      }
+    }
   }
 
   private hasPropertyEntity(property: Property, data: ComplexEntityData) {
