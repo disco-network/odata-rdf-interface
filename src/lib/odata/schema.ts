@@ -33,27 +33,27 @@ export type IRawProperty = {
   foreignSet?: undefined;
   foreignProperty?: undefined;
 } |
-{
-  type: string;
-  /** complex (navigation) property belonging to the foreign-key property */
-  foreignProperty: string;
-  isArray?: false;
-  optional?: undefined;
-  generated?: undefined | false;
-  autoIncrement_nextValue?: undefined;
-  inverseProperty?: undefined;
-  foreignSet?: undefined;
-} |
-{
-  type: string;
-  inverseProperty: string;
-  foreignSet: string;
-  optional?: boolean;
-  isArray?: boolean;
-  generated?: undefined | false;
-  autoIncrement_nextValue?: undefined;
-  foreignProperty?: undefined;
-}
+  {
+    type: string;
+    /** complex (navigation) property belonging to the foreign-key property */
+    foreignProperty: string;
+    isArray?: false;
+    optional?: undefined;
+    generated?: undefined | false;
+    autoIncrement_nextValue?: undefined;
+    inverseProperty?: undefined;
+    foreignSet?: undefined;
+  } |
+  {
+    type: string;
+    inverseProperty: string;
+    foreignSet: string;
+    optional?: boolean;
+    isArray?: boolean;
+    generated?: undefined | false;
+    autoIncrement_nextValue?: undefined;
+    foreignProperty?: undefined;
+  }
 
 const raw: IRawSchema = {
   entityTypes: {
@@ -62,8 +62,10 @@ const raw: IRawSchema = {
         Id: { autoIncrement_nextValue: 3, type: "Edm.Int32", rdfName: "id", generated: "auto-increment" },
         ContentId: { type: "Edm.Int32", foreignProperty: "Content" },
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
-        Parent: { type: "Post", optional: true,
-          rdfName: "parent" },
+        Parent: {
+          type: "Post", optional: true,
+          rdfName: "parent"
+        },
         Children: { type: "Post", isArray: true, inverseProperty: "Parent", foreignSet: "Posts" },
         Content: { type: "Content", rdfName: "content", optional: false },
       },
