@@ -124,13 +124,10 @@ describe("match evaluator", function () {
     response1[hEyeVar.substr(1)] = makeLiteral("green");
     const results = evaluator.run(responses, queryContext);
 
-    assert.deepEqual(results, [{
-      Id: "1",
-      Head: {
-        Id: "2",
-        EyeColor: "green",
-      },
-    }]);
+    assert.deepPropertyVal(results[0], "Id", "1");
+    assert.deepPropertyVal(results[0], "Head.Id", "2");
+    assert.deepPropertyVal(results[0], "Head.EyeColor", "green");
+
   });
   it("should set unbound elementary properties to null", function () {
     /* @todo should this only apply to optional props? */
@@ -147,9 +144,7 @@ describe("match evaluator", function () {
     let results = evaluator.run([response], queryContext);
 
     assert.strictEqual(results.length, 1);
-    assert.deepEqual(results[0], {
-      Id: "1", ContentId: "2", ParentId: null,
-    });
+    assert.deepPropertyVal(results[0], "ParentId", null);
   });
 });
 

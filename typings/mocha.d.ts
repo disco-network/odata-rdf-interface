@@ -9,6 +9,7 @@ declare module "chai" {
     strictEqual(x, y, msg?: string): void;
     notStrictEqual(x, y): void;
     deepEqual(x, y): void;
+    deepPropertyVal(object, property, value, message?): void;
     includeDeepMembers<T>(superset: T[], subset: T[]): void;
     throws(fn: () => void): void;
     isDefined(x): void;
