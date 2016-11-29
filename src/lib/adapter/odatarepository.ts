@@ -424,14 +424,14 @@ export class ComplexEntity implements IEntityValue {
         if (property.getName() === "Id") {
 
           const entitySet = this.context.getEntitySet();
-          serialized["odata.id"]
-            = `http://disco-node.local/api/odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
+          serialized["odata.id"] =
+            `${entitySet.getEntityUri()}odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
         }
         if (foreignKeyProperty !== undefined) {
 
           const entitySet = foreignKeyProperty.getEntityType().getEntitySet();
-          serialized[`${foreignKeyProperty.getName()}@odata.navigationLinkUrl`]
-            = `http://disco-node.local/api/odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
+          serialized[`${foreignKeyProperty.getName()}@odata.navigationLinkUrl`] =
+            `${entitySet.getEntityUri()}odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
         }
       };
 
