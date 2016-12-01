@@ -12,16 +12,17 @@ import { ILogger } from "../../logger";
 export { OptionsHandler } from "../../odata/queryengine"
 
 export class GetHandler extends base.GetHandler<IMinimalVisitor> {
-  constructor(schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string, logger?: ILogger) {
+  constructor(serviceUri: string, schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string, logger?: ILogger) {
     super(
-      schema, new GetRequestParser(), new ODataRepository(sparqlProvider, graphUri), new base.GetHttpResponder(),
+      schema, new GetRequestParser(), new ODataRepository(serviceUri, sparqlProvider, graphUri),
+      new base.GetHttpResponder(),
       logger);
   }
 }
 
 export class PostHandler extends base.PostHandler<IMinimalVisitor> {
-  constructor(schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
+  constructor(serviceUri: string, schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
     super(new PostRequestParser(), new EntityInitializer(new EdmConverter()),
-      new ODataRepository(sparqlProvider, graphUri), schema);
+      new ODataRepository(serviceUri, sparqlProvider, graphUri), schema);
   }
 }

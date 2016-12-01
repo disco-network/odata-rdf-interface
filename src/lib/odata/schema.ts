@@ -145,10 +145,6 @@ export class EntitySet {
   public getEntityTypeName(): string {
     return this.completeSchema.raw.entitySets[this.name].type;
   }
-
-  public getEntityUri(): string {
-    return this.completeSchema.raw.defaultNamespace.uri;
-  }
 }
 
 export class RdfBasedSchemaResource<T extends { rdfName?: string }> {

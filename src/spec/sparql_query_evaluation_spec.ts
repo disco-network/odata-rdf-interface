@@ -7,6 +7,8 @@ let schema = new Schema();
 import queryAdapter = require("../lib/adapter/odatarepository");
 import mhelper = require("./helpers/sparql_mappings");
 
+const serviceUri = "http://ex.org/odata";
+
 describe("Adapter.SparqlQueryContext", function () {
   it("should recognize and enumerate over elementary properties", function () {
     let mapping = mhelper.createStructuredMapping("?post");
@@ -40,7 +42,7 @@ describe("match evaluator", function () {
   it("should evaluate elem. and complex properties", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), { Parent: {} });
-    let evaluator = new JsonResultBuilder();
+    let evaluator = new JsonResultBuilder(serviceUri);
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
     let parentIdVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
@@ -57,7 +59,7 @@ describe("match evaluator", function () {
   it("should only include complex properties which are in the expand tree", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), {});
-    let resultBuilder = new JsonResultBuilder();
+    let resultBuilder = new JsonResultBuilder(serviceUri);
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
     let parentIdVar = mapping.getComplexProperty("Parent").getElementaryPropertyVariable("Id");
@@ -72,7 +74,7 @@ describe("match evaluator", function () {
   it("should include complex properties of quantity one", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), { Content: {} });
-    let evaluator = new JsonResultBuilder();
+    let evaluator = new JsonResultBuilder(serviceUri);
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
     let contentIdVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
@@ -91,7 +93,7 @@ describe("match evaluator", function () {
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"),
       { Content: { Culture: {} } });
-    let evaluator = new JsonResultBuilder();
+    let evaluator = new JsonResultBuilder(serviceUri);
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
     let cidVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");
@@ -111,7 +113,7 @@ describe("match evaluator", function () {
     const mapping = mhelper.createStructuredMapping("?post");
     const queryContext = new queryAdapter.QueryContext(mapping, nestedSchema.getEntityType("Human"),
       { Head: {} });
-    const evaluator = new JsonResultBuilder();
+    const evaluator = new JsonResultBuilder(serviceUri);
 
     const idVar = mapping.getElementaryPropertyVariable("Id");
     const hIdVar = mapping.getComplexProperty("Head").getElementaryPropertyVariable("Id");
@@ -133,7 +135,7 @@ describe("match evaluator", function () {
     /* @todo should this only apply to optional props? */
     let mapping = mhelper.createStructuredMapping("?post");
     let queryContext = new queryAdapter.QueryContext(mapping, schema.getEntityType("Post"), {});
-    let evaluator = new JsonResultBuilder();
+    let evaluator = new JsonResultBuilder(serviceUri);
 
     let idVar = mapping.getElementaryPropertyVariable("Id");
     let cidVar = mapping.getComplexProperty("Content").getElementaryPropertyVariable("Id");

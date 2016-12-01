@@ -64,7 +64,7 @@ describe("Adapter.ODataRepository:", () => {
     }], new Schema(), results => {
       assert.strictEqual(results.success(), true);
       assert.deepEqual(results.result()[0].result().odata, [{
-        "odata.id": "http://disco-node.local/api/odata/Posts(new)",
+        "odata.id": "http://ex.org/odata/Posts(new)",
         Id: "new",
         ContentId: null,
         ParentId: null,
@@ -260,7 +260,7 @@ function create<T extends IMinimalVisitor>(sparqlProvider: sparqlProviderBase.IS
                                            getQueryStringBuilder: IGetQueryStringBuilder<T>,
                                            insertQueryStringBuilder: IInsertQueryStringProducer,
                                            patchQueryStringBuilderFactory: IPatchQueryStringProducerFactory) {
-  return new ODataRepository<T>(sparqlProvider, getQueryStringBuilder,
+  return new ODataRepository<T>("http://ex.org/odata/", sparqlProvider, getQueryStringBuilder,
                                 insertQueryStringBuilder, patchQueryStringBuilderFactory);
 }
 

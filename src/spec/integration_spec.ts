@@ -17,14 +17,20 @@ describe("integration tests", () => {
         get.query({ relativeUrl: "/Content", body: "" }, new HttpResponseSender(() => null,
         {
           sendBody: body => {
-            assertEx.deepEqual(JSON.parse(body), {
-              "odata.metadata": match.any,
-              "value": [{
-                "Id": match.any,
-                "Title": "Lorem",
-              }],
-            });
-            done();
+            try {
+              assertEx.deepEqual(JSON.parse(body), {
+                "odata.metadata": match.any,
+                "value": [{
+                  "odata.id": match.any,
+                  "Id": match.any,
+                  "Title": "Lorem",
+                }],
+              });
+              done();
+            }
+            catch (e) {
+              assert.equal(body, "json");
+            }
           },
         }));
       }));
@@ -53,8 +59,10 @@ describe("integration tests", () => {
               assertEx.deepEqual(JSON.parse(body), {
                 "odata.metadata": match.any,
                 "value": [{
+                  "odata.id": match.any,
                   "Id": match.any,
                   "ContentId": cntId,
+                  "Content@odata.navigationLinkUrl": match.any,
                   "ParentId": null,
                 }],
               });
@@ -79,6 +87,7 @@ describe("integration tests", () => {
           assertEx.deepEqual(JSON.parse(body), {
             "odata.metadata": match.any,
             "value": {
+              "odata.id": match.any,
               "Id": match.any,
               "Title": "Lorem",
             },
@@ -98,6 +107,7 @@ describe("integration tests", () => {
           assertEx.deepEqual(JSON.parse(body), {
             "odata.metadata": match.any,
             "value": {
+              "odata.id": match.any,
               "Id": match.any,
               "Title": null,
             },
@@ -161,7 +171,8 @@ describe("integration tests", () => {
 
 function initOdataServer(cb: (get: GetHandler, post: PostHandler) => void, schm = schema) {
   initSparqlProvider(provider => {
-    cb(new GetHandler(schm, provider, graph), new PostHandler(schm, provider, graph));
+    const serviceUri = "http://ex.org/odata/";
+    cb(new GetHandler(serviceUri, schm, provider, graph), new PostHandler(serviceUri, schm, provider, graph));
   });
 }
 

@@ -32,24 +32,26 @@ describe("The GetHandler should evaluate", () => {
     expectSuccess(answer);
     assert.deepEqual(result, [
       {
-        "odata.id": "http://disco-network.org/resource/odata/Posts(1)",
+        "odata.id": "http://ex.org/odata/Posts(1)",
         Id: "1",
         ContentId: "1",
-        "Content@odata.navigationLinkUrl": "http://disco-network.org/resource/odata/Content(1)",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(1)",
         ParentId: null,
         Content: {
+          "odata.id": "http://ex.org/odata/Content(1)",
           Id: "1",
           Title: "Post Nr. 1",
         },
       },
       {
-        "odata.id": "http://disco-network.org/resource/odata/Posts(2)",
+        "odata.id": "http://ex.org/odata/Posts(2)",
         Id: "2",
         ContentId: "2",
-        "Content@odata.navigationLinkUrl": "http://disco-network.org/resource/odata/Content(2)",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(2)",
         ParentId: "1",
-        "Parent@odata.navigationLinkUrl": "http://disco-network.org/resource/odata/Posts(1)",
+        "Parent@odata.navigationLinkUrl": "http://ex.org/odata/Posts(1)",
         Content: {
+          "odata.id": "http://ex.org/odata/Content(2)",
           Id: "2",
           Title: "Post Nr. 2",
         },
@@ -64,18 +66,25 @@ describe("The GetHandler should evaluate", () => {
     expectSuccess(answer);
     assert.deepEqual(result, [
       {
+        "odata.id": "http://ex.org/odata/Posts(1)",
         Id: "1",
         ContentId: "1",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(1)",
         ParentId: null,
         Parent: null,
       },
       {
+        "odata.id": "http://ex.org/odata/Posts(2)",
         Id: "2",
         ContentId: "2",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(2)",
         ParentId: "1",
+        "Parent@odata.navigationLinkUrl": "http://ex.org/odata/Posts(1)",
         Parent: {
+          "odata.id": "http://ex.org/odata/Posts(1)",
           Id: "1",
           ContentId: "1",
+          "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(1)",
           ParentId: null,
         },
       },
@@ -87,21 +96,29 @@ describe("The GetHandler should evaluate", () => {
     expectSuccess(answer);
     assert.deepEqual(result, [
       {
+        "odata.id": "http://ex.org/odata/Posts(1)",
         Id: "1",
         ContentId: "1",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(1)",
         ParentId: null,
         Children: [
           {
+            "odata.id": "http://ex.org/odata/Posts(2)",
             Id: "2",
             ContentId: "2",
+            "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(2)",
             ParentId: "1",
+            "Parent@odata.navigationLinkUrl": "http://ex.org/odata/Posts(1)",
           },
         ],
       },
       {
+        "odata.id": "http://ex.org/odata/Posts(2)",
         Id: "2",
         ContentId: "2",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(2)",
         ParentId: "1",
+        "Parent@odata.navigationLinkUrl": "http://ex.org/odata/Posts(1)",
         Children: [],
       },
     ]);
@@ -114,26 +131,36 @@ describe("The GetHandler should evaluate", () => {
     expectSuccess(answer);
     assert.deepEqual(result, [
       {
+        "odata.id": "http://ex.org/odata/Posts(1)",
         Id: "1",
         ContentId: "1",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(1)",
         ParentId: null,
         Children: [
           {
+            "odata.id": "http://ex.org/odata/Posts(2)",
             Id: "2",
             ContentId: "2",
+            "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(2)",
             ParentId: "1",
+            "Parent@odata.navigationLinkUrl": "http://ex.org/odata/Posts(1)",
             Parent: {
+              "odata.id": "http://ex.org/odata/Posts(1)",
               Id: "1",
               ContentId: "1",
+              "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(1)",
               ParentId: null,
             },
           },
         ],
       },
       {
+        "odata.id": "http://ex.org/odata/Posts(2)",
         Id: "2",
         ContentId: "2",
+        "Content@odata.navigationLinkUrl": "http://ex.org/odata/Content(2)",
         ParentId: "1",
+        "Parent@odata.navigationLinkUrl": "http://ex.org/odata/Posts(1)",
         Children: [],
       },
     ]);
@@ -245,7 +272,7 @@ describe("The GetHandler should evaluate", () => {
         let graphName = "http://example.org/";
         storeSeed(store, graphName, () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
-          let repository = new ODataRepository(sparqlProvider, graphName);
+          let repository = new ODataRepository("http://ex.org/odata/", sparqlProvider, graphName);
           let responseSender = {
             success: function(entities) {
               cb(Result.success(entities)); done();

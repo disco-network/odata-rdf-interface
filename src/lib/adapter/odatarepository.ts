@@ -43,10 +43,16 @@ const prefixes = [
 export interface IMinimalVisitor extends IAndExpressionVisitor, IEqExpressionVisitor,
   IStringLiteralVisitor, INumericLiteralVisitor, IPropertyValueVisitor, IEqualsUriExpressionVisitor, INullVisitor { }
 
+/*
+ * @smell: ODataRepository is responsible for abstracting the data acquisition and at the
+ * same time for formatting it and for adding metadata.
+ */
+
 export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   implements base.IRepository<TExpressionVisitor> {
 
   constructor(
+    private serviceUri: string,
     private sparqlProvider: sparqlProvider.ISparqlProvider,
     private getQueryStringBuilder: IGetQueryStringBuilder<TExpressionVisitor>,
     private insertQueryStringBuilder: IInsertQueryStringProducer,
@@ -307,7 +313,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
   private translateSuccessfulResponseToOData(response: any, model: IQueryAdapterModel<TExpressionVisitor>) {
     let queryContext = new QueryContext(model.getMapping().variables,
       model.getEntitySetType(), model.getExpandTree());
-    let resultBuilder = new JsonResultBuilder();
+    let resultBuilder = new JsonResultBuilder(this.serviceUri);
     return resultBuilder.run(response, queryContext);
   }
 }
@@ -335,8 +341,11 @@ function compose<T, U, V>(y: (arg: V) => U, x: (arg: U) => T): (arg: V) => T {
 }
 
 export class JsonResultBuilder {
+
+  constructor(private serviceUri: string) { }
+
   public run(results: any[], context: IQueryContext): any[] {
-    let entityCollection = new EntityCollection(context, EntityKind.Complex);
+    let entityCollection = new EntityCollection(context, EntityKind.Complex, this.serviceUri);
 
     results.forEach(result => {
       entityCollection.applyResult(result);
@@ -354,13 +363,9 @@ export interface IEntityValue {
 }
 
 export class EntityCollection implements IEntityValue {
-  private context: IQueryContext;
-  private kind: EntityKind;
   private entities: { [id: string]: IEntityValue } = {};
 
-  constructor(context: IQueryContext, kind: EntityKind) {
-    this.context = context;
-    this.kind = kind;
+  constructor(private context: IQueryContext, private kind: EntityKind, private serviceUri: string) {
   }
 
   ///
@@ -370,7 +375,7 @@ export class EntityCollection implements IEntityValue {
       let id = this.context.getUniqueIdOfResult(result);
       if (!Object.prototype.hasOwnProperty.call(this.entities, id)) {
 
-        this.entities[id] = EntityFactory.fromEntityKind(this.kind, this.context);
+        this.entities[id] = EntityFactory.fromEntityKind(this.kind, this.context, this.serviceUri);
       }
 
       this.entities[id].applyResult(result);
@@ -391,7 +396,7 @@ export class ComplexEntity implements IEntityValue {
   private context: IQueryContext;
   private data?: ComplexEntityData = undefined;
 
-  constructor(context: IQueryContext) {
+  constructor(context: IQueryContext, private serviceUri: string) {
     this.context = context;
   }
 
@@ -425,13 +430,15 @@ export class ComplexEntity implements IEntityValue {
 
           const entitySet = this.context.getEntitySet();
           serialized["odata.id"] =
-            `${entitySet.getEntityUri()}odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
+            `${this.serviceUri}${entitySet.getName()}(${entity.serializeToODataJson()})`;
         }
+
+        // @smell creation of navigation links should be independent of foreign key properties
         if (foreignKeyProperty !== undefined && entity.serializeToODataJson() !== null) {
 
           const entitySet = foreignKeyProperty.getEntityType().getEntitySet();
           serialized[`${foreignKeyProperty.getName()}@odata.navigationLinkUrl`] =
-            `${entitySet.getEntityUri()}odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
+            `${this.serviceUri}${entitySet.getName()}(${entity.serializeToODataJson()})`;
         }
       };
 
@@ -461,7 +468,7 @@ export class ComplexEntity implements IEntityValue {
   private applyResultToProperty(result: any, property: Property, hasValueInResult: boolean, data: ComplexEntityData) {
     if (!this.hasPropertyEntity(property, data)) {
       this.setPropertyEntity(property,
-        EntityFactory.fromPropertyWithContext(property, this.context), data);
+        EntityFactory.fromPropertyWithContext(property, this.context, this.serviceUri), data);
     }
 
     let propertyName: string = property.getName();
@@ -506,23 +513,23 @@ export class ElementaryEntity implements IEntityValue {
 }
 
 export class EntityFactory {
-  public static fromPropertyWithContext(property: Property, context: IQueryContext): IEntityValue {
+  public static fromPropertyWithContext(property: Property, context: IQueryContext, serviceUri: string): IEntityValue {
     let kind = property.getEntityKind();
     let subContext = context.getSubContext(property.getName());
     if (property.isMultiplicityOne()) {
-      return EntityFactory.fromEntityKind(kind, subContext);
+      return EntityFactory.fromEntityKind(kind, subContext, serviceUri);
     }
     else {
-      return new EntityCollection(subContext, kind);
+      return new EntityCollection(subContext, kind, serviceUri);
     }
   }
 
-  public static fromEntityKind(kind: EntityKind, context: IQueryContext): IEntityValue {
+  public static fromEntityKind(kind: EntityKind, context: IQueryContext, serviceUri: string): IEntityValue {
     switch (kind) {
       case EntityKind.Elementary:
         return new ElementaryEntity();
       case EntityKind.Complex:
-        return new ComplexEntity(context);
+        return new ComplexEntity(context, serviceUri);
       default:
         throw new Error("invalid EntityKind " + kind);
     }

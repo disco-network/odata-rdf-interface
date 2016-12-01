@@ -11,8 +11,8 @@ import { PrefixProducer, GraphPatternStringProducer, SelectQueryStringBuilder } 
 import { FilterFromPatternProducer } from "../../odata/filters/matchpattern";
 
 export class ODataRepository extends base.ODataRepository<IMinimalVisitor> {
-  constructor(sparqlProvider: ISparqlProvider, graphUri: string) {
-    super(sparqlProvider, new GetQueryStringProducer(),
+  constructor(serviceUri: string, sparqlProvider: ISparqlProvider, graphUri: string) {
+    super(serviceUri, sparqlProvider, new GetQueryStringProducer(),
           new InsertQueryStringBuilder(graphUri), new PatchQueryStringProducerFactory());
   }
 }
