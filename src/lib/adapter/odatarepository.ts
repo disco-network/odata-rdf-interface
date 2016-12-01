@@ -427,7 +427,7 @@ export class ComplexEntity implements IEntityValue {
           serialized["odata.id"] =
             `${entitySet.getEntityUri()}odata/${entitySet.getName()}(${entity.serializeToODataJson()})`;
         }
-        if (foreignKeyProperty !== undefined) {
+        if (foreignKeyProperty !== undefined && entity.serializeToODataJson() !== null) {
 
           const entitySet = foreignKeyProperty.getEntityType().getEntitySet();
           serialized[`${foreignKeyProperty.getName()}@odata.navigationLinkUrl`] =
