@@ -32,8 +32,10 @@ describe("The GetHandler should evaluate", () => {
     expectSuccess(answer);
     assert.deepEqual(result, [
       {
+        "odata.id": "http://disco-network.org/resource/odata/Posts(1)",
         Id: "1",
         ContentId: "1",
+        "Content@odata.navigationLinkUrl": "http://disco-network.org/resource/odata/Content(1)",
         ParentId: null,
         Content: {
           Id: "1",
@@ -41,9 +43,12 @@ describe("The GetHandler should evaluate", () => {
         },
       },
       {
+        "odata.id": "http://disco-network.org/resource/odata/Posts(2)",
         Id: "2",
         ContentId: "2",
+        "Content@odata.navigationLinkUrl": "http://disco-network.org/resource/odata/Content(2)",
         ParentId: "1",
+        "Parent@odata.navigationLinkUrl": "http://disco-network.org/resource/odata/Posts(1)",
         Content: {
           Id: "2",
           Title: "Post Nr. 2",
@@ -244,6 +249,9 @@ describe("The GetHandler should evaluate", () => {
           let responseSender = {
             success: function(entities) {
               cb(Result.success(entities)); done();
+            },
+            error: function(message) {
+              cb(Result.error(message)); done();
             },
           };
           let getHandler = new GetHandler(new Schema(), new GetRequestParser(), repository, responseSender);

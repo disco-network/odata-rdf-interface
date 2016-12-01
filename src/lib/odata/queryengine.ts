@@ -18,6 +18,7 @@ export interface IGetHandler extends IHttpRequestHandler {
 
 export interface IGetHttpResponder {
   success(entityOrEntities: any, responseSender: IHttpResponseSender): void;
+  error(message: string, responseSender: IHttpResponseSender): void;
 }
 
 export interface IPostHandler extends IHttpRequestHandler {
@@ -62,9 +63,7 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
           if (result.success()) {
             this.getHttpResponder.success(result.result(), httpResponseSender);
           } else {
-            httpResponseSender.sendBody(result.error().stack);
-            httpResponseSender.sendStatusCode(500);
-            httpResponseSender.finishResponse();
+            this.getHttpResponder.error(result.error().stack, httpResponseSender);
           }
         });
         break;
@@ -123,6 +122,12 @@ export class GetHttpResponder implements IGetHttpResponder {
 
     httpResponseSender.sendBody(body);
 
+    httpResponseSender.finishResponse();
+  }
+
+  public error(message: string, httpResponseSender: IHttpResponseSender): void {
+    httpResponseSender.sendBody(message);
+    httpResponseSender.sendStatusCode(500);
     httpResponseSender.finishResponse();
   }
 }

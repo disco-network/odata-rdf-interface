@@ -64,6 +64,7 @@ describe("Adapter.ODataRepository:", () => {
     }], new Schema(), results => {
       assert.strictEqual(results.success(), true);
       assert.deepEqual(results.result()[0].result().odata, [{
+        "odata.id": "http://disco-node.local/api/odata/Posts(new)",
         Id: "new",
         ContentId: null,
         ParentId: null,

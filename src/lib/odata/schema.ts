@@ -64,7 +64,7 @@ const raw: IRawSchema = {
         ParentId: { type: "Edm.Int32", foreignProperty: "Parent" },
         Parent: {
           type: "Post", optional: true,
-          rdfName: "parent"
+          rdfName: "parent",
         },
         Children: { type: "Post", isArray: true, inverseProperty: "Parent", foreignSet: "Posts" },
         Content: { type: "Content", rdfName: "content", optional: false },
@@ -92,6 +92,9 @@ const raw: IRawSchema = {
     },
     Content: {
       type: "Content",
+    },
+    Culture: {
+      type: "Culture",
     },
   },
   defaultNamespace: {

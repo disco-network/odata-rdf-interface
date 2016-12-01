@@ -350,6 +350,10 @@ class GetResponseSenderStub implements IGetHttpResponder {
   public success(entities: any) {
     //
   }
+
+  public error(message: string): void {
+    //
+  }
 }
 
 class HttpResponseSender implements IHttpResponseSender {
