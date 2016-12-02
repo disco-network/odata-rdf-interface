@@ -436,9 +436,8 @@ export class ComplexEntity implements IEntityValue {
         // @smell creation of navigation links should be independent of foreign key properties
         if (foreignKeyProperty !== undefined && entity.serializeToODataJson() !== null) {
 
-          const entitySet = foreignKeyProperty.getEntityType().getEntitySet();
           serialized[`${foreignKeyProperty.getName()}@odata.navigationLinkUrl`] =
-            `${this.serviceUri}${entitySet.getName()}(${entity.serializeToODataJson()})`;
+            `${serialized["odata.id"]}/${foreignKeyProperty.getName()}`;
         }
       };
 

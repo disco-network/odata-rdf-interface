@@ -212,6 +212,10 @@ export class Property extends RdfBasedSchemaResource<IRawProperty> {
     return this.completeSchema.getEntityType(this.getRaw().type);
   }
 
+  public getEntityParentType(): EntityType {
+    return this.parentType;
+  }
+
   public isNavigationProperty(): boolean {
     return this.getEntityType().isElementary() === false;
   }
