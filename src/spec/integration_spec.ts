@@ -86,11 +86,9 @@ describe("integration tests", () => {
         sendBody: body => {
           assertEx.deepEqual(JSON.parse(body), {
             "odata.metadata": match.any,
-            "value": {
-              "odata.id": match.any,
-              "Id": match.any,
-              "Title": "Lorem",
-            },
+            "odata.id": match.any,
+            "Id": match.any,
+            "Title": "Lorem",
           });
           done();
         },
@@ -106,11 +104,9 @@ describe("integration tests", () => {
         sendBody: body => {
           assertEx.deepEqual(JSON.parse(body), {
             "odata.metadata": match.any,
-            "value": {
-              "odata.id": match.any,
-              "Id": match.any,
-              "Title": null,
-            },
+            "odata.id": match.any,
+            "Id": match.any,
+            "Title": null,
           });
           done();
         },
@@ -150,7 +146,7 @@ describe("integration tests", () => {
           post.query({ relativeUrl: "/Integers", body: `{ "Id": 2, "Prev": 1 }` },
           new HttpResponseSender(() => null, {
             sendBody: body2 => {
-              const secondInteger = JSON.parse(body2).value;
+              const secondInteger = JSON.parse(body2);
               try {
                 assert.strictEqual(null, secondInteger.Next);
                 assert.strictEqual("1", secondInteger.Prev);

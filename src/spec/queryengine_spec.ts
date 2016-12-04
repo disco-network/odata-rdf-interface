@@ -102,7 +102,8 @@ describe("OData.PostHandler:", () => {
     const sendBody = stub(responseSender, "sendBody",
       body => assertEx.deepEqual(JSON.parse(body), {
         "odata.metadata": eqMatch.any,
-        "value": { newPost: true } }));
+        "newPost": true,
+      }));
     stub(responseSender, "finishResponse", () => {
       assert.strictEqual(sendBody.calledOnce, true);
       assert.strictEqual(batch.calledOnce, true);
@@ -154,7 +155,7 @@ describe("OData.GetHandler", () => {
     const getHandler = new GetHandler<IFilterVisitor>(schema, parser, repository, responseSender);
 
     let successCounter = 0;
-    responseSender.success = entity => {
+    responseSender.singleEntityResult = entity => {
       ++successCounter;
       assert.deepEqual(entity, "ENTITY #1");
       assert.strictEqual(successCounter, 1);
@@ -180,7 +181,7 @@ describe("OData.GetHandler", () => {
       .callsArgWith(3, Result.success([ { Id: "1" } ]));
 
     const responseSender = new GetResponseSenderStub();
-    stub(responseSender, "success", entities => {
+    stub(responseSender, "arrayResult", entities => {
       assert.deepEqual(entities, [ { Id: "1" } ]);
       done();
     });
@@ -208,7 +209,7 @@ describe("OData.GetHandler", () => {
       .callsArgWith(3, Result.success([ { Id: "2" } ]));
 
     const responseSender = new GetResponseSenderStub();
-    stub(responseSender, "success", entities => {
+    stub(responseSender, "arrayResult", entities => {
       assert.deepEqual(entities, [ { Id: "2" } ]);
       done();
     });
@@ -233,28 +234,34 @@ describe("OData.GetResponseSender", () => {
     });
     const responseSender = new GetHttpResponder();
 
-    responseSender.success([], httpSenderThatShouldReceiveStatusCode(200, done));
+    responseSender.arrayResult([], httpSenderThatShouldReceiveStatusCode(200, done));
   });
   it("should send CORS headers", done => {
     const httpSender = httpSenderThatShouldReceiveCorsHeaders(done);
     const responseSender = new GetHttpResponder();
 
-    responseSender.success([], httpSender);
+    responseSender.arrayResult([], httpSender);
   });
   it("should send Content-Length and Content-Type headers", done => {
     const body = JSON.stringify({ "odata.metadata": "http://example.org/", value: [] }, null, 2);
     const httpSender = httpSenderThatShouldReceiveJsonContentHeaders(body.length.toString(), done);
     const responseSender = new GetHttpResponder();
 
-    responseSender.success([], httpSender);
+    responseSender.arrayResult([], httpSender);
   });
   it("should send the request body with minimal metadata", done => {
     const body = JSON.stringify({ "odata.metadata": "http://example.org/", value: [] }, null, 2);
-    const httpSender = httpSenderThatShouldReceiveRequestBody(
-      body, done);
+    const httpSender = httpSenderThatShouldReceiveRequestBody(body, done);
     const responseSender = new GetHttpResponder();
 
-    responseSender.success([], httpSender);
+    responseSender.arrayResult([], httpSender);
+  });
+  it(`should format single-entity responses this way: { odata.metadata: ?, ...properties }`, done => {
+    const body = JSON.stringify({ Id: 1, "odata.metadata": "http://example.org/" }, null, 2);
+    const httpSender = httpSenderThatShouldReceiveRequestBody(body, done);
+    const responseSender = new GetHttpResponder();
+
+    responseSender.singleEntityResult({ Id: 1 }, httpSender);
   });
 });
 
@@ -347,7 +354,11 @@ class EntityInitializer implements IEntityInitializer {
 }
 
 class GetResponseSenderStub implements IGetHttpResponder {
-  public success(entities: any) {
+  public arrayResult(entities: any[]) {
+    //
+  }
+
+  public singleEntityResult(entity: any) {
     //
   }
 

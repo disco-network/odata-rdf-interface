@@ -274,7 +274,10 @@ describe("The GetHandler should evaluate", () => {
           let sparqlProvider = new sparqlProviderModule.SparqlProvider(store, graphName);
           let repository = new ODataRepository("http://ex.org/odata/", sparqlProvider, graphName);
           let responseSender = {
-            success: function(entities) {
+            arrayResult: function(entities) {
+              cb(Result.success(entities)); done();
+            },
+            singleEntityResult: function(entities) {
               cb(Result.success(entities)); done();
             },
             error: function(message) {

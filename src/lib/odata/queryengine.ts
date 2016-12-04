@@ -17,7 +17,8 @@ export interface IGetHandler extends IHttpRequestHandler {
 }
 
 export interface IGetHttpResponder {
-  success(entityOrEntities: any, responseSender: IHttpResponseSender): void;
+  arrayResult(entities: any[], responseSender: IHttpResponseSender): void;
+  singleEntityResult(entity: any, responseSender: IHttpResponseSender): void;
   error(message: string, responseSender: IHttpResponseSender): void;
 }
 
@@ -61,7 +62,7 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
               `Query finished after ${finishedAfterTime[0] + finishedAfterTime[1] / 1000000000} seconds.`);
           }
           if (result.success()) {
-            this.getHttpResponder.success(result.result(), httpResponseSender);
+            this.getHttpResponder.arrayResult(result.result(), httpResponseSender);
           } else {
             this.getHttpResponder.error(result.error().stack, httpResponseSender);
           }
@@ -71,7 +72,7 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
         const edmLiteral = this.edmConverter.convert(parsed.id, type.getProperty("Id").getEntityType().getName());
         this.repository.getEntities(type, {}, this.filterExpressionFromEntityId(edmLiteral), result => {
           if (result.success())
-            this.getHttpResponder.success(result.result()[0], httpResponseSender);
+            this.getHttpResponder.singleEntityResult(result.result()[0], httpResponseSender);
         });
         break;
       case GetRequestType.PropertyOfSingle:
@@ -82,7 +83,12 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
           this.filterExpressionFromEntityId(baseEntityId), result => {
 
             if (result.success()) {
-              this.getHttpResponder.success(result.result()[0][req.propertyName], httpResponseSender);
+              const isNotArray = type.getProperty(req.propertyName).isMultiplicityOne();
+
+              if (isNotArray)
+                this.getHttpResponder.singleEntityResult(result.result()[0][req.propertyName], httpResponseSender);
+              else
+                this.getHttpResponder.arrayResult(result.result()[0][req.propertyName], httpResponseSender);
             }
           });
         break;
@@ -107,27 +113,39 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
 
 export class GetHttpResponder implements IGetHttpResponder {
 
-  public success(entityOrEntities: any, httpResponseSender: IHttpResponseSender) {
-    httpResponseSender.sendStatusCode(200);
-
-    httpResponseSender.sendHeader("Access-Control-Allow-Origin", "*");
-    httpResponseSender.sendHeader("Access-Control-Expose-Headers", "MaxDataServiceVersion, DataServiceVersion");
-
-    let body = JSON.stringify({
+  public arrayResult(entities: any[], httpResponseSender: IHttpResponseSender) {
+    this.success({
       "odata.metadata": "http://example.org/",
-      "value": entityOrEntities,
-    }, null, 2);
-    httpResponseSender.sendHeader("Content-Type", "application/json;charset=utf-8");
-    httpResponseSender.sendHeader("Content-Length", body.length.toString());
+      "value": entities,
+    }, httpResponseSender);
+  }
 
-    httpResponseSender.sendBody(body);
+  public singleEntityResult(entity: any, httpResponseSender: IHttpResponseSender) {
+    const data = {};
+    Object.keys(entity).forEach(k => data[k] = entity[k]);
+    data["odata.metadata"] = "http://example.org/";
 
-    httpResponseSender.finishResponse();
+    this.success(data, httpResponseSender);
   }
 
   public error(message: string, httpResponseSender: IHttpResponseSender): void {
     httpResponseSender.sendBody(message);
     httpResponseSender.sendStatusCode(500);
+    httpResponseSender.finishResponse();
+  }
+
+  private success(data: any, httpResponseSender: IHttpResponseSender) {
+    httpResponseSender.sendStatusCode(200);
+
+    httpResponseSender.sendHeader("Access-Control-Allow-Origin", "*");
+    httpResponseSender.sendHeader("Access-Control-Expose-Headers", "MaxDataServiceVersion, DataServiceVersion");
+
+    let body = JSON.stringify(data, null, 2);
+    httpResponseSender.sendHeader("Content-Type", "application/json;charset=utf-8");
+    httpResponseSender.sendHeader("Content-Length", body.length.toString());
+
+    httpResponseSender.sendBody(body);
+
     httpResponseSender.finishResponse();
   }
 }
@@ -154,10 +172,10 @@ export class PostHandler<T> implements IPostHandler {
           throw new Error(insertion.error());
         }
         const insertedEntity = insertion.result().odata[0];
-        responseSender.sendBody(JSON.stringify({
-          "odata.metadata": "http://example.org/",
-          "value": insertedEntity,
-        }, null, 2));
+        const data = {};
+        Object.keys(insertedEntity).forEach(k => data[k] = insertedEntity[k]);
+        data["odata.metadata"] = "http://example.org/";
+        responseSender.sendBody(JSON.stringify(data, null, 2));
         responseSender.finishResponse();
       });
     }
@@ -166,7 +184,9 @@ export class PostHandler<T> implements IPostHandler {
         responseSender.sendStatusCode(400, "Bad Request");
         responseSender.finishResponse();
       }
-      else throw e;
+      else {
+        throw e;
+      }
     }
   }
 }
