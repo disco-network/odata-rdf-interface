@@ -59,7 +59,7 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
           if (this.logger !== undefined) {
             const finishedAfterTime = process.hrtime(timeBeforeQuery);
             this.logger.debug(
-              `Query finished after ${finishedAfterTime[0] + finishedAfterTime[1] / 1000000000} seconds.`);
+              `Query finished after [${finishedAfterTime[0] + finishedAfterTime[1] / 1000000}ms]`);
           }
           if (result.success()) {
             this.getHttpResponder.arrayResult(result.result(), httpResponseSender);
@@ -71,8 +71,11 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
       case GetRequestType.ById:
         const edmLiteral = this.edmConverter.convert(parsed.id, type.getProperty("Id").getEntityType().getName());
         this.repository.getEntities(type, {}, this.filterExpressionFromEntityId(edmLiteral), result => {
-          if (result.success())
+          if (result.success()) {
             this.getHttpResponder.singleEntityResult(result.result()[0], httpResponseSender);
+          } else {
+            this.getHttpResponder.error(result.error().stack, httpResponseSender);
+          }
         });
         break;
       case GetRequestType.PropertyOfSingle:
@@ -89,6 +92,8 @@ export class GetHandler<T extends IMinimalVisitor> implements IGetHandler {
                 this.getHttpResponder.singleEntityResult(result.result()[0][req.propertyName], httpResponseSender);
               else
                 this.getHttpResponder.arrayResult(result.result()[0][req.propertyName], httpResponseSender);
+            } else {
+              this.getHttpResponder.error(result.error().stack, httpResponseSender);
             }
           });
         break;
