@@ -46,3 +46,8 @@ declare module "uuid" {
     export function v1(): string;
     export function v4(): string;
 }
+
+declare module "sparql" {
+    var x: any;
+    export = x;
+}

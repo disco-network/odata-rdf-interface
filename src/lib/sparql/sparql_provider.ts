@@ -2,6 +2,7 @@
 import base = require("./sparql_provider_base");
 import result = require("../result");
 import { ILogger } from "../logger";
+import * as sparql from "sparql";
 
 declare var process;
 
@@ -26,5 +27,23 @@ export class SparqlProvider implements base.ISparqlProvider {
   private logDebug(message: string) {
     if (this.logger !== undefined)
       this.logger.debug(message);
+  }
+}
+
+export class ServiceBasedSparqlProvider implements base.ISparqlProvider {
+
+  private client;
+
+  constructor(serviceUri: string) {
+    this.client = new sparql.Client(serviceUri);
+  }
+
+  public query(queryString: string, cb: (result: result.AnyResult) => void): void {
+    this.client.query(queryString, (err, res) => {
+      if (!err)
+        cb(result.Result.success(res.results.bindings));
+      else
+        cb(result.Result.error(err));
+    });
   }
 }
