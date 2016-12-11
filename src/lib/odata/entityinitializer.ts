@@ -335,9 +335,9 @@ export interface EntityRef {
   id: EdmLiteral;
 }
 
-export class BadBodyError extends Error {
+export class BadBodyError {
+  public message: string;
   constructor(message = "BadBodyError") {
-    super();
     this.message = message;
   }
 }

@@ -53,9 +53,10 @@ export class EdmConverter implements IEdmConverter {
   }
 }
 
-export class InvalidConversionError extends Error {
+export class InvalidConversionError {
+  public message: string;
+
   constructor(public source: EdmLiteral, public target: string, message?: string) {
-    super();
     this.message = `Literal of type ${source.type} cannot be converted to ${target}${message ? ": " + message : ""}`;
   }
 }
