@@ -34,6 +34,11 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
     });
   });
 
+  it("should parse a parentheses expression", function () {
+    const parser = initODataParser();
+    parser.parse("/Posts?$filter=(1 eq 1)");
+  });
+
   it("should parse an OData filter expression", function() {
     const parser = initODataParser();
     const evaluated = parser.parse("/Posts?$filter=a/b/c eq 1");
