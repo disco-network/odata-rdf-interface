@@ -663,7 +663,7 @@ geoLengthMethodCallExpr  = 'geo.length'     OPEN BWS commonExpr BWS CLOSE
 intersectsMethodCallExpr = 'geo.intersects' OPEN BWS commonExpr BWS COMMA BWS commonExpr BWS CLOSE
 
 boolParenExpr = OPEN BWS boolCommonExpr:inner BWS CLOSE
-parenExpr     = OPEN BWS commonExpr:expr     BWS CLOSE = { return d.getSubordinateDescriptors().expr.evaluate()  }
+parenExpr     = OPEN BWS commonExpr:expr     BWS CLOSE = { return this.getSubordinateDescriptors().expr.evaluate()  }
 
 andExpr = RWS 'and':op RWS boolCommonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } } 
 orExpr  = RWS 'or':op  RWS boolCommonExpr:rhs = { var d = this.getSubordinateDescriptors(); return { op: d.op.getString(), rhs: d.rhs.evaluate() } }
