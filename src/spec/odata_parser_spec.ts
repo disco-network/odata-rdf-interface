@@ -54,9 +54,15 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
     let parser = initODataParser();
     let result = parser.parse("/Posts?$expand=Children/ReferredFrom");
 
-    assert.strictEqual(result.queryOptions.expand.length, 1);
-    assert.strictEqual(result.queryOptions.expand[0].path[0], "Children");
-    assert.strictEqual(result.queryOptions.expand[0].path[1], "ReferredFrom");
+    assert.deepEqual(result.queryOptions.expand, { Children: { ReferredFrom: {} } });
+  });
+
+  it("should parse nested expand expressions (OData v4)", function() {
+    // @todo hacked solution, $expand=A($filter=Id eq 1) is still impossible
+    const parser = initODataParser();
+    const result = parser.parse("/Posts?$expand=Children/Children($expand=ReferredFrom)");
+
+    assert.deepEqual(result.queryOptions.expand, { Children: { Children: { ReferredFrom: {} } } });
   });
 
   it("should parse a string with \"", () => {
@@ -236,6 +242,17 @@ describe("OData.GetRequestParser:", () => {
       entitySetName: "Content",
       id: { type: "Edm.Int32", value: 42 },
       type: GetRequestType.ById,
+    });
+  });
+
+  it ("should parse nested $expand (OData v4)", () => {
+    const parser = initGetRequestParser();
+    const parsed = parser.parse({ relativeUrl: "/Posts?$expand=Children($expand=Content)", body: `` });
+    assert.deepEqual(parsed, {
+      entitySetName: "Posts",
+      type: GetRequestType.Collection,
+      expandTree: { Children: { Content: {} } },
+      filterExpression: undefined,
     });
   });
 });

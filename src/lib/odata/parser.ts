@@ -146,11 +146,7 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
     const entitySetName = ast.resourcePath.entitySetName;
 
     if (ast.resourcePath.navigation.type === "none") {
-      const expandTree = {};
-      (ast.queryOptions.expand || []).forEach(e => {
-        let currentBranch = expandTree;
-        e.path.forEach(prop => currentBranch = currentBranch[prop] = currentBranch[prop] || {});
-      });
+      const expandTree = ast.queryOptions.expand || {};
       const filterTree = ast.queryOptions.filter ? this.parseFilterExpression(ast.queryOptions.filter) : undefined;
       return {
         type: GetRequestType.Collection,
@@ -222,6 +218,13 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
                                  this.parseFilterExpression(raw.lambdaExpression.predicateExpression));
       default:
         throw new Error("Unsupported member expression");
+    }
+  }
+
+  private mergeTree(into, from) {
+    for (const key of Object.keys(from)) {
+      into[key] = into[key] || {};
+      this.mergeTree(into[key], from[key]);
     }
   }
 }

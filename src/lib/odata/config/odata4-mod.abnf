@@ -244,7 +244,7 @@ queryOptions = queryOption:option *( "&" queryOption:options )
       }
       else if(o.type == 'expand') {
         if(ret.expand) throw new Error('too many $expand options specified');
-        else ret.expand = o.value;
+        else ret.expand = o.tree;
       }
     });
     return ret;
@@ -284,16 +284,46 @@ expand            = '$expand' EQ expandItem:item *( COMMA expandItem:items )
   = {
     var d = this.getSubordinateDescriptors();
     var expandItems = [d.item].concat(d.items || []).map(function(i) { return i.evaluate() });
-    return { type: 'expand', value: expandItems }
+    var tree = {};
+    for (var i = 0; i < expandItems.length; ++i) {
+      merge(tree, expandItems[i].tree);
+    }
+    return { type: 'expand', tree: tree };
+
+    function merge(into, from) {
+      var keys = Object.keys(from);
+      for (var i = 0; i < keys.length; ++i) {
+        if (into[keys[i]]) merge(into[keys[i]], from[keys[i]]);
+        else into[keys[i]] = from[keys[i]];
+      }
+    }
   }
 
 expandItem        = ;STAR [ ref / OPEN levels CLOSE ] /
                     expandPath:path
+                      [ OPEN expand:recursiveExpand CLOSE ]
                     ;[ ref   [ OPEN expandRefOption   *( SEMI expandRefOption   ) CLOSE ]
                     ;/ count [ OPEN expandCountOption *( SEMI expandCountOption ) CLOSE ]
                     ;/         OPEN expandOption      *( SEMI expandOption      ) CLOSE 
                     ;]
-  = { return this.getSubordinateDescriptors().path.evaluate() }
+  = {
+    var d = this.getSubordinateDescriptors();
+    var path = d.path.evaluate();
+    var tree = {};
+    var currentBranch = tree;
+
+    path.forEach(function(prop) { currentBranch = currentBranch[prop] = {}; });
+
+    if (d.recursiveExpand) {
+      var nestedExpandTree = d.recursiveExpand.evaluate().tree;
+      var keys = Object.keys(nestedExpandTree);
+      for (var i = 0; i < keys.length; ++i) {
+        currentBranch[keys[i]] = nestedExpandTree[keys[i]];
+      }
+    }
+
+    return { tree: tree };
+  }
 expandPath        = ;[ qualifiedEntityTypeName "/" ] 
                     ;modified, see below *( ( complexProperty / complexColProperty ) "/" [ qualifiedComplexTypeName "/" ] )
                     *( ( complexProperty:properties / complexColProperty:properties ) "/" )
@@ -302,7 +332,7 @@ expandPath        = ;[ qualifiedEntityTypeName "/" ]
   = {
     var d = this.getSubordinateDescriptors();
     var properties = (d.properties || []).concat([d.property]).map(function(p) { return p.evaluate() });
-    return { path: properties };
+    return properties;
   }
 expandCountOption = filter
                   / search
