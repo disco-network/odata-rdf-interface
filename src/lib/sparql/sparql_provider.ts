@@ -2,7 +2,7 @@
 import base = require("./sparql_provider_base");
 import result = require("../result");
 import { ILogger } from "../logger";
-import * as sparql from "sparql";
+import * as request from "request";
 
 declare var process;
 
@@ -24,6 +24,10 @@ export class SparqlProvider implements base.ISparqlProvider {
     });
   }
 
+  public update(queryString: string, cb: (result: result.AnyResult) => void): void {
+    this.query(queryString, cb);
+  }
+
   private logDebug(message: string) {
     if (this.logger !== undefined)
       this.logger.debug(message);
@@ -32,16 +36,40 @@ export class SparqlProvider implements base.ISparqlProvider {
 
 export class ServiceBasedSparqlProvider implements base.ISparqlProvider {
 
-  private client;
-
-  constructor(serviceUri: string) {
-    this.client = new sparql.Client(serviceUri);
+  constructor(private serviceUri: string) {
   }
 
   public query(queryString: string, cb: (result: result.AnyResult) => void): void {
-    this.client.query(queryString, (err, res) => {
+    request(this.serviceUri + "/query", {
+      method: "POST",
+      headers: {
+        "accept": "application/sparql-results+json",
+      },
+      form: {
+        query: queryString,
+      },
+      timeout: 10000,
+    }, (err, res, body) => {
       if (!err)
-        cb(result.Result.success(res.results.bindings));
+        cb(result.Result.success(JSON.parse(body).results.bindings));
+      else
+        cb(result.Result.error(err));
+    });
+  }
+
+  public update(queryString: string, cb: (result: result.AnyResult) => void): void {
+    request(this.serviceUri + "/update", {
+      method: "POST",
+      headers: {
+        "accept": "application/sparql-results+json",
+      },
+      form: {
+        update: queryString,
+      },
+      timeout: 10000,
+    }, (err, res, body) => {
+      if (!err)
+        cb(result.Result.success(null));
       else
         cb(result.Result.error(err));
     });

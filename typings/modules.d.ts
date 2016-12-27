@@ -3,11 +3,6 @@ declare module "connect" {
     export = x;
 }
 
-declare module "fs" {
-    let x: any;
-    export = x;
-}
-
 declare module "abnfjs/tokenizer" {
     let x: any;
     export = x;

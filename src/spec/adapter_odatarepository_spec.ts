@@ -24,17 +24,23 @@ describe("Adapter.ODataRepository:", () => {
     let sparqlQueryCount = 0;
     mySparqlProvider.query = (query, cb) => {
       ++sparqlQueryCount;
-      if (sparqlQueryCount === 1) {
-        assert.strictEqual(query, sparql);
-        cb(results.Result.success("ok"));
-      }
-      else if (sparqlQueryCount === 2) {
+      if (sparqlQueryCount === 2) {
         assert.strictEqual(query, "SELECT {SOMETHING}");
         cb(results.Result.success([{
           [queryModel.getMapping().variables.getVariable().substr(1)]: { value: "uri" },
           [queryModel.getMapping().variables.getElementaryPropertyVariable("Id").substr(1)]: { value: "new" },
         }]));
       }
+      else assert.notStrictEqual("sparqlQueryCount", sparqlQueryCount);
+    };
+
+    mySparqlProvider.update = (query, cb) => {
+      ++sparqlQueryCount;
+      if (sparqlQueryCount === 1) {
+        assert.strictEqual(query, sparql);
+        cb(results.Result.success("ok"));
+      }
+      else assert.strictEqual("sparqlQueryCount", 1);
     };
 
     const insertQueryStringBuilder = new InsertQueryStringBuilder();
@@ -79,6 +85,7 @@ describe("Adapter.ODataRepository:", () => {
 
     const mySparqlProvider = new SparqlProvider();
     let sparqlQueryCount = 0;
+    // need to rewrite: separate query/update
     mySparqlProvider.query = (query, cb) => {
       switch (sparqlQueryCount) {
         case 0:
@@ -130,7 +137,7 @@ describe("Adapter.ODataRepository:", () => {
 
     const sparqlProvider = new SparqlProvider();
     let queryCount = 0;
-    sparqlProvider.query = tryCatch((query, cb) => {
+    sparqlProvider.update = tryCatch((query, cb) => {
       switch (queryCount++) {
         case 0:
           assert.strictEqual(query, sparql);
@@ -181,7 +188,7 @@ describe("Adapter.ODataRepository:", () => {
 
     const sparqlProvider = new SparqlProvider();
     let queryCount = 0;
-    sparqlProvider.query = tryCatch((query, cb) => {
+    sparqlProvider.update = tryCatch((query, cb) => {
       switch (queryCount++) {
         case 0:
           assert.strictEqual(query, sparql);
@@ -291,6 +298,10 @@ class InsertQueryStringBuilder implements IInsertQueryStringProducer {
 class SparqlProvider implements sparqlProviderBase.ISparqlProvider {
 
   public query(query: string, cb: (result: results.AnyResult) => void) {
+    //
+  }
+
+  public update(query: string, cb: (result: results.AnyResult) => void) {
     //
   }
 }

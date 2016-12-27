@@ -243,7 +243,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
 
     const query = this.patchQueryStringProducerFactory.create(updatedValues, pattern, entityType).produceSparql();
 
-    this.sparqlProvider.query(query, response => {
+    this.sparqlProvider.update(query, response => {
       cb(response);
     });
   }
@@ -256,7 +256,7 @@ export class ODataRepository<TExpressionVisitor extends IMinimalVisitor>
     const query = this.insertQueryStringBuilder.insertAsSparql(prefixes, uri,
       new SparqlNamespacedUri(entityType.getNamespacedUri()), sparqlEntity);
 
-    this.sparqlProvider.query(query, response => {
+    this.sparqlProvider.update(query, response => {
       cb(response.process(
         result => ({ success: true }),
         error => ({ success: false, error: error })
