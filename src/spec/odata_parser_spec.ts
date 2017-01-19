@@ -50,6 +50,13 @@ describe("ODataParser @todo inject this dependency @todo create abstraction", fu
     assert.strictEqual(evaluated.queryOptions.filter.rhs.type, "decimalValue");
   });
 
+  it("should parse a NotEquals expression", function() {
+    const parser = initODataParser();
+    const result = parser.parse("/Posts?$filter=1 ne 2");
+
+    assert.strictEqual(result.queryOptions.filter.type, "operator");
+  });
+
   it("should parse an OData expand expression", function() {
     let parser = initODataParser();
     let result = parser.parse("/Posts?$expand=Children/ReferredFrom");
@@ -283,4 +290,5 @@ class Visitor implements IFilterVisitor {
   public visitParentheses() { /* */ }
   public visitPropertyValue() { /* */ }
   public visitAnyExpression() { /* */ }
+  public visitNotExpression() { /* */ }
 }

@@ -2,7 +2,7 @@ import { assert } from "chai";
 
 import {
   IStringLiteral, INumericLiteral,
-  IEqExpression, IAndExpression, IOrExpression, IAnyExpression,
+  IEqExpression, IAndExpression, IOrExpression, IAnyExpression, INotExpression,
 } from "../lib/odata/filters/expressions";
 import {
   IVisitorState, IVisitor, VisitorBase, AssembledVisitor,
@@ -98,6 +98,16 @@ describe("Adapter.BinaryExprVisitor:", () => {
 
     assert.strictEqual(sparql, "(LHS && RHS)");
   });
+
+  it("should translate NOT expressions", () => {
+    const visitor = new MyBinaryVisitor(createNullState());
+
+    const expr: INotExpression<typeof visitor> = new TestNotExpression<typeof visitor>();
+    expr.accept = v => v.visitNotExpression(expr);
+    const sparql = visitor.create(expr).toSparqlFilterClause();
+
+    assert.strictEqual(sparql, "!(INNER)");
+  })
 });
 
 describe("Adapter.PropertyVisitor", () => {
@@ -393,4 +403,9 @@ class TestBinaryExpression<TVisitor> {
   public accept(v: TVisitor) { throw new Error("not implemented"); }
   public getLhs() { return new TestExpression("LHS", this.unbound1); }
   public getRhs() { return new TestExpression("RHS", this.unbound2); }
+}
+
+class TestNotExpression<TVisitor> {
+  public accept(v: TVisitor) { throw new Error("not implemented"); }
+  public getInner() { return new TestExpression("INNER"); }
 }

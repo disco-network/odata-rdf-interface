@@ -4,7 +4,7 @@ import { EdmConverter } from "../../odata/edm";
 import { ISparqlProvider } from "../../sparql/sparql_provider_base";
 
 import { EntityInitializer } from "../odata/entityinitializer";
-import { GetRequestParser, PostRequestParser } from "../odata/parser";
+import { GetRequestParser, PostRequestParser, PatchRequestParser } from "../odata/parser";
 import { ODataRepository } from "./odatarepository";
 import { IMinimalVisitor } from "./filters";
 import { ILogger } from "../../logger";
@@ -24,5 +24,12 @@ export class PostHandler extends base.PostHandler<IMinimalVisitor> {
   constructor(serviceUri: string, schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
     super(new PostRequestParser(), new EntityInitializer(new EdmConverter()),
       new ODataRepository(serviceUri, sparqlProvider, graphUri), schema);
+  }
+}
+
+export class PatchHandler extends base.PatchHandler<IMinimalVisitor> {
+  constructor(serviceUri: string, schema: Schema, sparqlProvider: ISparqlProvider, graphUri: string) {
+    super(new PatchRequestParser(), schema, new EntityInitializer(new EdmConverter()),
+      new ODataRepository(serviceUri, sparqlProvider, graphUri));
   }
 }

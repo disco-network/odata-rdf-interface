@@ -1,1 +1,1 @@
-export { PostRequestParser, GetRequestParser } from "../../odata/parser";
+export { PostRequestParser, GetRequestParser, PatchRequestParser } from "../../odata/parser";

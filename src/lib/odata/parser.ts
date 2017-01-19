@@ -5,11 +5,11 @@ import fs = require("fs");
 import { IHttpRequest } from "./http";
 import { EdmLiteral } from "./edm";
 import {
-  IValue, IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor,
+  IValue, IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor, INotExpressionVisitor,
   IStringLiteralVisitor, INumericLiteralVisitor, INullVisitor,
   IParenthesesVisitor, IPropertyValueVisitor, IAnyExpressionVisitor,
   IStringLiteral, INumericLiteral, INull,
-  IEqExpression, IAndExpression, IOrExpression, IParentheses,
+  IEqExpression, INotExpression, IAndExpression, IOrExpression, IParentheses,
   IPropertyValue, IAnyExpression, ILambdaExpression,
 } from "./filters/expressions";
 
@@ -131,7 +131,7 @@ export interface ParsedEntity {
 }
 
 export interface IFilterVisitor extends IStringLiteralVisitor, INumericLiteralVisitor,
-  IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor, IParenthesesVisitor,
+  IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor, INotExpressionVisitor, IParenthesesVisitor,
   IPropertyValueVisitor, IAnyExpressionVisitor, INullVisitor {}
 
 /* @todo make class more testable by injecting an IGetRequestParser for child expressions */
@@ -200,6 +200,8 @@ export class GetRequestParser implements IGetRequestParser<IFilterVisitor> {
     switch (raw.op) {
       case "eq":
         return new EqExpression(lhs, rhs);
+      case "ne":
+        return new NotExpression<IFilterVisitor>(new EqExpression(lhs, rhs));
       case "and":
         return new AndExpression(lhs, rhs);
       case "or":
@@ -310,6 +312,19 @@ export class BinaryExpression<T> {
 export class EqExpression<T extends IEqExpressionVisitor> extends BinaryExpression<T> implements IEqExpression<T> {
   public accept(visitor: T) {
     visitor.visitEqExpression(this);
+  }
+}
+
+export class NotExpression<T extends INotExpressionVisitor> implements INotExpression<T> {
+
+  constructor(private inner: IValue<T>) {}
+
+  public accept(visitor: T) {
+    visitor.visitNotExpression(this);
+  }
+
+  public getInner(): IValue<T> {
+    return this.inner;
   }
 }
 

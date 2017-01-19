@@ -1,6 +1,6 @@
 import { getFilterGraphPatternStrategy } from "./propertytree";
 
-import { IValue } from "../../odata/filters/expressions";
+import { IValue, INotExpressionVisitor } from "../../odata/filters/expressions";
 import { ILambdaVariable } from "../../odata/filters/filters";
 
 import {
@@ -25,7 +25,7 @@ export class AnyExpressionTranslatorFactory implements IAnyExpressionTranslatorF
 }
 
 export interface IMinimalVisitor extends IVisitor, ILiteralVisitor, IBinaryExprVisitor,
-                       IParenthesesVisitor, IPropertyVisitor, IEqualsUriExpressionVisitor {}
+  IParenthesesVisitor, IPropertyVisitor, IEqualsUriExpressionVisitor, INotExpressionVisitor {}
 
 export const Visitor: ITypeofVisitor<IMinimalVisitor> = AssembledVisitor<IMinimalVisitor>(VisitorBase, [
   LiteralVisitor, BinaryExprVisitor, ParenthesesVisitor, EqualsUriExpressionVisitor,

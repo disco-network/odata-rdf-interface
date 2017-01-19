@@ -7,6 +7,7 @@ import { IValue, IBinaryExpression,
   IAndExpressionVisitor, IAndExpression,
   IOrExpressionVisitor, IOrExpression,
   IEqExpressionVisitor, IEqExpression,
+  INotExpressionVisitor, INotExpression,
   IParenthesesVisitor as IParenthesesVisitorImported, IParentheses,
   IPropertyValueVisitor, IPropertyValue,
   IAnyExpressionVisitor, IAnyExpression } from "../odata/filters/expressions";
@@ -109,7 +110,7 @@ export function LiteralVisitor
 }
 
 export interface IBinaryExprVisitor
-  extends IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor {}
+  extends IAndExpressionVisitor, IOrExpressionVisitor, IEqExpressionVisitor, INotExpressionVisitor {}
 
 export function BinaryExprVisitor
   (Base: IVisitorConstructible) {
@@ -133,6 +134,11 @@ export function BinaryExprVisitor
       this.passResult(new EqExpressionTranslator(lhs, rhs) as any);
     }
 
+    public visitNotExpression(expr: INotExpression<this>) {
+      const inner = this.create(expr.getInner());
+      this.passResult(new NotExpressionTranslator(inner) as any);
+    }
+
     private visitBinaryExpression(expr: IBinaryExpression<this>, sparqlOperator: string) {
       let [lhs, rhs] = this.createBinaryOperands(expr);
       this.passResult(new BinaryOperatorTranslator(lhs, sparqlOperator, rhs));
@@ -142,6 +148,23 @@ export function BinaryExprVisitor
       return [ this.create(expr.getLhs()), this.create(expr.getRhs()) ];
     }
   } as IVisitorConstructible;
+}
+
+export class NotExpressionTranslator implements IExpressionTranslator {
+  constructor(private inner: IExpressionTranslator) {}
+
+  public getPropertyTree(): ScopedPropertyTree {
+    return this.inner.getPropertyTree();
+  }
+
+  public toSparqlFilterClause() {
+    const inner = this.inner.toSparqlFilterClause();
+    return `!(${inner})`;
+  }
+
+  public canBeUnbound() {
+    return false;
+  }
 }
 
 export class EqExpressionTranslator implements IExpressionTranslator {

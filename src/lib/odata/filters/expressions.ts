@@ -37,6 +37,14 @@ export interface IAndExpressionVisitor {
 export interface IAndExpression<TVisitor extends IAndExpressionVisitor> extends IBinaryExpression<TVisitor> {
 }
 
+export interface INotExpressionVisitor {
+  visitNotExpression(expr: INotExpression<this>);
+}
+
+export interface INotExpression<TVisitor extends INotExpressionVisitor> extends IValue<TVisitor> {
+  getInner(): IValue<TVisitor>;
+}
+
 export interface IEqExpressionVisitor {
   visitEqExpression(expr: IEqExpression<this>);
 }
