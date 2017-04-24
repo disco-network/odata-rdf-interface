@@ -32,9 +32,9 @@ var sourceMapsConfig = {
     // To get the additional ones, we need to subtract the initial path count.
     // For this project setting it is the magic number of 4. Please adjust 
     // this to your project needs. 
-    const initialPathCount = 4;
-    let depthCount = (sourcePath.match(/\//g) || []).length;
-    let pathUps = "../".repeat(Math.max(depthCount, initialPathCount) - initialPathCount);
+    var initialPathCount = 4;
+    var depthCount = (sourcePath.match(/\//g) || []).length;
+    var pathUps = "../".repeat(Math.max(depthCount, initialPathCount) - initialPathCount);
     return pathUps + sourcePath;
   }
 };
